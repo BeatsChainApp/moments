@@ -3,14 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 import { franc } from 'franc';
 
 const app = express();
-const PORT = process.env.RAILWAY_PORT || 3001;
+const PORT = process.env.PORT || process.env.RAILWAY_PORT || 3001;
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+// Only create Supabase client if credentials exist
+let supabase = null;
+if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
+  supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_KEY
+  );
+}
 
 app.use(express.json());
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'healthy', supabase: !!supabase });
+});
 
 app.post('/advisory', async (req, res) => {
   const { message, language, media_type, from_number, timestamp } = req.body;
