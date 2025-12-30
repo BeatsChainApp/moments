@@ -20,22 +20,18 @@ export const detectLanguage = (text) => {
   }
   
   try {
-    const detected = franc(text, { minLength: 3 });
-    
-    // Handle common South African patterns
-    if (detected === 'und') {
-      // Check for common SA language patterns
-      if (/\b(sawubona|ngiyabonga|hamba|yebo)\b/i.test(text)) {
-        return { code: 'zul', name: 'Zulu', confidence: 0.7 };
-      }
-      if (/\b(molo|enkosi|hamba|ewe)\b/i.test(text)) {
-        return { code: 'xho', name: 'Xhosa', confidence: 0.7 };
-      }
-      if (/\b(dumela|ke|go|ga)\b/i.test(text)) {
-        return { code: 'tsn', name: 'Tswana', confidence: 0.7 };
-      }
+    // Check for common SA language patterns first
+    if (/\b(sawubona|ngiyabonga|hamba|yebo)\b/i.test(text)) {
+      return { code: 'zul', name: 'Zulu', confidence: 0.7 };
+    }
+    if (/\b(molo|enkosi|hamba|ewe)\b/i.test(text)) {
+      return { code: 'xho', name: 'Xhosa', confidence: 0.7 };
+    }
+    if (/\b(dumela|ke|go|ga)\b/i.test(text)) {
+      return { code: 'tsn', name: 'Tswana', confidence: 0.7 };
     }
     
+    const detected = franc(text, { minLength: 3 });
     const languageName = SOUTH_AFRICAN_LANGUAGES[detected] || 'Unknown';
     
     return {
