@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from '../config/supabase.js';
 
 export const callMCPAdvisory = async (messageData) => {
-  // Use local MCP service running on Railway
+  // Use hardcoded working MCP endpoint
   const mcpEndpoint = 'https://mcp-advisory-production.up.railway.app/advisory';
   
   try {
