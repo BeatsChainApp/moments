@@ -133,6 +133,10 @@ const processIncomingMessage = async (message) => {
 };
 
 const triggerN8nWorkflow = async (data) => {
+  // Disabled for production - n8n not accessible from Railway
+  console.log('n8n workflow would be triggered:', data.message?.id);
+  return;
+  
   try {
     await axios.post(`${process.env.N8N_WEBHOOK_URL}/whatsapp-inbound`, data, {
       timeout: 3000,
