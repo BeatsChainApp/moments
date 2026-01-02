@@ -6,7 +6,7 @@ export async function healthCheck() {
     timestamp: new Date().toISOString(),
     service: 'Unami Foundation Moments API',
     version: '1.0.0',
-    environment: process.env.RAILWAY_ENVIRONMENT || 'local'
+    environment: process.env.VERCEL_ENV || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'local'
   };
 
   // Only test external services if environment variables are configured
