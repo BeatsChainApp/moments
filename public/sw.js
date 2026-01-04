@@ -1,19 +1,34 @@
-const CACHE_NAME = 'moments-admin-v1';
-const ASSETS = [
+const CACHE_NAME = 'unami-moments-v1';
+const STATIC_ASSETS = [
   '/',
+  '/moments',
+  '/broadcasts',
+  '/settings',
   '/admin.html',
   '/manifest.json',
+  '/logo.png',
   '/logo.svg',
+  '/favicon.ico',
   '/css/admin.css',
   '/js/admin.js',
   '/offline.html'
 ];
 
+const API_CACHE_NAME = 'unami-api-v1';
+const API_ENDPOINTS = [
+  '/api/moments',
+  '/api/broadcasts',
+  '/api/analytics'
+];
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
+    Promise.all([
+      caches.open(CACHE_NAME).then((cache) => {
+        return cache.addAll(STATIC_ASSETS.filter(asset => asset !== '/'));
+      }),
+      caches.open(API_CACHE_NAME)
+    ])
   );
   self.skipWaiting();
 });
@@ -22,48 +37,158 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+      keys.filter(k => !k.startsWith('unami-')).map(k => caches.delete(k))
     ))
   );
   self.clients.claim();
 });
 
-// Fetch handler: navigation -> cache-first with network fallback; others -> network with fallback to cache
+// Fetch handler with improved caching strategy
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Don't cache API requests with Authorization
+  // Skip non-GET requests and requests with auth headers
   if (req.method !== 'GET' || req.headers.get('authorization')) {
-    return event.respondWith(fetch(req).catch(() => caches.match('/offline.html')));
+    return event.respondWith(
+      fetch(req).catch(() => {
+        if (req.mode === 'navigate') {
+          return caches.match('/offline.html');
+        }
+        return new Response('Offline', { status: 503 });
+      })
+    );
   }
 
-  // Serve navigation requests from cache first
+  // Handle navigation requests (HTML pages)
   if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
     event.respondWith(
-      caches.match(req).then(cached => cached || fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match('/offline.html')))
+      // Try network first for fresh content
+      fetch(req)
+        .then(response => {
+          // Cache successful responses
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+              cache.put(req, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache, then offline page
+          return caches.match(req)
+            .then(cached => cached || caches.match('/offline.html'));
+        })
     );
     return;
   }
 
-  // For static assets: stale-while-revalidate
-  if (ASSETS.includes(url.pathname)) {
+  // Handle API requests with cache-first strategy for better offline experience
+  if (API_ENDPOINTS.some(endpoint => url.pathname.startsWith(endpoint))) {
     event.respondWith(
-      caches.match(req).then(cached => {
-        const network = fetch(req).then(resp => {
-          caches.open(CACHE_NAME).then(c => c.put(req, resp.clone()));
-          return resp;
-        }).catch(() => null);
-        return cached || network;
+      caches.open(API_CACHE_NAME).then(cache => {
+        return cache.match(req).then(cached => {
+          // Return cached version immediately if available
+          if (cached) {
+            // Update cache in background
+            fetch(req).then(response => {
+              if (response.ok) {
+                cache.put(req, response.clone());
+              }
+            }).catch(() => {});
+            return cached;
+          }
+          
+          // No cache, try network
+          return fetch(req).then(response => {
+            if (response.ok) {
+              cache.put(req, response.clone());
+            }
+            return response;
+          }).catch(() => {
+            // Return empty data structure for API failures
+            return new Response(JSON.stringify({ data: [] }), {
+              headers: { 'Content-Type': 'application/json' },
+              status: 200
+            });
+          });
+        });
       })
     );
     return;
   }
 
-  // Default: try network then cache
-  event.respondWith(fetch(req).catch(() => caches.match(req)));
+  // Handle static assets with stale-while-revalidate
+  if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(css|js|png|jpg|svg|ico)$/)) {
+    event.respondWith(
+      caches.open(CACHE_NAME).then(cache => {
+        return cache.match(req).then(cached => {
+          const fetchPromise = fetch(req).then(response => {
+            if (response.ok) {
+              cache.put(req, response.clone());
+            }
+            return response;
+          }).catch(() => null);
+          
+          return cached || fetchPromise;
+        });
+      })
+    );
+    return;
+  }
+
+  // Default: network with cache fallback
+  event.respondWith(
+    fetch(req).catch(() => caches.match(req))
+  );
+});
+
+// Handle background sync for offline actions (future enhancement)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(
+      // Handle queued actions when back online
+      console.log('Background sync triggered')
+    );
+  }
+});
+
+// Handle push notifications (future enhancement)
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    const data = event.data.json();
+    const options = {
+      body: data.body,
+      icon: '/logo.png',
+      badge: '/logo.png',
+      tag: 'unami-moment',
+      requireInteraction: false,
+      actions: [
+        {
+          action: 'view',
+          title: 'View Moment'
+        },
+        {
+          action: 'dismiss',
+          title: 'Dismiss'
+        }
+      ]
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(data.title || 'New Moment', options)
+    );
+  }
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  
+  if (event.action === 'view') {
+    event.waitUntil(
+      clients.openWindow('/moments')
+    );
+  }
 });

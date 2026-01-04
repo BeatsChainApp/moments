@@ -86,7 +86,10 @@
 <body>
     <div class="header">
         <div class="container">
-            <h1>📢 Unami Foundation Moments</h1>
+            <h1>
+                <img src="/Placeholder-logo.png" alt="logo" style="height:40px;vertical-align:middle;margin-right:8px;">
+                📢 Unami Foundation Moments
+            </h1>
             <div class="nav">
                 <button data-section="dashboard" class="active">Dashboard</button>
                 <button data-section="moments">Moments</button>
@@ -97,6 +100,12 @@
                 <button data-section="subscribers">Subscribers</button>
                 <button data-section="settings">Settings</button>
             </div>
+        </div>
+    </div>
+    <div style="position: absolute; top: 12px; right: 16px;">
+        <div id="auth-area">
+            <button id="sign-in" class="btn btn-sm">Sign in</button>
+            <button id="sign-out" class="btn btn-sm hidden">Sign out</button>
         </div>
     </div>
 
@@ -225,6 +234,11 @@
                         <input type="datetime-local" name="scheduled_at">
                         <small style="color: #6b7280;">Leave empty to save as draft</small>
                     </div>
+                    <div class="form-group">
+                        <label>Media files (optional)</label>
+                        <input type="file" name="media_files" id="media_files" multiple accept="image/*,video/*,audio/*">
+                        <small style="color: #6b7280;">Uploaded files will be stored and included in the Moment.</small>
+                    </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button type="submit" class="btn" id="submit-btn">Create Moment</button>
                         <button type="button" class="btn btn-secondary" data-action="reset-form">Reset</button>
@@ -351,6 +365,12 @@
         </div>
     </div>
 
+    <script>
+        // Supply Supabase details for the admin UI (override in production)
+        window.SUPABASE_URL = window.SUPABASE_URL || 'https://arqeiadudzbmzdhqkit.supabase.co';
+        window.SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || 'SUPABASE_ANON_KEY_PLACEHOLDER';
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
     <script src="/js/admin.js"></script>
 </body>
 </html>

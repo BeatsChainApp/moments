@@ -135,8 +135,7 @@ app.get('/test-mcp', async (req, res) => {
   }
 });
 
-// Admin API routes
-app.use('/admin', adminRoutes);
+// Admin API routes (mounted above with CSRF middleware)
 
 // WhatsApp webhook endpoints
 app.get('/webhook', verifyWebhook);

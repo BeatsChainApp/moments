@@ -56,7 +56,7 @@ cat supabase/schema.sql | supabase db reset --db-url $SUPABASE_URL
 
 ## WhatsApp Configuration
 
-1. Set webhook URL: `https://your-domain.com/webhook`
+1. Set webhook URL: `https://moments.unamfoundation.org/webhook` (update DNS and TLS for this subdomain)
 2. Set verify token from your `.env`
 3. Subscribe to message events
 4. Test with a message
@@ -84,9 +84,9 @@ pm2 save
 pm2 startup
 ```
 
-## Monitoring
+- Monitoring
 
-- Health check: `GET /health`
+- Health check: `GET /health` (e.g., https://moments.unamfoundation.org/health)
 - Logs: Check console output and Supabase flags table
 - Media processing: Monitor storage bucket usage
 - n8n workflows: Check execution logs

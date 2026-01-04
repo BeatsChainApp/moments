@@ -72,6 +72,13 @@ router.post('/moments', async (req, res) => {
     }
 
     const status = scheduled_at ? 'scheduled' : 'draft';
+    // Normalize media_urls: accept comma-separated string or array
+    let normalizedMedia = [];
+    if (Array.isArray(media_urls)) {
+      normalizedMedia = media_urls.map(u => (u || '').toString().trim()).filter(Boolean);
+    } else if (typeof media_urls === 'string') {
+      normalizedMedia = media_urls.split(',').map(u => u.trim()).filter(Boolean);
+    }
 
     const { data, error } = await supabase
       .from('moments')
@@ -84,7 +91,7 @@ router.post('/moments', async (req, res) => {
         sponsor_id,
         is_sponsored,
         pwa_link,
-        media_urls,
+        media_urls: normalizedMedia,
         scheduled_at,
         status,
         created_by

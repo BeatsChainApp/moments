@@ -1,4 +1,27 @@
 const API_BASE = window.location.origin;
+// Supabase client (initialized after CDN script loads)
+let supabaseClient = null;
+
+function initSupabase() {
+    if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
+        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+    }
+}
+
+async function apiFetch(path, opts = {}) {
+    opts.headers = opts.headers || {};
+    try {
+        if (supabaseClient) {
+            const session = await supabaseClient.auth.getSession();
+            const token = session?.data?.session?.access_token;
+            if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+        }
+    } catch (e) {
+        console.warn('apiFetch auth lookup failed', e?.message || e);
+    }
+    const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
+    return fetch(url, opts);
+}
 let currentPage = 1;
 let allMoments = [];
 let filteredMoments = [];
@@ -114,7 +137,7 @@ function handleAction(action, element) {
 // Load analytics
 async function loadAnalytics() {
     try {
-        const response = await fetch(`${API_BASE}/admin/analytics`);
+        const response = await apiFetch('/admin/analytics');
         const data = await response.json();
         
         document.getElementById('analytics').innerHTML = `
@@ -143,7 +166,7 @@ async function loadAnalytics() {
 // Load recent activity
 async function loadRecentActivity() {
     try {
-        const response = await fetch(`${API_BASE}/admin/moments?limit=5`);
+        const response = await apiFetch('/admin/moments?limit=5');
         const data = await response.json();
         
         if (data.moments && data.moments.length > 0) {
@@ -167,7 +190,7 @@ async function loadRecentActivity() {
 // Load moments with filtering and pagination
 async function loadMoments(page = 1) {
     try {
-        const response = await fetch(`${API_BASE}/admin/moments?page=${page}&limit=10`);
+        const response = await apiFetch(`/admin/moments?page=${page}&limit=10`);
         const data = await response.json();
         allMoments = data.moments || [];
         currentPage = page;
@@ -264,7 +287,7 @@ function deleteMoment(id) {
     const moment = allMoments.find(m => m.id === id);
     showConfirm(`Delete "${moment.title}"?`, async () => {
         try {
-            const response = await fetch(`${API_BASE}/admin/moments/${id}`, {
+                const response = await apiFetch(`/admin/moments/${id}`, {
                 method: 'DELETE'
             });
             
@@ -285,7 +308,7 @@ function deleteMoment(id) {
 async function broadcastMoment(momentId) {
     showConfirm('Broadcast this moment now?', async () => {
         try {
-            const response = await fetch(`${API_BASE}/admin/moments/${momentId}/broadcast`, {
+                const response = await apiFetch(`/admin/moments/${momentId}/broadcast`, {
                 method: 'POST'
             });
             
@@ -306,7 +329,7 @@ async function broadcastMoment(momentId) {
 // Load sponsors
 async function loadSponsors() {
     try {
-        const response = await fetch(`${API_BASE}/admin/sponsors`);
+        const response = await apiFetch('/admin/sponsors');
         const data = await response.json();
         
         // Update sponsor select in create form
@@ -380,7 +403,7 @@ function editSponsor(id) {
 function deleteSponsor(id) {
     showConfirm('Delete this sponsor?', async () => {
         try {
-            const response = await fetch(`${API_BASE}/admin/sponsors/${id}`, {
+            const response = await apiFetch(`/admin/sponsors/${id}`, {
                 method: 'DELETE'
             });
             
@@ -399,7 +422,7 @@ function deleteSponsor(id) {
 // Load broadcasts
 async function loadBroadcasts() {
     try {
-        const response = await fetch(`${API_BASE}/admin/broadcasts`);
+        const response = await apiFetch('/admin/broadcasts');
         const data = await response.json();
         
         if (data.broadcasts && data.broadcasts.length > 0) {
@@ -443,7 +466,7 @@ async function loadBroadcasts() {
 async function loadModeration() {
     try {
         const filter = document.getElementById('moderation-filter')?.value || 'all';
-        const response = await fetch(`${API_BASE}/admin/moderation?filter=${filter}`);
+        const response = await apiFetch(`/admin/moderation?filter=${filter}`);
         const data = await response.json();
         
         if (data.flaggedMessages && data.flaggedMessages.length > 0) {
@@ -484,7 +507,7 @@ async function loadModeration() {
 async function loadSubscribers() {
     try {
         const filter = document.getElementById('subscriber-filter')?.value || 'all';
-        const response = await fetch(`${API_BASE}/admin/subscribers?filter=${filter}`);
+        const response = await apiFetch(`/admin/subscribers?filter=${filter}`);
         const data = await response.json();
         
         if (data.subscribers && data.subscribers.length > 0) {
@@ -527,7 +550,7 @@ async function loadSubscribers() {
 // Load system settings
 async function loadSettings() {
     try {
-        const response = await fetch(`${API_BASE}/admin/settings`);
+        const response = await apiFetch('/admin/settings');
         const data = await response.json();
         
         if (data.settings && data.settings.length > 0) {
@@ -575,7 +598,7 @@ function editSetting(key, currentValue, type) {
 // Update setting
 async function updateSetting(key, value) {
     try {
-        const response = await fetch(`${API_BASE}/admin/settings/${key}`, {
+        const response = await apiFetch(`/admin/settings/${key}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ value })
@@ -699,27 +722,60 @@ document.addEventListener('DOMContentLoaded', () => {
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
             const isEdit = !!data.id;
-            
+
             data.is_sponsored = !!data.sponsor_id;
-            
+
+            // Normalize empty values
             Object.keys(data).forEach(key => {
                 if (data[key] === '') delete data[key];
             });
-            
+
+            // Handle media file uploads if any
+            const mediaInput = document.getElementById('media_files');
+            const mediaUrls = [];
+            if (mediaInput && mediaInput.files && mediaInput.files.length > 0) {
+                if (!supabaseClient) {
+                    showError('Storage unavailable: missing Supabase client');
+                    return;
+                }
+
+                for (const file of Array.from(mediaInput.files)) {
+                    try {
+                        const path = `moments/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
+                        const { data: uploadData, error: uploadErr } = await supabaseClient.storage.from('moments').upload(path, file, { cacheControl: '3600', upsert: false });
+                        if (uploadErr) {
+                            console.error('Upload error', uploadErr.message || uploadErr);
+                            continue;
+                        }
+                        const { data: publicData } = supabaseClient.storage.from('moments').getPublicUrl(path);
+                        if (publicData && publicData.publicUrl) mediaUrls.push(publicData.publicUrl);
+                    } catch (err) {
+                        console.error('File upload failed', err?.message || err);
+                    }
+                }
+            }
+
+            if (mediaUrls.length > 0) data.media_urls = mediaUrls;
+
+            // Convert scheduled_at (datetime-local) to ISO if present
+            if (data.scheduled_at && data.scheduled_at.indexOf('T') !== -1) {
+                data.scheduled_at = new Date(data.scheduled_at).toISOString();
+            }
+
             try {
-                const url = isEdit ? `${API_BASE}/admin/moments/${data.id}` : `${API_BASE}/admin/moments`;
+                const url = isEdit ? `/admin/moments/${data.id}` : '/admin/moments';
                 const method = isEdit ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
+
+                const response = await apiFetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
-                
+
                 if (response.ok) {
                     showSuccess(`Moment ${isEdit ? 'updated' : 'created'} successfully!`);
                     resetForm();
@@ -748,7 +804,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = isEdit ? `${API_BASE}/admin/sponsors/${data.id}` : `${API_BASE}/admin/sponsors`;
                 const method = isEdit ? 'PUT' : 'POST';
                 
-                const response = await fetch(url, {
+                const response = await apiFetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -768,6 +824,48 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Initialize Supabase and auth UI
+    initSupabase();
+    const signInBtn = document.getElementById('sign-in');
+    const signOutBtn = document.getElementById('sign-out');
+
+    async function refreshAuthUI() {
+        if (!supabaseClient) return;
+        const session = await supabaseClient.auth.getSession();
+        if (session?.data?.session) {
+            signInBtn.classList.add('hidden');
+            signOutBtn.classList.remove('hidden');
+        } else {
+            signInBtn.classList.remove('hidden');
+            signOutBtn.classList.add('hidden');
+        }
+    }
+
+    if (signInBtn) {
+        signInBtn.addEventListener('click', async () => {
+            const email = prompt('Admin email:');
+            const password = prompt('Password:');
+            if (!email || !password) return;
+            try {
+                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+                if (error) return alert('Sign-in failed: ' + error.message);
+                await refreshAuthUI();
+            } catch (err) {
+                console.error('Sign-in error', err);
+            }
+        });
+    }
+    if (signOutBtn) {
+        signOutBtn.addEventListener('click', async () => {
+            try {
+                if (supabaseClient) await supabaseClient.auth.signOut();
+            } catch (err) {}
+            await refreshAuthUI();
+        });
+    }
+
+    refreshAuthUI();
+
     // Initialize app
     loadAnalytics();
     loadRecentActivity();
@@ -775,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadSettings();
     
     // Load and apply logo from settings
-    fetch(`${API_BASE}/admin/settings`)
+    apiFetch('/admin/settings')
         .then(response => response.json())
         .then(data => {
             const logoSetting = data.settings?.find(s => s.setting_key === 'app_logo');

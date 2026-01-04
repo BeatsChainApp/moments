@@ -79,9 +79,10 @@ ADMIN_ORIGIN=https://your-admin-origin.example
 
 ## **Access Points**
 
-- **Admin**: `https://your-domain.vercel.app`
+- **Site / PWA**: `https://moments.unamfoundation.org`
+- **Admin**: `https://moments.unamfoundation.org/admin.html`
 - **Settings**: Settings tab in admin
-- **Health**: `https://your-domain.vercel.app/health`
-- **Webhook**: `https://your-domain.vercel.app/webhook`
+- **Health**: `https://moments.unamfoundation.org/health`
+- **Webhook**: `https://moments.unamfoundation.org/webhook`
 
 **System is production-ready!** 🎉

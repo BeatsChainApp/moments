@@ -42,7 +42,7 @@ npm start
 
 ### 4. Access Admin Dashboard
 - Local: `http://localhost:3000`
-- Production: `https://moments-api.unamifoundation.org`
+-- Production: `https://moments.unamfoundation.org`
 
 ## 📱 WhatsApp Integration
 
