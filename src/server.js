@@ -89,7 +89,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Internal-Secret']
 }));
 
-app.use(express.static(path.join(__dirname, '../public')));
+// Serve static files but exclude index.html to prevent conflicts
+app.use(express.static(path.join(__dirname, '../public'), {
+  index: false // Don't serve index.html automatically
+}));
 
 // parse cookies for CSRF handling
 app.use(cookieParser());
@@ -188,13 +191,13 @@ const verifyIncomingWebhook = (req, res, next) => {
 
 app.post('/webhook', verifyIncomingWebhook, handleWebhook);
 
-// PWA routes
+// PWA routes - Serve production landing page
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.sendFile(path.join(__dirname, '../public/landing.html'));
 });
 
 app.get('/moments', (req, res) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.redirect('https://moments-pwa.unamifoundation.org/moments');
 });
 
 // Error handling
