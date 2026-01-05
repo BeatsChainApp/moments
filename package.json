@@ -3,48 +3,20 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node src/production-server.js",
-    "start:full": "node src/server.js",
-    "start:minimal": "node src/minimal-server.js",
+    "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "dev:next": "next dev",
     "test": "node --test tests/**/*.test.js",
-    "test:watch": "node --test --watch tests/**/*.test.js",
-    "test:smoke": "node tests/smoke-tests.js",
-    "test:admin": "./test-admin-complete.sh",
-    "test:all": "npm run test && npm run test:smoke",
-    "test:pwa": "echo '✅ Server running on port 8080. Use Codespaces port forwarding to test PWA features.' && echo 'See PWA_CODESPACES.md for testing guide.'",
-    "build": "next build || echo 'Next build skipped'",
-    "build:legacy": "echo 'Build complete - Vercel serverless functions ready'",
-    "vercel-build": "echo 'Vercel build complete - serverless functions ready'",
-    "deploy:vercel": "vercel --prod",
-    "deploy:railway": "railway up",
-    "setup:storage": "node scripts/create_storage_bucket.js",
-    "apply:rbac": "bash scripts/apply_rbac.sh",
-    "seed:superadmin": "bash scripts/seed_superadmin.sh"
+    "build": "echo 'No build step required'"
   },
   "dependencies": {
-    "@sentry/node": "^7.26.0",
-    "@supabase/supabase-js": "^2.38.0",
-    "axios": "^1.6.0",
-    "bcrypt": "^6.0.0",
-    "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
+    "@supabase/supabase-js": "^2.45.0",
     "express": "^4.18.2",
-    "form-data": "^4.0.0",
-    "franc": "^6.1.0",
-    "jsonwebtoken": "^9.0.3",
-    "multer": "^1.4.5-lts.1",
-    "pg": "^8.11.3",
-    "uuid": "^9.0.1"
-  },
-  "devDependencies": {
-    "next": "^14.0.0",
-    "supertest": "^6.3.4"
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.6",
+    "jsonwebtoken": "^9.0.3"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "node": ">=20.0.0"
   }
 }
