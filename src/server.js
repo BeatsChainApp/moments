@@ -31,16 +31,6 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Health check - MUST be before any middleware that could block it
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'Unami Foundation Moments API',
-    version: '1.0.0'
-  });
-});
-
 // Capture raw body for webhook HMAC verification
 app.use(express.json({
   limit: '50mb',
@@ -66,16 +56,11 @@ if (process.env.SENTRY_DSN) {
   app.use(Sentry.Handlers.requestHandler());
 }
 
-// Simple in-memory rate limiter (per IP) - EXCLUDE health check
+// Simple in-memory rate limiter (per IP)
 const rateWindowMs = 15 * 60 * 1000; // 15 minutes
 const maxRequests = 300; // per window per IP
 const ipMap = new Map();
 app.use((req, res, next) => {
-  // Skip rate limiting for health check
-  if (req.path === '/health') {
-    return next();
-  }
-  
   try {
     const now = Date.now();
     const ip = req.ip || req.connection.remoteAddress || 'unknown';
@@ -131,30 +116,10 @@ app.post('/admin/login', adminLogin);
 // Mount public routes (no auth required)
 app.use('/public', publicRoutes);
 
-// Detailed health check with external services
-app.get('/health-detailed', async (req, res) => {
-  try {
-    const health = await healthCheck();
-    res.status(200).json(health);
-  } catch (error) {
-    console.error('Detailed health check error:', error);
-    res.status(200).json({
-      status: 'degraded',
-      timestamp: new Date().toISOString(),
-      service: 'Unami Foundation Moments API',
-      error: error.message
-    });
-  }
-});
-
-// Health check - MUST be before any middleware that could block it
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'Unami Foundation Moments API',
-    version: '1.0.0'
-  });
+// Health check
+app.get('/health', async (req, res) => {
+  const health = await healthCheck();
+  res.json(health);
 });
 
 // Test endpoints
@@ -253,11 +218,10 @@ app.use((req, res) => {
 
 // Export app for testing; start server only when not in test env
 if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Unami Foundation Moments API running on port ${PORT}`);
-    console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
-    console.log(`🎛️  Admin Dashboard: http://0.0.0.0:${PORT}/admin-dashboard.html`);
-    console.log(`🌍 Environment: ${process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'production'}`);
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Unami Foundation Moments API running on port ${PORT}`);
+    console.log(`Health check: http://0.0.0.0:${PORT}/health`);
+    console.log(`Admin Dashboard: http://0.0.0.0:${PORT}`);
 
     // Start broadcast scheduler (check every 5 minutes) - with error handling
     try {
@@ -269,18 +233,10 @@ if (process.env.NODE_ENV !== 'test') {
           if (process.env.SENTRY_DSN) Sentry.captureException(err);
         }
       }, 5 * 60 * 1000);
-      console.log('📅 Broadcast scheduler started');
+      console.log('Broadcast scheduler started');
     } catch (err) {
       console.error('Failed to start broadcast scheduler:', err.message);
     }
-  });
-  
-  // Graceful shutdown
-  process.on('SIGTERM', () => {
-    console.log('SIGTERM received, shutting down gracefully');
-    server.close(() => {
-      console.log('Process terminated');
-    });
   });
 }
 
