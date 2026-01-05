@@ -3,13 +3,18 @@
 import { useState, useEffect } from 'react';
 
 export default function HomePage() {
+  const [connected, setConnected] = useState(false);
   const [stats, setStats] = useState({ moments: 0, subscribers: 0, broadcasts: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check if user has connected via WhatsApp (stored in localStorage)
+    const isConnected = localStorage.getItem('whatsapp_connected') === 'true';
+    setConnected(isConnected);
+    
+    // Fetch public stats
     async function fetchStats() {
       try {
-        // Use public stats endpoint instead of admin analytics
         const res = await fetch('/api/public-stats');
         if (res.ok) {
           const data = await res.json();
@@ -18,19 +23,106 @@ export default function HomePage() {
             subscribers: data.activeSubscribers || 0,
             broadcasts: data.totalBroadcasts || 0
           });
-        } else {
-          // Fallback to static data if API unavailable
-          setStats({ moments: 0, subscribers: 0, broadcasts: 0 });
         }
       } catch (e) {
-        console.log('Stats not available, using defaults');
-        setStats({ moments: 0, subscribers: 0, broadcasts: 0 });
+        console.log('Stats not available');
       } finally {
         setLoading(false);
       }
     }
     fetchStats();
   }, []);
+
+  const handleWhatsAppConnect = () => {
+    // Open WhatsApp with pre-filled message
+    const message = encodeURIComponent('START - I want to join Unami Moments community updates');
+    const whatsappUrl = `https://wa.me/27658295041?text=${message}`;
+    window.open(whatsappUrl, '_blank');
+    
+    // Mark as connected (user will confirm after sending message)
+    setTimeout(() => {
+      localStorage.setItem('whatsapp_connected', 'true');
+      setConnected(true);
+    }, 2000);
+  };
+
+  if (!connected) {
+    return (
+      <div style={{maxWidth: '600px', margin: '0 auto', textAlign: 'center'}}>
+        {/* Welcome Section */}
+        <div className="card" style={{background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white', marginBottom: '24px'}}>
+          <div style={{fontSize: '3rem', marginBottom: '16px'}}>🌍</div>
+          <h1 style={{fontSize: '2.5rem', marginBottom: '12px', fontWeight: 700}}>Welcome to Unami Moments</h1>
+          <p style={{fontSize: '1.2rem', opacity: 0.9, lineHeight: 1.6}}>100% WhatsApp-native community engagement platform connecting South African communities</p>
+        </div>
+
+        {/* Connection Steps */}
+        <div className="card" style={{marginBottom: '24px', textAlign: 'left'}}>
+          <h2 style={{color: '#1f2937', marginBottom: '20px', textAlign: 'center'}}>Get Started in 3 Simple Steps</h2>
+          
+          <div style={{display: 'flex', flexDirection: 'column', gap: '16px'}}>
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              <div style={{background: '#2563eb', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>1</div>
+              <div>
+                <strong>Connect via WhatsApp</strong>
+                <p style={{color: '#6b7280', margin: '4px 0 0 0'}}>Click below to send a message to our WhatsApp number</p>
+              </div>
+            </div>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              <div style={{background: '#059669', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>2</div>
+              <div>
+                <strong>Choose Your Preferences</strong>
+                <p style={{color: '#6b7280', margin: '4px 0 0 0'}}>Select regions and topics you're interested in</p>
+              </div>
+            </div>
+            
+            <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+              <div style={{background: '#dc2626', color: 'white', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>3</div>
+              <div>
+                <strong>Receive Community Updates</strong>
+                <p style={{color: '#6b7280', margin: '4px 0 0 0'}}>Get moments, events, and opportunities directly on WhatsApp</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Connect Button */}
+        <button 
+          onClick={handleWhatsAppConnect}
+          className="btn btn-primary"
+          style={{fontSize: '1.1rem', padding: '12px 24px', marginBottom: '24px', width: '100%', maxWidth: '300px'}}
+        >
+          📱 Connect via WhatsApp
+        </button>
+
+        {/* Community Stats */}
+        <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '24px'}}>
+          <div className="card" style={{textAlign: 'center', padding: '12px'}}>
+            <div style={{fontSize: '1.5rem', color: '#2563eb', marginBottom: '4px'}}>📢</div>
+            <div style={{fontSize: '1.2rem', fontWeight: 600}}>{loading ? '...' : stats.moments}</div>
+            <div style={{color: '#6b7280', fontSize: '12px'}}>Moments</div>
+          </div>
+          <div className="card" style={{textAlign: 'center', padding: '12px'}}>
+            <div style={{fontSize: '1.5rem', color: '#059669', marginBottom: '4px'}}>👥</div>
+            <div style={{fontSize: '1.2rem', fontWeight: 600}}>{loading ? '...' : stats.subscribers}</div>
+            <div style={{color: '#6b7280', fontSize: '12px'}}>Members</div>
+          </div>
+          <div className="card" style={{textAlign: 'center', padding: '12px'}}>
+            <div style={{fontSize: '1.5rem', color: '#dc2626', marginBottom: '4px'}}>📡</div>
+            <div style={{fontSize: '1.2rem', fontWeight: 600}}>{loading ? '...' : stats.broadcasts}</div>
+            <div style={{color: '#6b7280', fontSize: '12px'}}>Updates</div>
+          </div>
+        </div>
+
+        {/* WhatsApp Info */}
+        <div className="card" style={{background: '#f0fdf4', border: '1px solid #bbf7d0', fontSize: '14px'}}>
+          <p style={{color: '#166534', marginBottom: '8px'}}><strong>WhatsApp Number:</strong> +27 65 829 5041</p>
+          <p style={{color: '#166534'}}>Send "START" to begin receiving community updates</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -39,8 +131,8 @@ export default function HomePage() {
         <h1 style={{fontSize: '2rem', marginBottom: '8px', fontWeight: 700}}>🌍 Welcome to Unami Moments</h1>
         <p style={{fontSize: '1.1rem', opacity: 0.9, marginBottom: '16px'}}>100% WhatsApp-native community engagement platform for South Africa</p>
         <div style={{display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap'}}>
+          <a href="/preferences" className="btn" style={{background: 'rgba(255,255,255,0.2)', color: 'white', textDecoration: 'none'}}>⚙️ Set Preferences</a>
           <a href="/moments" className="btn" style={{background: 'rgba(255,255,255,0.2)', color: 'white', textDecoration: 'none'}}>📢 View Moments</a>
-          <a href="/broadcasts" className="btn" style={{background: 'rgba(255,255,255,0.2)', color: 'white', textDecoration: 'none'}}>📡 Broadcasts</a>
         </div>
       </div>
 
