@@ -116,10 +116,20 @@ app.post('/admin/login', adminLogin);
 // Mount public routes (no auth required)
 app.use('/public', publicRoutes);
 
-// Health check
+// Health check - simplified for Railway deployment
 app.get('/health', async (req, res) => {
-  const health = await healthCheck();
-  res.json(health);
+  try {
+    const health = await healthCheck();
+    res.status(200).json(health);
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(200).json({
+      status: 'degraded',
+      timestamp: new Date().toISOString(),
+      service: 'Unami Foundation Moments API',
+      error: error.message
+    });
+  }
 });
 
 // Test endpoints
@@ -218,10 +228,11 @@ app.use((req, res) => {
 
 // Export app for testing; start server only when not in test env
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Unami Foundation Moments API running on port ${PORT}`);
-    console.log(`Health check: http://0.0.0.0:${PORT}/health`);
-    console.log(`Admin Dashboard: http://0.0.0.0:${PORT}`);
+  const server = app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Unami Foundation Moments API running on port ${PORT}`);
+    console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
+    console.log(`🎛️  Admin Dashboard: http://0.0.0.0:${PORT}/admin-dashboard.html`);
+    console.log(`🌍 Environment: ${process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'production'}`);
 
     // Start broadcast scheduler (check every 5 minutes) - with error handling
     try {
@@ -233,10 +244,18 @@ if (process.env.NODE_ENV !== 'test') {
           if (process.env.SENTRY_DSN) Sentry.captureException(err);
         }
       }, 5 * 60 * 1000);
-      console.log('Broadcast scheduler started');
+      console.log('📅 Broadcast scheduler started');
     } catch (err) {
       console.error('Failed to start broadcast scheduler:', err.message);
     }
+  });
+  
+  // Graceful shutdown
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    server.close(() => {
+      console.log('Process terminated');
+    });
   });
 }
 

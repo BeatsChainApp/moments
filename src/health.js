@@ -6,18 +6,25 @@ export async function healthCheck() {
     timestamp: new Date().toISOString(),
     service: 'Unami Foundation Moments API',
     version: '1.0.0',
-    environment: process.env.VERCEL_ENV || process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'local'
+    environment: process.env.RAILWAY_ENVIRONMENT || process.env.NODE_ENV || 'production'
   };
 
-  // Only test external services if environment variables are configured
+  // Test Supabase connection with timeout
   if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_KEY) {
     try {
-      const { data, error } = await supabase.from('messages').select('count').limit(1);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Supabase timeout')), 5000)
+      );
+      
+      const dbPromise = supabase.from('messages').select('count').limit(1);
+      
+      const { data, error } = await Promise.race([dbPromise, timeoutPromise]);
       if (error) throw error;
       results.supabase = { status: 'connected' };
     } catch (err) {
+      console.warn('Supabase health check failed:', err.message);
       results.supabase = { status: 'failed', error: err.message };
-      // Don't fail health check if Supabase is down
+      // Don't fail overall health check
     }
   } else {
     results.supabase = { status: 'not_configured' };
