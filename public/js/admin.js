@@ -1,24 +1,24 @@
-const API_BASE = window.location.origin;
-// Supabase client (initialized after CDN script loads)
-let supabaseClient = null;
+// Direct API calls without Supabase library
+const API_BASE = '/admin';
 
-function initSupabase() {
-    if (window.supabase && window.SUPABASE_URL && window.SUPABASE_ANON_KEY) {
-        supabaseClient = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+// Get auth token from localStorage
+function getAuthToken() {
+    const token = localStorage.getItem('supabase.auth.token');
+    if (!token) return null;
+    try {
+        const parsed = JSON.parse(token);
+        return parsed.access_token;
+    } catch {
+        return null;
     }
 }
 
+// API fetch with auth
 async function apiFetch(path, opts = {}) {
     opts.headers = opts.headers || {};
-    try {
-        if (supabaseClient) {
-            const session = await supabaseClient.auth.getSession();
-            const token = session?.data?.session?.access_token;
-            if (token) opts.headers['Authorization'] = `Bearer ${token}`;
-        }
-    } catch (e) {
-        console.warn('apiFetch auth lookup failed', e?.message || e);
-    }
+    const token = getAuthToken();
+    if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+    
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
     return fetch(url, opts);
 }
@@ -137,7 +137,7 @@ function handleAction(action, element) {
 // Load analytics
 async function loadAnalytics() {
     try {
-        const response = await apiFetch('/admin/analytics');
+        const response = await apiFetch('/analytics');
         const data = await response.json();
         
         document.getElementById('analytics').innerHTML = `
@@ -166,7 +166,7 @@ async function loadAnalytics() {
 // Load recent activity
 async function loadRecentActivity() {
     try {
-        const response = await apiFetch('/admin/moments?limit=5');
+        const response = await apiFetch('/moments?limit=5');
         const data = await response.json();
         
         if (data.moments && data.moments.length > 0) {
@@ -190,7 +190,7 @@ async function loadRecentActivity() {
 // Load moments with filtering and pagination
 async function loadMoments(page = 1) {
     try {
-        const response = await apiFetch(`/admin/moments?page=${page}&limit=10`);
+        const response = await apiFetch(`/moments?page=${page}&limit=10`);
         const data = await response.json();
         allMoments = data.moments || [];
         currentPage = page;
@@ -329,7 +329,7 @@ async function broadcastMoment(momentId) {
 // Load sponsors
 async function loadSponsors() {
     try {
-        const response = await apiFetch('/admin/sponsors');
+        const response = await apiFetch('/sponsors');
         const data = await response.json();
         
         // Update sponsor select in create form
