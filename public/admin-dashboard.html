@@ -491,6 +491,12 @@
                     });
                 }
                 
+                // Initialize the admin interface
+                loadAnalytics();
+                loadRecentActivity();
+                loadSponsors();
+                loadSettings();
+                
             } catch (error) {
                 console.error('Auth error:', error);
                 window.location.href = '/login';

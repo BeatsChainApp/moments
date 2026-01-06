@@ -917,3 +917,48 @@ window.addEventListener('beforeinstallprompt', (e) => {
     });
     document.body.appendChild(installBtn);
 });
+
+// Load campaigns
+async function loadCampaigns() {
+    try {
+        const response = await apiFetch('/campaigns');
+        const data = await response.json();
+        
+        if (data.campaigns && data.campaigns.length > 0) {
+            const html = data.campaigns.map(campaign => `
+                <div class="moment-item">
+                    <div class="moment-header">
+                        <div class="moment-info">
+                            <div class="moment-title">${campaign.title}</div>
+                            <div class="moment-meta">
+                                Budget: R${campaign.budget || 0} • ${new Date(campaign.created_at).toLocaleDateString()}
+                            </div>
+                        </div>
+                        <div class="moment-actions">
+                            <span class="status-badge status-${campaign.status}">${campaign.status}</span>
+                            ${campaign.status === 'pending_review' ? `<button class="btn btn-sm btn-success" data-action="approve-campaign" data-id="${campaign.id}">Approve</button>` : ''}
+                            ${campaign.status === 'approved' ? `<button class="btn btn-sm btn-success" data-action="publish-campaign" data-id="${campaign.id}">Publish</button>` : ''}
+                            <button class="btn btn-sm" data-action="edit-campaign" data-id="${campaign.id}">Edit</button>
+                        </div>
+                    </div>
+                    <div class="moment-content">${campaign.content.substring(0, 200)}${campaign.content.length > 200 ? '...' : ''}</div>
+                    <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.5rem;">
+                        Regions: ${campaign.target_regions?.join(', ') || 'All'} • 
+                        Categories: ${campaign.target_categories?.join(', ') || 'All'}
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('campaigns-list').innerHTML = html;
+        } else {
+            document.getElementById('campaigns-list').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">📢</div>
+                    <div>No campaigns found</div>
+                    <button class="btn" data-action="create-campaign" style="margin-top: 1rem;">Create First Campaign</button>
+                </div>
+            `;
+        }
+    } catch (error) {
+        document.getElementById('campaigns-list').innerHTML = '<div class="error">Failed to load campaigns</div>';
+    }
+}
