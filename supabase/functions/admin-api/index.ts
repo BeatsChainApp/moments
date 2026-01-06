@@ -34,6 +34,7 @@ serve(async (req) => {
 
     // Handle login - check for email/password in body
     if (method === 'POST' && body && body.email && body.password) {
+      console.log('Login attempt for:', body.email)
       const { email, password } = body
       
       // Get admin user
@@ -44,7 +45,10 @@ serve(async (req) => {
         .eq('active', true)
         .single()
       
+      console.log('Admin query result:', { admin: admin?.email, error })
+      
       if (error || !admin) {
+        console.log('Admin not found or error:', error)
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -52,7 +56,10 @@ serve(async (req) => {
       }
       
       // Verify password
+      console.log('Verifying password...')
       const validPassword = await bcrypt.compare(password, admin.password_hash)
+      console.log('Password valid:', validPassword)
+      
       if (!validPassword) {
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
           status: 401,
@@ -64,6 +71,7 @@ serve(async (req) => {
       const sessionToken = crypto.randomUUID()
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
       
+      console.log('Creating session...')
       // Store session
       await supabase
         .from('admin_sessions')
@@ -79,6 +87,7 @@ serve(async (req) => {
         .update({ last_login: new Date().toISOString() })
         .eq('id', admin.id)
       
+      console.log('Login successful for:', email)
       return new Response(JSON.stringify({
         success: true,
         token: sessionToken,
