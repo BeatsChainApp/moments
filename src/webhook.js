@@ -2,6 +2,11 @@ import { supabase } from '../config/supabase.js';
 import { callMCPAdvisory } from './advisory.js';
 import { detectLanguage } from './language.js';
 import { downloadAndStoreMedia } from './media.js';
+import { 
+  sendWelcomeMessage, 
+  sendUnsubscribeConfirmation,
+  sendPreferencesMessage 
+} from './broadcast-compliant.js';
 import axios from 'axios';
 
 export function verifyWebhook(req, res) {
@@ -96,7 +101,7 @@ async function processMessage(message, value) {
     // Detect language
     const languageDetected = detectLanguage(content);
 
-    // Store message in database
+    // Store message in database and update 24-hour messaging window
     const { data: messageRecord, error: insertError } = await supabase
       .from('messages')
       .insert({
@@ -110,6 +115,9 @@ async function processMessage(message, value) {
       })
       .select()
       .single();
+    
+    // Update 24-hour messaging window (enables freeform messages)
+    await supabase.rpc('update_messaging_window', { user_phone: fromNumber });
 
     if (insertError) {
       console.error('Message insert error:', insertError);
@@ -161,6 +169,7 @@ async function processMessage(message, value) {
 
 async function handleOptOut(phoneNumber) {
   try {
+    // Update subscription status
     await supabase
       .from('subscriptions')
       .upsert({
@@ -169,7 +178,11 @@ async function handleOptOut(phoneNumber) {
         opted_out_at: new Date().toISOString(),
         last_activity: new Date().toISOString()
       });
-    console.log(`User ${phoneNumber} opted out`);
+    
+    // Send compliant unsubscribe confirmation using approved template
+    await sendUnsubscribeConfirmation(phoneNumber);
+    
+    console.log(`User ${phoneNumber} opted out with template confirmation`);
   } catch (error) {
     console.error('Opt-out error:', error);
   }
@@ -177,6 +190,10 @@ async function handleOptOut(phoneNumber) {
 
 async function handleOptIn(phoneNumber) {
   try {
+    const defaultRegion = 'National';
+    const defaultCategories = ['Education', 'Safety', 'Culture', 'Opportunity', 'Events', 'Health', 'Technology'];
+    
+    // Update subscription with consent tracking
     await supabase
       .from('subscriptions')
       .upsert({
@@ -184,10 +201,17 @@ async function handleOptIn(phoneNumber) {
         opted_in: true,
         opted_in_at: new Date().toISOString(),
         last_activity: new Date().toISOString(),
-        regions: ['National'],
-        categories: ['Education', 'Safety', 'Culture', 'Opportunity', 'Events', 'Health', 'Technology']
+        regions: [defaultRegion],
+        categories: defaultCategories,
+        consent_timestamp: new Date().toISOString(),
+        consent_method: 'whatsapp_optin',
+        double_opt_in_confirmed: true
       });
-    console.log(`User ${phoneNumber} opted in`);
+    
+    // Send compliant welcome message using approved template
+    await sendWelcomeMessage(phoneNumber, defaultRegion, defaultCategories);
+    
+    console.log(`User ${phoneNumber} opted in with template welcome`);
   } catch (error) {
     console.error('Opt-in error:', error);
   }
