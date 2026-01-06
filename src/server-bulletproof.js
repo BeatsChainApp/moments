@@ -22,17 +22,9 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Security headers with CSP for Supabase
+// Security headers - minimal for development
 app.use((req, res, next) => {
-  res.setHeader('Content-Security-Policy', 
-    "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "style-src 'self' 'unsafe-inline'; " +
-    "connect-src 'self' https://arqeiadudzwbmzdhqkit.supabase.co; " +
-    "img-src 'self' data: https:; " +
-    "font-src 'self' data:;"
-  );
+  // Remove CSP temporarily to fix login
   next();
 });
 
