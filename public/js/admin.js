@@ -304,21 +304,26 @@ function deleteMoment(id) {
 // Broadcast moment
 async function broadcastMoment(momentId) {
     showConfirm('Broadcast this moment now?', async () => {
+        const broadcastBtn = document.querySelector(`[data-action="broadcast"][data-id="${momentId}"]`);
+        if (broadcastBtn) setButtonLoading(broadcastBtn, true);
+        
         try {
-                const response = await apiFetch(`/moments/${momentId}/broadcast`, {
+            const response = await apiFetch(`/moments/${momentId}/broadcast`, {
                 method: 'POST'
             });
             
+            const result = await response.json();
             if (response.ok) {
                 showSuccess('Moment broadcasted successfully!');
                 loadMoments(currentPage);
                 loadAnalytics();
             } else {
-                const error = await response.json();
-                showError(error.error || 'Failed to broadcast moment');
+                showError(result.error || 'Failed to broadcast moment');
             }
         } catch (error) {
             showError('Failed to broadcast moment');
+        } finally {
+            if (broadcastBtn) setButtonLoading(broadcastBtn, false);
         }
     });
 }
@@ -694,23 +699,22 @@ function showNotification(message, type) {
     }, 3000);
 }
 
-// Add CSS animations
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
+// Show loading state on button
+function setButtonLoading(button, loading) {
+    if (loading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<span style="display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top:2px solid transparent;border-radius:50%;animation:spin 1s linear infinite;margin-right:8px;"></span>Loading...';
+    } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || button.textContent;
     }
-    @keyframes slideOut {
-        from { transform: translateX(0); opacity: 1; }
-        to { transform: translateX(100%); opacity: 0; }
-    }
-    .notification {
-        max-width: 300px;
-        word-wrap: break-word;
-    }
-`;
-document.head.appendChild(style);
+}
+
+// Add spinner CSS
+const spinnerStyle = document.createElement('style');
+spinnerStyle.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+document.head.appendChild(spinnerStyle);
 
 // Form submission handlers
 document.addEventListener('DOMContentLoaded', () => {
@@ -719,6 +723,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = document.getElementById('submit-btn');
+            setButtonLoading(submitBtn, true);
 
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
@@ -730,33 +736,6 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(data).forEach(key => {
                 if (data[key] === '') delete data[key];
             });
-
-            // Handle media file uploads if any
-            const mediaInput = document.getElementById('media_files');
-            const mediaUrls = [];
-            if (mediaInput && mediaInput.files && mediaInput.files.length > 0) {
-                if (!supabaseClient) {
-                    showError('Storage unavailable: missing Supabase client');
-                    return;
-                }
-
-                for (const file of Array.from(mediaInput.files)) {
-                    try {
-                        const path = `moments/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9_.-]/g, '_')}`;
-                        const { data: uploadData, error: uploadErr } = await supabaseClient.storage.from('moments').upload(path, file, { cacheControl: '3600', upsert: false });
-                        if (uploadErr) {
-                            console.error('Upload error', uploadErr.message || uploadErr);
-                            continue;
-                        }
-                        const { data: publicData } = supabaseClient.storage.from('moments').getPublicUrl(path);
-                        if (publicData && publicData.publicUrl) mediaUrls.push(publicData.publicUrl);
-                    } catch (err) {
-                        console.error('File upload failed', err?.message || err);
-                    }
-                }
-            }
-
-            if (mediaUrls.length > 0) data.media_urls = mediaUrls;
 
             // Convert scheduled_at (datetime-local) to ISO if present
             if (data.scheduled_at && data.scheduled_at.indexOf('T') !== -1) {
@@ -783,6 +762,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 showError(`Failed to ${isEdit ? 'update' : 'create'} moment`);
+            } finally {
+                setButtonLoading(submitBtn, false);
             }
         });
     }
@@ -792,6 +773,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (sponsorForm) {
         sponsorForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = document.getElementById('sponsor-submit-btn');
+            setButtonLoading(submitBtn, true);
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
@@ -807,78 +790,62 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(data)
                 });
                 
+                const result = await response.json();
                 if (response.ok) {
                     showSuccess(`Sponsor ${isEdit ? 'updated' : 'created'} successfully!`);
                     closeSponsorModal();
                     loadSponsors();
                 } else {
-                    const error = await response.json();
-                    document.getElementById('sponsor-message').innerHTML = `<div class="error">${error.error}</div>`;
+                    document.getElementById('sponsor-message').innerHTML = `<div class="error">${result.error}</div>`;
                 }
             } catch (error) {
                 document.getElementById('sponsor-message').innerHTML = '<div class="error">Failed to save sponsor</div>';
+            } finally {
+                setButtonLoading(submitBtn, false);
             }
         });
     }
 
-
-    const signInBtn = document.getElementById('sign-in');
-    const signOutBtn = document.getElementById('sign-out');
-
-    async function refreshAuthUI() {
-        if (!supabaseClient) return;
-        const session = await supabaseClient.auth.getSession();
-        if (session?.data?.session) {
-            signInBtn.classList.add('hidden');
-            signOutBtn.classList.remove('hidden');
-        } else {
-            signInBtn.classList.remove('hidden');
-            signOutBtn.classList.add('hidden');
-        }
-    }
-
-    if (signInBtn) {
-        signInBtn.addEventListener('click', async () => {
-            const email = prompt('Admin email:');
-            const password = prompt('Password:');
-            if (!email || !password) return;
+    // Campaign form handler
+    const campaignForm = document.getElementById('campaign-form');
+    if (campaignForm) {
+        campaignForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const submitBtn = document.getElementById('campaign-submit-btn');
+            setButtonLoading(submitBtn, true);
+            
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData);
+            
+            // Handle checkboxes for regions and categories
+            const regions = Array.from(document.querySelectorAll('input[name="target_regions"]:checked')).map(cb => cb.value);
+            const categories = Array.from(document.querySelectorAll('input[name="target_categories"]:checked')).map(cb => cb.value);
+            
+            data.target_regions = regions;
+            data.target_categories = categories;
+            
             try {
-                const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-                if (error) return alert('Sign-in failed: ' + error.message);
-                await refreshAuthUI();
-            } catch (err) {
-                console.error('Sign-in error', err);
+                const response = await apiFetch('/campaigns', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                if (response.ok) {
+                    showSuccess('Campaign created successfully!');
+                    closeCampaignModal();
+                    loadCampaigns();
+                } else {
+                    showError(result.error || 'Failed to create campaign');
+                }
+            } catch (error) {
+                showError('Failed to create campaign');
+            } finally {
+                setButtonLoading(submitBtn, false);
             }
         });
     }
-    if (signOutBtn) {
-        signOutBtn.addEventListener('click', async () => {
-            try {
-                if (supabaseClient) await supabaseClient.auth.signOut();
-            } catch (err) {}
-            await refreshAuthUI();
-        });
-    }
-
-    refreshAuthUI();
-
-    // Initialize app
-    loadAnalytics();
-    loadRecentActivity();
-    loadSponsors();
-    loadSettings();
-    
-    // Load and apply logo from settings
-    apiFetch('/admin/settings')
-        .then(response => response.json())
-        .then(data => {
-            const logoSetting = data.settings?.find(s => s.setting_key === 'app_logo');
-            if (logoSetting && logoSetting.setting_value) {
-                updateHeaderLogo(logoSetting.setting_value);
-            }
-        })
-        .catch(console.error);
-});
 
 // Service Worker disabled to prevent session conflicts
 // if ('serviceWorker' in navigator) {
@@ -976,6 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (campaignForm) {
         campaignForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            const submitBtn = document.getElementById('campaign-submit-btn');
+            setButtonLoading(submitBtn, true);
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
@@ -994,16 +963,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(data)
                 });
                 
+                const result = await response.json();
                 if (response.ok) {
                     showSuccess('Campaign created successfully!');
                     closeCampaignModal();
                     loadCampaigns();
                 } else {
-                    const error = await response.json();
-                    showError(error.error || 'Failed to create campaign');
+                    showError(result.error || 'Failed to create campaign');
                 }
             } catch (error) {
                 showError('Failed to create campaign');
+            } finally {
+                setButtonLoading(submitBtn, false);
             }
         });
     }

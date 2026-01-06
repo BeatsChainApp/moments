@@ -55,6 +55,9 @@ function hideAdminUserModal() {
 
 // Create admin user
 async function createAdminUser(formData) {
+    const submitBtn = document.getElementById('admin-user-submit-btn');
+    setButtonLoading(submitBtn, true);
+    
     try {
         const response = await fetch('/admin/admin-users', {
             method: 'POST',
@@ -80,6 +83,8 @@ async function createAdminUser(formData) {
         
     } catch (error) {
         showMessage('admin-user-message', error.message, 'error');
+    } finally {
+        setButtonLoading(submitBtn, false);
     }
 }
 
