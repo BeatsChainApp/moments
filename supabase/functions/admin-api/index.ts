@@ -27,10 +27,14 @@ serve(async (req) => {
     if (method === 'POST') {
       try {
         body = await req.json()
+        console.log('Parsed body:', JSON.stringify(body))
       } catch (e) {
+        console.log('Body parse error:', e.message)
         // Invalid JSON, continue
       }
     }
+
+    console.log('Method:', method, 'Body exists:', !!body, 'Has email:', !!body?.email, 'Has password:', !!body?.password)
 
     // Handle login - check for email/password in body
     if (method === 'POST' && body && body.email && body.password) {
