@@ -90,6 +90,30 @@ app.post('/webhook', (req, res) => {
   res.status(200).json({ status: 'received' });
 });
 
+// Admin login endpoint - secure Supabase function only
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    // Forward to Supabase admin API
+    const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/admin-api`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const result = await response.json();
+    res.status(response.status).json(result);
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
 // Basic admin endpoints
 app.get('/admin/analytics', (req, res) => {
   res.json({

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,9 +18,193 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
+    // Handle login first - check for email/password in body
+    if (method === 'POST') {
+      try {
+        const body = await req.json()
+        if (body.email && body.password) {
+          // This is a login request
+          const { email, password } = body
+          
+          // Get admin user
+          const { data: admin, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('email', email)
+            .eq('active', true)
+            .single()
+          
+          if (error || !admin) {
+            return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          
+          // Verify password
+          const validPassword = await bcrypt.compare(password, admin.password_hash)
+          if (!validPassword) {
+            return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          
+          // Create simple session token (no JWT)
+          const sessionToken = crypto.randomUUID()
+          const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+          
+          // Store session
+          await supabase
+            .from('admin_sessions')
+            .insert({
+              user_id: admin.id,
+              token: sessionToken,
+              expires_at: expiresAt.toISOString()
+            })
+          
+          // Update last login
+          await supabase
+            .from('admin_users')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', admin.id)
+          
+          return new Response(JSON.stringify({
+            success: true,
+            token: sessionToken,
+            user: {
+              id: admin.id,
+              email: admin.email,
+              name: admin.name
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+      } catch (e) {
+        // Not a login request, continue with other endpoints
+      }
+    }
+
     const url = new URL(req.url)
     const path = url.pathname
     const method = req.method
+
+    console.log('Request path:', path, 'Method:', method);
+    
+    // Admin login endpoint - debug and match properly
+    console.log('Full URL:', req.url);
+    console.log('Path:', path);
+    console.log('Method:', method);
+    
+    if (method === 'POST') {
+      // Try to parse request body for login
+      try {
+        const body = await req.json();
+        if (body.email && body.password) {
+          console.log('Login attempt detected for:', body.email);
+          
+          // Get admin user
+          const { data: admin, error } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('email', body.email)
+            .eq('active', true)
+            .single()
+          
+          if (error || !admin) {
+            return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          
+          // Verify password
+          const validPassword = await bcrypt.compare(body.password, admin.password_hash)
+          if (!validPassword) {
+            return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
+              status: 401,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
+          
+          // Create JWT token
+          const key = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(Deno.env.get('JWT_SECRET') || 'fallback-secret'),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign', 'verify']
+          )
+          
+          const token = await create(
+            { alg: 'HS256', typ: 'JWT' },
+            { 
+              sub: admin.id,
+              email: admin.email,
+              name: admin.name,
+              exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+            },
+            key
+          )
+          
+          // Update last login
+          await supabase
+            .from('admin_users')
+            .update({ last_login: new Date().toISOString() })
+            .eq('id', admin.id)
+          
+          return new Response(JSON.stringify({
+            success: true,
+            token,
+            user: {
+              id: admin.id,
+              email: admin.email,
+              name: admin.name
+            }
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+      } catch (e) {
+        console.log('Not a login request or parse error:', e.message);
+      }
+    }
+
+
+    // Admin users endpoints
+    if (path.includes('/admin-users') && method === 'GET') {
+      const { data: users } = await supabase
+        .from('admin_users')
+        .select('id, email, name, active, created_at, last_login')
+        .order('created_at', { ascending: false })
+      
+      return new Response(JSON.stringify({ users: users || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Create admin user
+    if (path.includes('/admin-users') && method === 'POST') {
+      const body = await req.json()
+      const passwordHash = await bcrypt.hash(body.password, 12)
+      
+      const { data, error } = await supabase
+        .from('admin_users')
+        .insert({
+          email: body.email,
+          name: body.name,
+          password_hash: passwordHash,
+          active: true
+        })
+        .select('id, email, name, active, created_at')
+        .single()
+      
+      if (error) throw error
+      return new Response(JSON.stringify({ user: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
 
     // Analytics endpoint
     if (path.includes('/analytics') && method === 'GET') {

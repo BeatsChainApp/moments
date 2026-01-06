@@ -95,6 +95,7 @@
                 <button data-section="moments">Moments</button>
                 <button data-section="campaigns">Campaigns</button>
                 <button data-section="sponsors">Sponsors</button>
+                <button data-section="users">Admin Users</button>
                 <button data-section="broadcasts">Broadcasts</button>
                 <button data-section="moderation">Moderation</button>
                 <button data-section="subscribers">Subscribers</button>
@@ -270,6 +271,19 @@
             </div>
         </div>
 
+        <!-- Admin Users Section -->
+        <div id="users" class="section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
+                    <h2>Admin Users</h2>
+                    <button class="btn" data-action="new-admin-user">+ Add Admin User</button>
+                </div>
+                <div id="admin-users-list">
+                    <div class="loading">Loading admin users...</div>
+                </div>
+            </div>
+        </div>
+
         <!-- Sponsors Section -->
         <div id="sponsors" class="section">
             <div class="card">
@@ -438,6 +452,35 @@
         </div>
     </div>
 
+    <!-- Admin User Modal -->
+    <div id="admin-user-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="admin-user-modal-title">Add Admin User</h3>
+                <button class="close-btn" data-action="close-admin-user-modal">&times;</button>
+            </div>
+            <div id="admin-user-message"></div>
+            <form id="admin-user-form">
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input type="email" name="email" required placeholder="partner@unamifoundation.org">
+                </div>
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" name="name" required placeholder="Partner Name">
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <input type="password" name="password" required placeholder="Secure password" minlength="8">
+                </div>
+                <div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" data-action="cancel-admin-user">Cancel</button>
+                    <button type="submit" class="btn" id="admin-user-submit-btn">Add Admin User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div id="confirm-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -472,22 +515,26 @@
         // Check authentication on page load
         document.addEventListener('DOMContentLoaded', async () => {
             try {
-                const session = await getSession();
+                const token = localStorage.getItem('admin.auth.token');
+                const userInfo = localStorage.getItem('admin.user.info');
                 
-                if (!session) {
-                    window.location.href = '/login';
+                if (!token || !userInfo) {
+                    window.location.href = '/login.html';
                     return;
                 }
                 
-                // Show user email and setup logout
+                const user = JSON.parse(userInfo);
+                
+                // Show user info and setup logout
                 const userEmailEl = document.getElementById('user-email');
                 const signOutEl = document.getElementById('sign-out');
                 
-                if (userEmailEl) userEmailEl.textContent = session.user.email;
+                if (userEmailEl) userEmailEl.textContent = user.name || user.email;
                 if (signOutEl) {
                     signOutEl.addEventListener('click', async () => {
-                        await signOut();
-                        window.location.href = '/login';
+                        localStorage.removeItem('admin.auth.token');
+                        localStorage.removeItem('admin.user.info');
+                        window.location.href = '/login.html';
                     });
                 }
                 
@@ -499,10 +546,11 @@
                 
             } catch (error) {
                 console.error('Auth error:', error);
-                window.location.href = '/login';
+                window.location.href = '/login.html';
             }
         });
     </script>
     <script src="/js/admin.js"></script>
+    <script src="/js/admin-users.js"></script>
 </body>
 </html>

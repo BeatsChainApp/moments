@@ -140,13 +140,12 @@
     </div>
 
     <script>
-        // Direct Supabase auth without library
-        async function signInWithPassword(email, password) {
-            const response = await fetch('https://arqeiadudzwbmzdhqkit.supabase.co/auth/v1/token?grant_type=password', {
+        // Admin authentication using admin_users table
+        async function authenticateAdmin(email, password) {
+            const response = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycWVpYWR1ZHp3Ym16ZGhxa2l0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjYyMTg1OTgsImV4cCI6MjA4MTc5NDU5OH0.ZuFeM6U3_-romnhLN2X3ozqWHovifqMQjxRAc3N8r2E'
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ email, password })
             });
@@ -226,18 +225,19 @@
                         throw new Error('Password must be between 8-128 characters');
                     }
                     
-                    // Sign in with direct API call
-                    const result = await signInWithPassword(email, password);
+                    // Sign in with admin API
+                    const result = await authenticateAdmin(email, password);
                     
                     if (result.error) {
-                        throw new Error(result.error.message);
+                        throw new Error(result.error);
                     }
                     
-                    if (result.access_token) {
-                        localStorage.setItem('supabase.auth.token', JSON.stringify(result));
+                    if (result.success && result.token) {
+                        localStorage.setItem('admin.auth.token', result.token);
+                        localStorage.setItem('admin.user.info', JSON.stringify(result.user));
                         window.location.href = '/admin-dashboard.html';
                     } else {
-                        throw new Error('Login failed - no token received');
+                        throw new Error('Login failed - invalid credentials');
                     }
                     
                 } catch (error) {
