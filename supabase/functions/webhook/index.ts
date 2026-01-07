@@ -116,12 +116,12 @@ serve(async (req) => {
                 last_activity: new Date().toISOString()
               }, { onConflict: 'phone_number' })
               
-              // Send welcome message
-              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll now receive community updates, opportunities, and sponsored content that matters to South Africa.\n\nReply STOP anytime to unsubscribe.\n\n🌐 More info: moments.unamifoundation.org`
+              // WhatsApp compliant welcome message
+              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll receive community updates and opportunities across South Africa.\n\nCommands:\n• HELP - Show options\n• STOP - Unsubscribe\n\n🌐 More: moments.unamifoundation.org`
               await sendWhatsAppMessage(message.from, welcomeMsg)
               
               console.log('User subscribed and welcomed:', message.from)
-            } else if (['stop', 'unsubscribe', 'quit'].includes(text)) {
+            } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
               await supabase.from('subscriptions').upsert({
                 phone_number: message.from,
                 opted_in: false,
@@ -129,11 +129,74 @@ serve(async (req) => {
                 last_activity: new Date().toISOString()
               }, { onConflict: 'phone_number' })
               
-              // Send goodbye message
-              const goodbyeMsg = `✅ You've been unsubscribed from Unami Foundation Moments.\n\nThank you for being part of our community. Reply START anytime to rejoin.\n\n🌐 Visit: moments.unamifoundation.org`
+              // WhatsApp compliant goodbye message
+              const goodbyeMsg = `✅ You have been unsubscribed successfully.\n\nThank you for being part of our community.\n\nReply START anytime to rejoin.\n\n🌐 Visit: moments.unamifoundation.org`
               await sendWhatsAppMessage(message.from, goodbyeMsg)
               
               console.log('User unsubscribed with confirmation:', message.from)
+            } else if (['help', 'info', 'menu', '?'].includes(text)) {
+              // Help command with WhatsApp compliant messaging
+              const helpMsg = `📱 Unami Foundation Moments\n\nAvailable commands:\n• START - Join community updates\n• STOP - Leave updates\n• HELP - Show this menu\n\nShare community reports by sending messages.\n\n🌐 Browse all: moments.unamifoundation.org\n📞 Contact: info@unamifoundation.org`
+              await sendWhatsAppMessage(message.from, helpMsg)
+              
+              console.log('Help sent to:', message.from)
+            } else {
+              // Process as community content with MCP moderation
+              try {
+                // Get MCP advisory
+                const advisory = await callMCPAdvisory({
+                  id: insertedMessage.id,
+                  content: message.text?.body || '',
+                  language_detected: 'eng',
+                  message_type: 'text',
+                  from_number: message.from,
+                  timestamp: new Date().toISOString()
+                })
+                
+                // Only publish if MCP approves
+                if (advisory.should_publish && !advisory.is_duplicate) {
+                  const words = advisory.cleaned_content.trim().split(' ')
+                  const title = words.length <= 8 ? advisory.cleaned_content : words.slice(0, 8).join(' ') + '...'
+                  
+                  // Determine urgency for broadcast timing
+                  const isUrgent = advisory.urgency_level === 'high'
+                  
+                  const { data: moment, error: momentError } = await supabase
+                    .from('moments')
+                    .insert({
+                      title: title,
+                      content: advisory.cleaned_content, // Use cleaned content
+                      raw_content: message.text?.body || '', // Preserve original
+                      region: 'National',
+                      category: 'Community',
+                      status: 'broadcasted',
+                      broadcasted_at: new Date().toISOString(),
+                      created_by: 'community',
+                      is_sponsored: false,
+                      urgency_level: advisory.urgency_level || 'low'
+                    })
+                    .select()
+                    .single()
+                  
+                  if (!momentError && moment) {
+                    console.log('Community moment created:', moment.title)
+                    
+                    // WhatsApp compliant acknowledgment
+                    const ackMsg = `📝 Thank you for sharing.\n\nYour message has been noted and shared for community awareness.\n\n🌐 View: moments.unamifoundation.org`
+                    await sendWhatsAppMessage(message.from, ackMsg)
+                    
+                    // Broadcast to subscribers if urgent
+                    if (isUrgent) {
+                      // TODO: Trigger immediate broadcast
+                      console.log('Urgent moment - triggering immediate broadcast')
+                    }
+                  }
+                } else {
+                  console.log('Message blocked by MCP:', advisory.action)
+                }
+              } catch (error) {
+                console.error('Community processing failed:', error)
+              }
             }
 
             // Mark message as processed

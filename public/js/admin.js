@@ -143,6 +143,14 @@ async function loadAnalytics() {
                 <div class="stat-label">Total Moments</div>
             </div>
             <div class="stat-card">
+                <div class="stat-number">${data.communityMoments || 0}</div>
+                <div class="stat-label">Community Reports</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">${data.adminMoments || 0}</div>
+                <div class="stat-label">Official Updates</div>
+            </div>
+            <div class="stat-card">
                 <div class="stat-number">${data.activeSubscribers || 0}</div>
                 <div class="stat-label">Active Subscribers</div>
             </div>

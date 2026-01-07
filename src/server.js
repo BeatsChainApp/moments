@@ -8,6 +8,7 @@ import { supabase } from '../config/supabase.js';
 import { callMCPAdvisory } from './advisory.js';
 import { healthCheck } from './health.js';
 import { scheduleNextBroadcasts } from './broadcast.js';
+import { processUrgentMoments, processWeeklyDigest } from './urgency.js';
 import adminRoutes from './admin.js';
 import publicRoutes from './public.js';
 import { adminLogin } from './admin-auth.js';
@@ -232,17 +233,41 @@ if (process.env.NODE_ENV !== 'test') {
     console.log(`Health check: http://0.0.0.0:${PORT}/health`);
     console.log(`Admin Dashboard: http://0.0.0.0:${PORT}`);
 
-    // Start broadcast scheduler (check every 5 minutes) - with error handling
+    // Start broadcast scheduler with urgency processing
     try {
+      // Check urgent moments every 2 minutes
+      setInterval(async () => {
+        try {
+          await processUrgentMoments();
+        } catch (err) {
+          console.error('Urgent broadcast error:', err.message);
+          if (process.env.SENTRY_DSN) Sentry.captureException(err);
+        }
+      }, 2 * 60 * 1000);
+      
+      // Check scheduled broadcasts every 5 minutes
       setInterval(async () => {
         try {
           await scheduleNextBroadcasts();
         } catch (err) {
-          console.error('Broadcast scheduler error:', err.message);
+          console.error('Scheduled broadcast error:', err.message);
           if (process.env.SENTRY_DSN) Sentry.captureException(err);
         }
       }, 5 * 60 * 1000);
-      console.log('Broadcast scheduler started');
+      
+      // Weekly digest on Sundays at 9 AM
+      setInterval(async () => {
+        const now = new Date();
+        if (now.getDay() === 0 && now.getHours() === 9) {
+          try {
+            await processWeeklyDigest();
+          } catch (err) {
+            console.error('Weekly digest error:', err.message);
+          }
+        }
+      }, 60 * 60 * 1000); // Check every hour
+      
+      console.log('Enhanced broadcast scheduler started');
     } catch (err) {
       console.error('Failed to start broadcast scheduler:', err.message);
     }

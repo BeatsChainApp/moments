@@ -92,6 +92,13 @@
                 <option value="Events">Events</option>
                 <option value="Health">Health</option>
                 <option value="Technology">Technology</option>
+                <option value="Community">Community</option>
+            </select>
+            
+            <select class="filter-select" id="source-filter">
+                <option value="">All Sources</option>
+                <option value="community">Community Reports</option>
+                <option value="admin">Official Updates</option>
             </select>
         </div>
         
@@ -102,7 +109,7 @@
 
     <script>
         // Immersive PWA functionality
-        let currentFilters = { region: '', category: '' };
+        let currentFilters = { region: '', category: '', source: '' };
         
         async function loadStats() {
             try {
@@ -122,6 +129,7 @@
                 const params = new URLSearchParams();
                 if (currentFilters.region) params.append('region', currentFilters.region);
                 if (currentFilters.category) params.append('category', currentFilters.category);
+                if (currentFilters.source) params.append('source', currentFilters.source);
                 
                 const response = await fetch(`/public/moments?${params}`);
                 const data = await response.json();
@@ -160,6 +168,7 @@
                         <span class="badge region-badge">${escapeHtml(moment.region)}</span>
                         <span class="badge category-badge">${escapeHtml(moment.category)}</span>
                         ${moment.is_sponsored ? '<span class="badge sponsored-badge">Sponsored</span>' : ''}
+                        ${moment.content_source === 'community' ? '<span class="badge" style="background: #e0f2fe; color: #0277bd;">Community</span>' : ''}
                     </div>
                     
                     <div class="moment-footer">
@@ -223,12 +232,23 @@
             currentFilters.category = e.target.value;
             loadMoments();
         });
+        
+        document.getElementById('source-filter').addEventListener('change', (e) => {
+            currentFilters.source = e.target.value;
+            loadMoments();
+        });
 
         // Load data on page load
         loadStats();
         loadMoments();
         
-        // Refresh data every 5 minutes
+        // Real-time updates every 30 seconds for community content
+        setInterval(() => {
+            loadStats();
+            loadMoments();
+        }, 30 * 1000);
+        
+        // Full refresh every 5 minutes
         setInterval(() => {
             loadStats();
             loadMoments();

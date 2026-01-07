@@ -6,7 +6,7 @@ const router = express.Router();
 // Get published moments for public PWA
 router.get('/moments', async (req, res) => {
   try {
-    const { region, category } = req.query;
+    const { region, category, source } = req.query;
     
     let query = supabase
       .from('moments')
@@ -18,6 +18,7 @@ router.get('/moments', async (req, res) => {
         category,
         is_sponsored,
         broadcasted_at,
+        content_source,
         sponsors(display_name)
       `)
       .eq('status', 'broadcasted')
@@ -26,6 +27,7 @@ router.get('/moments', async (req, res) => {
 
     if (region) query = query.eq('region', region);
     if (category) query = query.eq('category', category);
+    if (source) query = query.eq('content_source', source);
 
     const { data, error } = await query;
     if (error) throw error;

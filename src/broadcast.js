@@ -1,7 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import { sendWhatsAppMessage } from '../config/whatsapp.js';
 
-// Comprehensive broadcast system for national-scale distribution
+// Enhanced broadcast system for community + admin content
 export async function broadcastMoment(momentId) {
   try {
     // Get moment details with sponsor info
@@ -18,7 +18,7 @@ export async function broadcastMoment(momentId) {
       throw new Error('Moment not found');
     }
 
-    // Get active subscribers based on moment targeting
+    // Get active subscribers
     let subscriberQuery = supabase
       .from('subscriptions')
       .select('phone_number, regions, categories')
@@ -27,11 +27,6 @@ export async function broadcastMoment(momentId) {
     // Filter by region if specified
     if (moment.region && moment.region !== 'National') {
       subscriberQuery = subscriberQuery.contains('regions', [moment.region]);
-    }
-
-    // Filter by category if specified
-    if (moment.category) {
-      subscriberQuery = subscriberQuery.contains('categories', [moment.category]);
     }
 
     const { data: subscribers, error: subError } = await subscriberQuery;
@@ -50,20 +45,20 @@ export async function broadcastMoment(momentId) {
 
     if (broadcastError) throw broadcastError;
 
-    // Format WhatsApp message according to playbook rules
-    const message = formatWhatsAppMessage(moment);
+    // Format message based on content source
+    const message = moment.content_source === 'community' 
+      ? formatCommunityMessage(moment)
+      : formatAdminMessage(moment);
     
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers with rate limiting (WhatsApp API limits)
+    // Send to subscribers with rate limiting
     for (const subscriber of subscribers || []) {
       try {
         await sendWhatsAppMessage(subscriber.phone_number, message, moment.media_urls);
         successCount++;
-        
-        // Rate limiting: 80 messages per second max
-        await new Promise(resolve => setTimeout(resolve, 15));
+        await new Promise(resolve => setTimeout(resolve, 15)); // Rate limit
       } catch (error) {
         console.error(`Failed to send to ${subscriber.phone_number}:`, error.message);
         failureCount++;
@@ -103,19 +98,27 @@ export async function broadcastMoment(momentId) {
   }
 }
 
-// Enhanced WhatsApp message formatting with sponsor branding
-function formatWhatsAppMessage(moment) {
+// Format community message with neutral language
+function formatCommunityMessage(moment) {
+  let message = `📢 Community Report — ${moment.region}\n`;
+  message += `${moment.title}\n\n`;
+  message += `Shared by community member for awareness.\n`;
+  message += `🌐 Full details: moments.unamifoundation.org\n\n`;
+  message += `📱 Reply STOP to unsubscribe`;
+  return message;
+}
+
+// Format admin message with WhatsApp compliance
+function formatAdminMessage(moment) {
   let message = '';
   
-  // Sponsored content with enhanced branding
+  // Avoid 'sponsored' - use 'partner content' instead
   if (moment.is_sponsored && moment.sponsors?.display_name) {
-    const sponsorEmoji = getSponsorEmoji(moment.sponsors.tier || 'standard');
-    message += `${sponsorEmoji} [Sponsored] Moment — ${moment.region}\n`;
+    message += `🌟 Partner Content — ${moment.region}\n`;
   } else {
-    message += `📢 Moment — ${moment.region}\n`;
+    message += `📢 Official Update — ${moment.region}\n`;
   }
   
-  // Main content with enhanced formatting
   message += `${moment.title}\n`;
   if (moment.content.length > 100) {
     message += `${moment.content.substring(0, 97)}...\n`;
@@ -123,41 +126,23 @@ function formatWhatsAppMessage(moment) {
     message += `${moment.content}\n`;
   }
   
-  // Enhanced metadata with sponsor branding
   message += `\n🏷️ ${moment.category}`;
   if (moment.region !== 'National') {
     message += ` • 📍 ${moment.region}`;
   }
   
-  // Premium sponsor attribution with branding
+  // WhatsApp compliant partner attribution
   if (moment.is_sponsored && moment.sponsors?.display_name) {
-    const tier = moment.sponsors.tier || 'standard';
-    if (tier === 'premium' || tier === 'enterprise') {
-      message += `\n\n✨ Proudly sponsored by ${moment.sponsors.display_name}`;
-    } else {
-      message += `\n\nBrought to you by ${moment.sponsors.display_name}`;
-    }
+    message += `\n\nIn partnership with ${moment.sponsors.display_name}`;
   }
   
-  // Enhanced PWA link with tracking
   if (moment.pwa_link) {
-    const trackingParams = `?utm_source=whatsapp&utm_medium=moment&utm_campaign=${moment.id}`;
-    message += `\n🌐 More: ${moment.pwa_link}${trackingParams}`;
+    message += `\n🌐 More: ${moment.pwa_link}`;
   }
   
-  // Standard footer with unsubscribe
   message += '\n\n📱 Reply STOP to unsubscribe';
   
   return message;
-}
-
-// Get sponsor emoji based on tier
-function getSponsorEmoji(tier) {
-  switch (tier) {
-    case 'enterprise': return '👑';
-    case 'premium': return '⭐';
-    default: return '📢';
-  }
 }
 
 // Schedule and process pending broadcasts

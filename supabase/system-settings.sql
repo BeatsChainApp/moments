@@ -23,7 +23,7 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
 ('app_logo', '/logo.png', 'url', 'Application logo URL'),
 ('primary_color', '#2563eb', 'text', 'Primary brand color'),
 ('whatsapp_number', '+27 65 829 5041', 'text', 'WhatsApp Business number'),
-('support_email', 'support@unamifoundation.org', 'text', 'Support contact email'),
+('support_email', 'info@unamifoundation.org', 'text', 'Support contact email'),
 ('max_moments_per_day', '10', 'number', 'Maximum moments that can be broadcasted per day'),
 ('auto_broadcast_enabled', 'true', 'boolean', 'Enable automatic scheduled broadcasting'),
 ('maintenance_mode', 'false', 'boolean', 'Enable maintenance mode'),

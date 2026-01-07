@@ -99,6 +99,7 @@ router.post('/moments', async (req, res) => {
         scheduled_at,
         status: finalStatus,
         broadcasted_at: broadcastedAt,
+        content_source: 'admin',
         created_by
       })
       .select()
@@ -223,7 +224,7 @@ router.get('/analytics', async (req, res) => {
   try {
     const { data: moments } = await supabase
       .from('moments')
-      .select('status')
+      .select('status, content_source')
       .not('status', 'eq', 'draft');
 
     const { data: broadcasts } = await supabase
@@ -235,6 +236,8 @@ router.get('/analytics', async (req, res) => {
       .select('opted_in');
 
     const totalMoments = moments?.length || 0;
+    const communityMoments = moments?.filter(m => m.content_source === 'community').length || 0;
+    const adminMoments = moments?.filter(m => m.content_source === 'admin').length || 0;
     const totalBroadcasts = broadcasts?.length || 0;
     const totalRecipients = broadcasts?.reduce((sum, b) => sum + (b.recipient_count || 0), 0) || 0;
     const totalSuccess = broadcasts?.reduce((sum, b) => sum + (b.success_count || 0), 0) || 0;
@@ -242,6 +245,8 @@ router.get('/analytics', async (req, res) => {
 
     res.json({
       totalMoments,
+      communityMoments,
+      adminMoments,
       totalBroadcasts,
       totalRecipients,
       totalSuccess,
@@ -413,6 +418,42 @@ router.post('/process-scheduled', async (req, res) => {
   try {
     await scheduleNextBroadcasts();
     res.json({ success: true, message: 'Scheduled broadcasts processed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// N8N webhook for sponsored content triggers
+router.post('/n8n-trigger', async (req, res) => {
+  try {
+    const { trigger_type, moment_data, schedule_at } = req.body;
+    
+    if (trigger_type === 'sponsored_moment') {
+      const { data: moment, error } = await supabase
+        .from('moments')
+        .insert({
+          ...moment_data,
+          content_source: 'admin',
+          is_sponsored: true,
+          status: schedule_at ? 'scheduled' : 'draft',
+          scheduled_at: schedule_at,
+          created_by: 'n8n_automation'
+        })
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      // Auto-broadcast if not scheduled
+      if (!schedule_at) {
+        const { broadcastMoment } = await import('./broadcast.js');
+        await broadcastMoment(moment.id);
+      }
+      
+      res.json({ success: true, moment_id: moment.id });
+    } else {
+      res.status(400).json({ error: 'Unknown trigger type' });
+    }
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
