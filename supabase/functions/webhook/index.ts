@@ -6,6 +6,45 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// WhatsApp API helper function
+async function sendWhatsAppMessage(to: string, message: string) {
+  const token = Deno.env.get('WHATSAPP_TOKEN')
+  const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
+  
+  if (!token || !phoneId) {
+    console.error('WhatsApp credentials missing')
+    return false
+  }
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'text',
+        text: { body: message }
+      })
+    })
+
+    if (response.ok) {
+      console.log('WhatsApp message sent successfully to', to)
+      return true
+    } else {
+      const error = await response.text()
+      console.error('WhatsApp API error:', error)
+      return false
+    }
+  } catch (error) {
+    console.error('Failed to send WhatsApp message:', error)
+    return false
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -78,7 +117,11 @@ serve(async (req) => {
                 last_activity: new Date().toISOString()
               }, { onConflict: 'phone_number' })
               
-              console.log('User subscribed:', message.from)
+              // Send welcome message
+              const welcomeMsg = `🌟 Welcome to Unami Foundation Moments!\n\nYou'll now receive community updates, opportunities, and sponsored content that matters to South Africa.\n\nReply STOP anytime to unsubscribe.\n\n🌐 More info: moments.unamifoundation.org`
+              await sendWhatsAppMessage(message.from, welcomeMsg)
+              
+              console.log('User subscribed and welcomed:', message.from)
             } else if (['stop', 'unsubscribe', 'quit'].includes(text)) {
               await supabase.from('subscriptions').upsert({
                 phone_number: message.from,
@@ -87,7 +130,11 @@ serve(async (req) => {
                 last_activity: new Date().toISOString()
               }, { onConflict: 'phone_number' })
               
-              console.log('User unsubscribed:', message.from)
+              // Send goodbye message
+              const goodbyeMsg = `✅ You've been unsubscribed from Unami Foundation Moments.\n\nThank you for being part of our community. Reply START anytime to rejoin.\n\n🌐 Visit: moments.unamifoundation.org`
+              await sendWhatsAppMessage(message.from, goodbyeMsg)
+              
+              console.log('User unsubscribed with confirmation:', message.from)
             }
 
             // Mark message as processed
