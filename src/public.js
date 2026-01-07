@@ -66,4 +66,28 @@ router.get('/stats', async (req, res) => {
   }
 });
 
+// Privacy-first analytics endpoint
+router.post('/analytics', async (req, res) => {
+  try {
+    const { sessionId, events, sessionDuration } = req.body;
+    
+    // Store aggregated analytics (no personal data)
+    const analyticsData = {
+      session_id: sessionId,
+      event_count: events.length,
+      session_duration: sessionDuration,
+      page_views: events.filter(e => e.type === 'page_view').length,
+      user_actions: events.filter(e => e.type === 'user_action').length,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Log to console for now (could store in analytics table)
+    console.log('Analytics:', analyticsData);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Analytics processing failed' });
+  }
+});
+
 export default router;

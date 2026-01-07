@@ -64,6 +64,7 @@ router.post('/moments', async (req, res) => {
       pwa_link,
       media_urls = [],
       scheduled_at,
+      status = 'draft', // Allow explicit status setting
       created_by = 'admin'
     } = req.body;
 
@@ -71,7 +72,10 @@ router.post('/moments', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const status = scheduled_at ? 'scheduled' : 'draft';
+    // If status is explicitly set to 'broadcasted', set broadcasted_at
+    const finalStatus = status || (scheduled_at ? 'scheduled' : 'draft');
+    const broadcastedAt = finalStatus === 'broadcasted' ? new Date().toISOString() : null;
+    
     // Normalize media_urls: accept comma-separated string or array
     let normalizedMedia = [];
     if (Array.isArray(media_urls)) {
@@ -93,7 +97,8 @@ router.post('/moments', async (req, res) => {
         pwa_link,
         media_urls: normalizedMedia,
         scheduled_at,
-        status,
+        status: finalStatus,
+        broadcasted_at: broadcastedAt,
         created_by
       })
       .select()
@@ -408,6 +413,73 @@ router.post('/process-scheduled', async (req, res) => {
   try {
     await scheduleNextBroadcasts();
     res.json({ success: true, message: 'Scheduled broadcasts processed' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Seed test moments (development only)
+router.post('/seed-test-moments', async (req, res) => {
+  try {
+    const testMoments = [
+      {
+        title: "Community Garden Project Launch",
+        content: "New community garden opens in Soweto this Saturday. Free seedlings and training provided. Join us at 9 AM for the opening ceremony.",
+        region: "GP",
+        category: "Opportunity",
+        status: "broadcasted",
+        broadcasted_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        title: "Digital Skills Workshop",
+        content: "Free computer literacy classes starting next week in Durban. Learn basic computer skills, internet safety, and online job applications.",
+        region: "KZN", 
+        category: "Education",
+        status: "broadcasted",
+        broadcasted_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        title: "Health Screening Drive",
+        content: "Free health screenings available at Cape Town Community Center. Blood pressure, diabetes, and vision tests. No appointment needed.",
+        region: "WC",
+        category: "Health", 
+        status: "broadcasted",
+        broadcasted_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        title: "Youth Soccer Tournament",
+        content: "Annual youth soccer tournament registration now open. Ages 12-18 welcome. Prizes for winning teams. Register at local community center.",
+        region: "EC",
+        category: "Events",
+        status: "broadcasted", 
+        broadcasted_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        title: "Small Business Support Program", 
+        content: "Government-backed small business loans and mentorship program. Applications open until month end. Free business plan assistance available.",
+        region: "FS",
+        category: "Opportunity",
+        status: "broadcasted",
+        broadcasted_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    ];
+
+    const results = [];
+    for (const moment of testMoments) {
+      const { data, error } = await supabase
+        .from('moments')
+        .insert(moment)
+        .select()
+        .single();
+      
+      if (error) {
+        console.error(`Failed to insert: ${moment.title}`, error);
+      } else {
+        results.push(data);
+      }
+    }
+
+    res.json({ success: true, created: results.length, moments: results });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

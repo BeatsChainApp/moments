@@ -6,6 +6,7 @@
     <title>Unami Foundation Moments</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
+    <link rel="stylesheet" href="/css/design-system.css">
     <meta name="description" content="Community updates and opportunities across South Africa">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -137,9 +138,9 @@
             if (moments.length === 0) {
                 container.innerHTML = `
                     <div class="empty-state">
-                        <div class="empty-icon">📭</div>
-                        <h3>No moments available</h3>
-                        <p>Join our WhatsApp community to receive updates when new moments are shared.</p>
+                        <div class="empty-icon">🌱</div>
+                        <h3>Community moments coming soon</h3>
+                        <p>We're building something amazing for South African communities. Join our WhatsApp to be the first to receive updates.</p>
                         <a href="https://wa.me/27658295041?text=START" class="join-whatsapp">
                             📱 Join WhatsApp Community
                         </a>
@@ -233,5 +234,6 @@
             loadMoments();
         }, 5 * 60 * 1000);
     </script>
+    <script src="/js/analytics.js"></script>
 </body>
 </html>

@@ -6,6 +6,7 @@
     <title>Unami Foundation Moments - Admin</title>
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#2563eb">
+    <link rel="stylesheet" href="/css/design-system.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; line-height: 1.5; }
@@ -134,7 +135,7 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                     <h2>All Moments</h2>
-                    <button class="btn" data-action="create-moment">+ New Moment</button>
+                    <button class="btn" data-action="create-moment">✏️ Create Moment</button>
                 </div>
                 <div class="filters">
                     <select class="filter-select" id="status-filter" data-filter="status">
@@ -573,5 +574,6 @@
     </script>
     <script src="/js/admin.js"></script>
     <script src="/js/admin-users.js"></script>
+    <script src="/js/analytics.js"></script>
 </body>
 </html>

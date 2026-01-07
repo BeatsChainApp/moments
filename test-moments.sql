@@ -1,0 +1,7 @@
+-- Insert sample broadcasted moments for public display
+INSERT INTO moments (title, content, region, category, status, broadcasted_at, created_at) VALUES
+('Community Garden Project Launch', 'New community garden opens in Soweto this Saturday. Free seedlings and training provided. Join us at 9 AM for the opening ceremony.', 'GP', 'Opportunity', 'broadcasted', NOW() - INTERVAL '1 day', NOW() - INTERVAL '2 days'),
+('Digital Skills Workshop', 'Free computer literacy classes starting next week in Durban. Learn basic computer skills, internet safety, and online job applications.', 'KZN', 'Education', 'broadcasted', NOW() - INTERVAL '2 days', NOW() - INTERVAL '3 days'),
+('Health Screening Drive', 'Free health screenings available at Cape Town Community Center. Blood pressure, diabetes, and vision tests. No appointment needed.', 'WC', 'Health', 'broadcasted', NOW() - INTERVAL '3 days', NOW() - INTERVAL '4 days'),
+('Youth Soccer Tournament', 'Annual youth soccer tournament registration now open. Ages 12-18 welcome. Prizes for winning teams. Register at local community center.', 'EC', 'Events', 'broadcasted', NOW() - INTERVAL '4 days', NOW() - INTERVAL '5 days'),
+('Small Business Support Program', 'Government-backed small business loans and mentorship program. Applications open until month end. Free business plan assistance available.', 'FS', 'Opportunity', 'broadcasted', NOW() - INTERVAL '5 days', NOW() - INTERVAL '6 days');

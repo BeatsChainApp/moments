@@ -222,8 +222,9 @@ function displayMoments() {
         document.getElementById('moments-list').innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📝</div>
-                <div>No moments found</div>
-                <button class="btn" data-section="create" style="margin-top: 1rem;">Create First Moment</button>
+                <h3>No moments found</h3>
+                <p>Create your first moment to share with the community</p>
+                <button class="btn" data-section="create" style="margin-top: 1rem;">✏️ Create First Moment</button>
             </div>
         `;
         return;
@@ -241,9 +242,9 @@ function displayMoments() {
                 </div>
                 <div class="moment-actions">
                     <span class="status-badge status-${moment.status}">${moment.status}</span>
-                    ${moment.status === 'draft' ? `<button class="btn btn-sm btn-success" data-action="broadcast" data-id="${moment.id}">Broadcast</button>` : ''}
-                    ${moment.status !== 'broadcasted' ? `<button class="btn btn-sm" data-action="edit" data-id="${moment.id}">Edit</button>` : ''}
-                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${moment.id}">Delete</button>
+                    ${moment.status === 'draft' ? `<button class="btn btn-sm btn-success" data-action="broadcast" data-id="${moment.id}">📡 Broadcast Now</button>` : ''}
+                    ${moment.status !== 'broadcasted' ? `<button class="btn btn-sm" data-action="edit" data-id="${moment.id}">✏️ Edit</button>` : ''}
+                    <button class="btn btn-sm btn-danger" data-action="delete" data-id="${moment.id}">🗑️ Delete</button>
                 </div>
             </div>
             <div class="moment-content">${moment.content.substring(0, 200)}${moment.content.length > 200 ? '...' : ''}</div>
@@ -847,6 +848,19 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+// Service Worker registration for PWA functionality
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+                console.log('PWA: Service Worker registered');
+            })
+            .catch(error => {
+                console.log('PWA: Service Worker registration failed');
+            });
+    });
+}
+
 // Service Worker disabled to prevent session conflicts
 // if ('serviceWorker' in navigator) {
 //     navigator.serviceWorker.register('/sw.js')
@@ -935,6 +949,28 @@ function openCampaignModal() {
 function closeCampaignModal() {
     document.getElementById('campaign-modal').classList.remove('active');
     document.getElementById('campaign-form').reset();
+}
+
+// Seed test moments for development
+async function seedTestMoments() {
+    showConfirm('Add test moments for public display?', async () => {
+        try {
+            const response = await apiFetch('/seed-test-moments', {
+                method: 'POST'
+            });
+            
+            const result = await response.json();
+            if (response.ok) {
+                showSuccess(`Added ${result.created} test moments successfully!`);
+                loadMoments();
+                loadAnalytics();
+            } else {
+                showError(result.error || 'Failed to seed test moments');
+            }
+        } catch (error) {
+            showError('Failed to seed test moments');
+        }
+    });
 }
 
 // Add campaign form handler
