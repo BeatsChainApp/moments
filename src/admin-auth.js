@@ -11,43 +11,56 @@ export async function adminLogin(req, res) {
       return res.status(400).json({ error: 'Email and password required' });
     }
 
-    // Check if user exists in admin_roles table
-    const { data: adminUser, error } = await supabase
-      .from('admin_roles')
-      .select('*')
-      .eq('user_id', email)
-      .single();
-
-    if (error || !adminUser) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    // Rate limiting check
+    const clientIP = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    const windowMs = 15 * 60 * 1000; // 15 minutes
+    const maxAttempts = 5;
+    
+    if (!global.loginAttempts) global.loginAttempts = new Map();
+    const attempts = global.loginAttempts.get(clientIP) || { count: 0, resetTime: now + windowMs };
+    
+    if (now > attempts.resetTime) {
+      attempts.count = 0;
+      attempts.resetTime = now + windowMs;
     }
-
-    // For development, accept any password for admin users
-    // In production, implement proper password hashing
-    const validPassword = process.env.NODE_ENV === 'development' || 
-                         password === process.env.ADMIN_PASSWORD;
-
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    
+    if (attempts.count >= maxAttempts) {
+      return res.status(429).json({ error: 'Too many login attempts. Please try again later.' });
     }
+    
+    attempts.count++;
+    global.loginAttempts.set(clientIP, attempts);
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        user_id: adminUser.user_id,
-        role: adminUser.role,
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    // Call Supabase admin-api function server-side
+    const response = await fetch('https://arqeiadudzwbmzdhqkit.supabase.co/functions/v1/admin-api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`
       },
-      JWT_SECRET
-    );
-
-    res.json({ 
-      token,
-      user: {
-        id: adminUser.user_id,
-        role: adminUser.role
-      }
+      body: JSON.stringify({ email, password })
     });
+    
+    const result = await response.json();
+    
+    if (result.error) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
+    if (result.success && result.token) {
+      // Reset login attempts on successful login
+      global.loginAttempts.delete(clientIP);
+      
+      res.json({
+        success: true,
+        token: result.token,
+        user: result.user
+      });
+    } else {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    
   } catch (error) {
     console.error('Admin login error:', error);
     res.status(500).json({ error: 'Login failed' });

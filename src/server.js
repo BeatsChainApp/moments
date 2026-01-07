@@ -111,11 +111,11 @@ app.get('/login', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/login.html'));
 });
 
+// Admin login endpoint (no CSRF for login) - MUST be before admin routes
+app.post('/admin/login', adminLogin);
+
 // Mount admin routes with CSRF enforcement for state-changing requests
 app.use('/admin', csrfMiddleware, adminRoutes);
-
-// Admin login endpoint (no CSRF for login)
-app.post('/admin/login', adminLogin);
 
 // Mount public routes (no auth required)
 app.use('/public', publicRoutes);
