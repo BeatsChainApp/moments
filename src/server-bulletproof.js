@@ -190,6 +190,28 @@ app.get('/admin/settings', authenticateAdmin, (req, res) => {
   });
 });
 
+// Admin campaigns endpoint
+app.get('/admin/campaigns', authenticateAdmin, (req, res) => {
+  res.json({
+    campaigns: []
+  });
+});
+
+// Create moment endpoint
+app.post('/admin/moments', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: 'moment_' + Date.now() });
+});
+
+// Create sponsor endpoint
+app.post('/admin/sponsors', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: 'sponsor_' + Date.now() });
+});
+
+// Create campaign endpoint
+app.post('/admin/campaigns', authenticateAdmin, (req, res) => {
+  res.json({ success: true, id: 'campaign_' + Date.now() });
+});
+
 // Error handling
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);
