@@ -112,6 +112,41 @@
         .footer { background: #f8fafc; border-top: 1px solid #e5e7eb; padding: 1rem 0; margin-top: 2rem; text-align: center; color: #6b7280; font-size: 0.875rem; }
         .footer a { color: #2563eb; text-decoration: none; }
         .footer a:hover { text-decoration: underline; }
+        
+        /* Help Section Styles */
+        .help-tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .help-tab { background: #f3f4f6; border: none; padding: 0.5rem 1rem; border-radius: 0.375rem; cursor: pointer; font-size: 0.875rem; transition: all 0.2s; }
+        .help-tab.active { background: #2563eb; color: white; }
+        .help-tab:hover { background: #e5e7eb; }
+        .help-tab.active:hover { background: #1d4ed8; }
+        .help-content { min-height: 400px; }
+        .help-panel { display: none; }
+        .help-panel.active { display: block; }
+        .alert { padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem; }
+        .alert-warning { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+        .alert-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+        .risk-levels { display: grid; gap: 0.75rem; margin: 1rem 0; }
+        .risk-item { display: flex; align-items: center; gap: 1rem; padding: 0.75rem; border-radius: 0.5rem; background: #f8fafc; }
+        .risk-badge { padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; min-width: 80px; text-align: center; }
+        .risk-low .risk-badge { background: #d1fae5; color: #065f46; }
+        .risk-medium .risk-badge { background: #fef3c7; color: #92400e; }
+        .risk-high .risk-badge { background: #fed7aa; color: #c2410c; }
+        .risk-critical .risk-badge { background: #fecaca; color: #991b1b; }
+        .category-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin: 1rem 0; }
+        .category-safe { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 0.5rem; padding: 1rem; }
+        .category-safe h4 { color: #166534; margin-bottom: 0.5rem; }
+        .category-safe p { color: #15803d; margin-bottom: 0.5rem; }
+        .category-safe .risk-low { background: #dcfce7; color: #166534; padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: bold; }
+        .prohibited-grid { display: grid; gap: 1rem; margin: 1rem 0; }
+        .prohibited-item { background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 1rem; }
+        .prohibited-item h4 { color: #991b1b; margin-bottom: 0.5rem; }
+        .prohibited-item p { color: #dc2626; margin-bottom: 0.5rem; }
+        .prohibited-item .examples { background: #fee2e2; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; }
+        .prohibited-item .examples strong { color: #991b1b; }
+        .best-practice { background: #f8fafc; border-left: 4px solid #3b82f6; padding: 1rem; margin-bottom: 1rem; border-radius: 0 0.5rem 0.5rem 0; }
+        .best-practice h4 { color: #1e40af; margin-bottom: 0.5rem; }
+        .best-practice ul { margin-left: 1rem; }
+        .best-practice li { margin-bottom: 0.25rem; color: #374151; }
     </style>
 </head>
 <body>
@@ -153,6 +188,7 @@
                 <button data-section="subscribers">📱 Subscribers</button>
                 <button data-section="broadcasts">📡 Broadcasts</button>
                 <button data-section="settings">⚙️ Settings</button>
+                <button data-section="help">❓ Help & Guide</button>
             </div>
         </div>
     </div>
@@ -399,6 +435,192 @@
             </div>
         </div>
 
+        <!-- Help & Guide Section -->
+        <div id="help" class="section">
+            <div class="card">
+                <h2>📚 Admin Campaign Guide</h2>
+                <div class="help-tabs">
+                    <button class="help-tab active" data-tab="compliance">Meta Compliance</button>
+                    <button class="help-tab" data-tab="categories">Safe Categories</button>
+                    <button class="help-tab" data-tab="prohibited">Prohibited Content</button>
+                    <button class="help-tab" data-tab="best-practices">Best Practices</button>
+                </div>
+                
+                <div class="help-content">
+                    <div id="compliance-help" class="help-panel active">
+                        <h3>🛡️ Meta WhatsApp Business API Compliance</h3>
+                        <div class="alert alert-warning">
+                            <strong>Critical:</strong> Violating Meta policies can result in immediate account suspension and loss of WhatsApp Business API access.
+                        </div>
+                        
+                        <h4>Risk Levels:</h4>
+                        <div class="risk-levels">
+                            <div class="risk-item risk-low">
+                                <span class="risk-badge">LOW</span>
+                                <div>
+                                    <strong>Community-focused content</strong><br>
+                                    Education, safety, cultural events, local services
+                                </div>
+                            </div>
+                            <div class="risk-item risk-medium">
+                                <span class="risk-badge">MEDIUM</span>
+                                <div>
+                                    <strong>Requires approval</strong><br>
+                                    Health information, government services, financial literacy
+                                </div>
+                            </div>
+                            <div class="risk-item risk-high">
+                                <span class="risk-badge">HIGH</span>
+                                <div>
+                                    <strong>Needs careful review</strong><br>
+                                    Content that could be misinterpreted
+                                </div>
+                            </div>
+                            <div class="risk-item risk-critical">
+                                <span class="risk-badge">CRITICAL</span>
+                                <div>
+                                    <strong>Account suspension risk</strong><br>
+                                    Political, financial products, medical claims
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="categories-help" class="help-panel">
+                        <h3>✅ Safe Campaign Categories</h3>
+                        <div class="category-grid">
+                            <div class="category-safe">
+                                <h4>🎓 Community Education</h4>
+                                <p>Skills development, literacy programs, educational workshops</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                            <div class="category-safe">
+                                <h4>🛡️ Safety Awareness</h4>
+                                <p>Public safety tips, emergency preparedness, community safety</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                            <div class="category-safe">
+                                <h4>🎆 Cultural Events</h4>
+                                <p>Heritage celebrations, local festivals, community gatherings</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                            <div class="category-safe">
+                                <h4>💼 Job Opportunities</h4>
+                                <p>Legitimate job postings, skills training, employment programs</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                            <div class="category-safe">
+                                <h4>🌱 Environmental</h4>
+                                <p>Conservation efforts, recycling programs, environmental awareness</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                            <div class="category-safe">
+                                <h4>🏃 Youth Programs</h4>
+                                <p>Sports programs, youth development, educational initiatives</p>
+                                <span class="risk-low">LOW RISK</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="prohibited-help" class="help-panel">
+                        <h3>❌ Prohibited Content (Account Suspension Risk)</h3>
+                        <div class="prohibited-grid">
+                            <div class="prohibited-item">
+                                <h4>🗳️ Political Campaigns</h4>
+                                <p>Party promotion, candidate endorsements, political messaging</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Vote for [candidate]", "Support [party]", election campaigns
+                                </div>
+                            </div>
+                            <div class="prohibited-item">
+                                <h4>💰 Financial Products</h4>
+                                <p>Loans, investments, cryptocurrency, get-rich-quick schemes</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Easy money", "Investment opportunity", "Guaranteed returns"
+                                </div>
+                            </div>
+                            <div class="prohibited-item">
+                                <h4>🎭 Medical Treatments</h4>
+                                <p>Medical advice, treatment claims, health product sales</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Cure", "Treatment", "Medical advice", "Guaranteed healing"
+                                </div>
+                            </div>
+                            <div class="prohibited-item">
+                                <h4>🎲 Gambling</h4>
+                                <p>Betting, lotteries, gambling services, games of chance</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Bet now", "Lottery", "Casino", "Win money"
+                                </div>
+                            </div>
+                            <div class="prohibited-item">
+                                <h4>📧 Spam/Bulk Messaging</h4>
+                                <p>Chain letters, forward messages, unsolicited bulk content</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Forward this", "Send to 10 friends", "Chain letter"
+                                </div>
+                            </div>
+                            <div class="prohibited-item">
+                                <h4>🔒 Data Collection</h4>
+                                <p>Requesting personal information, privacy violations</p>
+                                <div class="examples">
+                                    <strong>Avoid:</strong> "Send ID number", "Bank details", "Personal information"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="best-practices-help" class="help-panel">
+                        <h3>✨ Campaign Best Practices</h3>
+                        
+                        <div class="best-practice">
+                            <h4>🎯 Focus on Community Value</h4>
+                            <ul>
+                                <li>Provide genuine value to community members</li>
+                                <li>Share local opportunities and resources</li>
+                                <li>Promote community engagement and participation</li>
+                                <li>Support local initiatives and events</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="best-practice">
+                            <h4>📝 Content Guidelines</h4>
+                            <ul>
+                                <li>Keep messages clear, concise, and actionable</li>
+                                <li>Use respectful, inclusive language</li>
+                                <li>Include relevant location and timing information</li>
+                                <li>Provide contact details for follow-up</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="best-practice">
+                            <h4>🔄 Frequency & Timing</h4>
+                            <ul>
+                                <li>Limit campaigns to 2-3 per week maximum</li>
+                                <li>Send during appropriate hours (9 AM - 6 PM)</li>
+                                <li>Avoid sending on Sundays and public holidays</li>
+                                <li>Space campaigns at least 24 hours apart</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="best-practice">
+                            <h4>📊 Compliance Monitoring</h4>
+                            <ul>
+                                <li>Always review the compliance check before sending</li>
+                                <li>Get approval for medium/high-risk content</li>
+                                <li>Monitor campaign performance and feedback</li>
+                                <li>Report any delivery issues immediately</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <strong>Remember:</strong> Our community trusts us to provide valuable, relevant content. Every campaign should enhance their experience and provide genuine value.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Settings Section -->
         <div id="settings" class="section">
             <div class="card">
@@ -519,16 +741,25 @@
                 </div>
                 <div class="form-group">
                     <label>Primary Category *</label>
-                    <select name="primary_category" required>
+                    <select name="primary_category" required id="campaign-category-select">
                         <option value="">Select Primary Category</option>
-                        <option value="Education">Education</option>
-                        <option value="Safety">Safety</option>
-                        <option value="Culture">Culture</option>
-                        <option value="Opportunity">Opportunity</option>
-                        <option value="Events">Events</option>
-                        <option value="Health">Health</option>
-                        <option value="Technology">Technology</option>
+                        <optgroup label="✅ Safe Categories (Low Risk)">
+                            <option value="Community Education">📚 Community Education</option>
+                            <option value="Safety Awareness">🛡️ Safety Awareness</option>
+                            <option value="Cultural Events">🎭 Cultural Events</option>
+                            <option value="Job Opportunities">💼 Job Opportunities</option>
+                            <option value="Local Services">🏪 Local Services</option>
+                            <option value="Environmental Initiatives">🌱 Environmental Initiatives</option>
+                            <option value="Youth Programs">🏃 Youth Programs</option>
+                        </optgroup>
+                        <optgroup label="⚠️ Restricted Categories (Requires Approval)">
+                            <option value="Government Services">🏛️ Government Services</option>
+                            <option value="Financial Literacy">💰 Financial Literacy</option>
+                            <option value="Healthcare Services">🏥 Healthcare Services</option>
+                            <option value="Religious Events">⛪ Religious Events</option>
+                        </optgroup>
                     </select>
+                    <small style="color: #6b7280;">Prohibited categories are hidden to prevent account suspension</small>
                 </div>
                 <div class="form-group">
                     <label>Additional Regions (optional)</label>
@@ -659,6 +890,23 @@
             const nav = document.getElementById('admin-nav');
             nav.classList.toggle('collapsed');
         }
+        
+        // Help section tab functionality
+        document.addEventListener('DOMContentLoaded', () => {
+            // Help tabs
+            document.querySelectorAll('.help-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Remove active from all tabs and panels
+                    document.querySelectorAll('.help-tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.help-panel').forEach(p => p.classList.remove('active'));
+                    
+                    // Add active to clicked tab and corresponding panel
+                    tab.classList.add('active');
+                    const panelId = tab.dataset.tab + '-help';
+                    document.getElementById(panelId)?.classList.add('active');
+                });
+            });
+        });
         
         // Settings functions
         function saveSettings() {
