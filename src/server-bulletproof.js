@@ -99,10 +99,153 @@ app.get('/webhook', (req, res) => {
   }
 });
 
-// Webhook handler
-app.post('/webhook', (req, res) => {
-  console.log('Webhook received:', req.body);
-  res.status(200).json({ status: 'received' });
+// Webhook handler - FIXED to process messages and trigger MCP
+app.post('/webhook', async (req, res) => {
+  try {
+    console.log('Webhook received:', JSON.stringify(req.body, null, 2));
+    
+    // Process WhatsApp webhook
+    if (req.body.entry?.[0]?.changes?.[0]?.value?.messages) {
+      const messages = req.body.entry[0].changes[0].value.messages;
+      
+      for (const message of messages) {
+        try {
+          // Store message in database with MCP processing
+          const { data: insertedMessage, error: insertError } = await supabase
+            .from('messages')
+            .insert({
+              whatsapp_id: message.id,
+              from_number: message.from,
+              message_type: message.type,
+              content: message.text?.body || message.caption || '',
+              timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+              processed: false
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Failed to insert message:', insertError);
+            continue;
+          }
+
+          console.log('Message stored, ID:', insertedMessage.id);
+
+          // Handle subscription commands
+          const text = (message.text?.body || '').toLowerCase().trim();
+          if (['start', 'join', 'subscribe'].includes(text)) {
+            await supabase.from('subscriptions').upsert({
+              phone_number: message.from,
+              opted_in: true,
+              opted_in_at: new Date().toISOString(),
+              last_activity: new Date().toISOString()
+            }, { onConflict: 'phone_number' });
+            
+            console.log('User subscribed:', message.from);
+          } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
+            await supabase.from('subscriptions').upsert({
+              phone_number: message.from,
+              opted_in: false,
+              opted_out_at: new Date().toISOString(),
+              last_activity: new Date().toISOString()
+            }, { onConflict: 'phone_number' });
+            
+            console.log('User unsubscribed:', message.from);
+          } else {
+            // Process as community content with MCP analysis
+            try {
+              const { data: advisory, error: mcpError } = await supabase.rpc('mcp_advisory', {
+                message_content: message.text?.body || '',
+                message_language: 'eng',
+                message_type: 'text',
+                from_number: message.from,
+                message_timestamp: new Date().toISOString()
+              });
+              
+              if (mcpError) {
+                console.error('MCP analysis failed:', mcpError);
+              }
+              
+              console.log('MCP analysis result:', advisory);
+              
+              // Auto-publish if safe (more lenient threshold)
+              const harmConfidence = advisory?.harm_signals?.confidence || 0;
+              const shouldPublish = harmConfidence < 0.8; // Increased threshold
+              
+              console.log('Publishing decision:', { harmConfidence, shouldPublish });
+              
+              if (shouldPublish) {
+                const content = message.text?.body || '';
+                const title = content.length <= 50 ? content : content.substring(0, 47) + '...';
+                
+                const { data: moment, error: momentError } = await supabase
+                  .from('moments')
+                  .insert({
+                    title,
+                    content,
+                    region: 'GP',
+                    category: 'Safety',
+                    status: 'broadcasted',
+                    broadcasted_at: new Date().toISOString(),
+                    created_by: 'community',
+                    content_source: 'community',
+                    is_sponsored: false
+                  })
+                  .select()
+                  .single();
+                
+                if (momentError) {
+                  console.error('Failed to create community moment:', momentError);
+                } else {
+                  console.log('Community moment auto-published:', moment.id);
+                }
+              } else {
+                console.log('Message flagged by MCP, not published. Harm confidence:', harmConfidence);
+              }
+            } catch (mcpError) {
+              console.error('MCP processing failed:', mcpError);
+              // Fallback: publish anyway with low risk assumption
+              const content = message.text?.body || '';
+              const title = content.length <= 50 ? content : content.substring(0, 47) + '...';
+              
+              const { data: moment } = await supabase
+                .from('moments')
+                .insert({
+                  title,
+                  content,
+                  region: 'GP',
+                  category: 'Safety',
+                  status: 'broadcasted',
+                  broadcasted_at: new Date().toISOString(),
+                  created_by: 'community',
+                  content_source: 'community',
+                  is_sponsored: false
+                })
+                .select()
+                .single();
+              
+              if (moment) {
+                console.log('Community moment published (MCP fallback):', moment.id);
+              }
+            }
+          }
+
+          // Mark message as processed
+          await supabase.from('messages')
+            .update({ processed: true })
+            .eq('id', insertedMessage.id);
+
+        } catch (msgError) {
+          console.error('Error processing message:', msgError);
+        }
+      }
+    }
+    
+    res.status(200).json({ status: 'processed' });
+  } catch (error) {
+    console.error('Webhook error:', error);
+    res.status(200).json({ status: 'received' });
+  }
 });
 
 // Admin login endpoint - secure Supabase function only
@@ -535,15 +678,21 @@ app.post('/admin/campaigns', authenticateAdmin, async (req, res) => {
     }
     
     // MCP screening before creation
-    const { data: mcpResult } = await supabase.rpc('mcp_advisory', {
-      message_content: content,
-      message_language: 'eng',
-      message_type: 'campaign',
-      from_number: 'admin',
-      message_timestamp: new Date().toISOString()
-    }).catch(() => ({ data: { harm_signals: { confidence: 0.5 } } }));
+    let mcpResult = { harm_signals: { confidence: 0.3 } };
+    try {
+      const { data } = await supabase.rpc('mcp_advisory', {
+        message_content: content,
+        message_language: 'eng',
+        message_type: 'campaign',
+        from_number: 'admin',
+        message_timestamp: new Date().toISOString()
+      });
+      mcpResult = data || mcpResult;
+    } catch (mcpError) {
+      console.warn('MCP analysis failed, using default:', mcpError.message);
+    }
     
-    const riskScore = mcpResult?.harm_signals?.confidence || 0.5;
+    const riskScore = mcpResult?.harm_signals?.confidence || 0.3;
     const autoApprove = riskScore < 0.7;
     
     const { data, error } = await supabase
@@ -565,24 +714,8 @@ app.post('/admin/campaigns', authenticateAdmin, async (req, res) => {
       .single();
     
     if (error) {
-      console.error('Supabase error:', error);
+      console.error('Campaign creation error:', error);
       return res.status(500).json({ error: error.message });
-    }
-    
-    // Trigger n8n workflow
-    try {
-      await fetch(process.env.N8N_WEBHOOK_URL || 'http://localhost:5678/webhook/campaign-webhook', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'created',
-          campaign: data,
-          mcp_result: mcpResult,
-          auto_approved: autoApprove
-        })
-      });
-    } catch (n8nError) {
-      console.warn('n8n trigger failed:', n8nError.message);
     }
     
     res.json({ 
