@@ -13,7 +13,18 @@ async function apiFetch(path, opts = {}) {
     if (token) opts.headers['Authorization'] = `Bearer ${token}`;
     
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
-    return fetch(url, opts);
+    const response = await fetch(url, opts);
+    
+    // Handle auth errors gracefully
+    if (response.status === 401) {
+        console.warn('Authentication failed, clearing tokens');
+        localStorage.removeItem('admin.auth.token');
+        localStorage.removeItem('admin.user.info');
+        // Don't auto-redirect, let user stay on page
+        throw new Error('Authentication expired');
+    }
+    
+    return response;
 }
 let currentPage = 1;
 let allMoments = [];
@@ -164,7 +175,12 @@ async function loadAnalytics() {
             </div>
         `;
     } catch (error) {
-        document.getElementById('analytics').innerHTML = '<div class="error">Failed to load analytics</div>';
+        console.error('Analytics load error:', error);
+        if (error.message === 'Authentication expired') {
+            document.getElementById('analytics').innerHTML = '<div class="error">Session expired. Please <a href="/login">login again</a>.</div>';
+        } else {
+            document.getElementById('analytics').innerHTML = '<div class="error">Failed to load analytics</div>';
+        }
     }
 }
 
@@ -173,6 +189,9 @@ async function loadRecentActivity() {
     try {
         const response = await apiFetch('/moments?limit=5');
         const data = await response.json();
+        
+        const recentActivityEl = document.getElementById('recent-activity');
+        if (!recentActivityEl) return;
         
         if (data.moments && data.moments.length > 0) {
             const html = data.moments.map(moment => `
@@ -183,12 +202,20 @@ async function loadRecentActivity() {
                     </div>
                 </div>
             `).join('');
-            document.getElementById('recent-activity').innerHTML = html;
+            recentActivityEl.innerHTML = html;
         } else {
-            document.getElementById('recent-activity').innerHTML = '<div class="empty-state">No recent activity</div>';
+            recentActivityEl.innerHTML = '<div class="empty-state">No recent activity</div>';
         }
     } catch (error) {
-        document.getElementById('recent-activity').innerHTML = '<div class="error">Failed to load recent activity</div>';
+        console.error('Recent activity load error:', error);
+        const recentActivityEl = document.getElementById('recent-activity');
+        if (recentActivityEl) {
+            if (error.message === 'Authentication expired') {
+                recentActivityEl.innerHTML = '<div class="error">Session expired. Please <a href="/login">login again</a>.</div>';
+            } else {
+                recentActivityEl.innerHTML = '<div class="error">Failed to load recent activity</div>';
+            }
+        }
     }
 }
 
@@ -381,9 +408,14 @@ async function loadSponsors() {
             }
         }
     } catch (error) {
+        console.error('Sponsors load error:', error);
         const sponsorsList = document.getElementById('sponsors-list');
         if (sponsorsList) {
-            sponsorsList.innerHTML = '<div class="error">Failed to load sponsors</div>';
+            if (error.message === 'Authentication expired') {
+                sponsorsList.innerHTML = '<div class="error">Session expired. Please <a href="/login">login again</a>.</div>';
+            } else {
+                sponsorsList.innerHTML = '<div class="error">Failed to load sponsors</div>';
+            }
         }
     }
 }

@@ -114,13 +114,79 @@ app.post('/api/admin/login', async (req, res) => {
   }
 });
 
+// Admin authentication middleware
+function authenticateAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  const token = authHeader.substring(7);
+  if (!token || token.length < 10) {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+  
+  // For now, accept any valid-looking token
+  // In production, validate against Supabase JWT
+  req.user = { token };
+  next();
+}
+
 // Basic admin endpoints
-app.get('/admin/analytics', (req, res) => {
+app.get('/admin/analytics', authenticateAdmin, (req, res) => {
   res.json({
     totalMoments: 0,
+    communityMoments: 0,
+    adminMoments: 0,
     activeSubscribers: 0,
     totalBroadcasts: 0,
+    successRate: 95,
     timestamp: new Date().toISOString()
+  });
+});
+
+// Admin moments endpoint
+app.get('/admin/moments', authenticateAdmin, (req, res) => {
+  res.json({
+    moments: [],
+    total: 0,
+    page: 1,
+    limit: 10
+  });
+});
+
+// Admin sponsors endpoint
+app.get('/admin/sponsors', authenticateAdmin, (req, res) => {
+  res.json({
+    sponsors: []
+  });
+});
+
+// Admin broadcasts endpoint
+app.get('/admin/broadcasts', authenticateAdmin, (req, res) => {
+  res.json({
+    broadcasts: []
+  });
+});
+
+// Admin moderation endpoint
+app.get('/admin/moderation', authenticateAdmin, (req, res) => {
+  res.json({
+    flaggedMessages: []
+  });
+});
+
+// Admin subscribers endpoint
+app.get('/admin/subscribers', authenticateAdmin, (req, res) => {
+  res.json({
+    subscribers: []
+  });
+});
+
+// Admin settings endpoint
+app.get('/admin/settings', authenticateAdmin, (req, res) => {
+  res.json({
+    settings: []
   });
 });
 

@@ -525,7 +525,7 @@
                 
                 if (!token || !userInfo) {
                     console.log('No auth found, redirecting to login');
-                    window.location.href = '/login.html';
+                    window.location.href = '/login';
                     return;
                 }
                 
@@ -537,7 +537,7 @@
                     console.error('Invalid user info format, clearing auth');
                     localStorage.removeItem('admin.auth.token');
                     localStorage.removeItem('admin.user.info');
-                    window.location.href = '/login.html';
+                    window.location.href = '/login';
                     return;
                 }
                 
@@ -552,23 +552,44 @@
                     signOutEl.addEventListener('click', async () => {
                         localStorage.removeItem('admin.auth.token');
                         localStorage.removeItem('admin.user.info');
-                        window.location.href = '/login.html';
+                        window.location.href = '/login';
                     });
                 }
                 
                 console.log('Auth successful, initializing admin interface');
                 
-                // Initialize the admin interface
-                loadAnalytics();
-                loadRecentActivity();
-                loadSponsors();
-                loadSettings();
+                // Initialize the admin interface with error handling
+                try {
+                    await loadAnalytics();
+                } catch (e) {
+                    console.warn('Analytics load failed:', e.message);
+                }
+                
+                try {
+                    await loadRecentActivity();
+                } catch (e) {
+                    console.warn('Recent activity load failed:', e.message);
+                }
+                
+                try {
+                    await loadSponsors();
+                } catch (e) {
+                    console.warn('Sponsors load failed:', e.message);
+                }
+                
+                try {
+                    await loadSettings();
+                } catch (e) {
+                    console.warn('Settings load failed:', e.message);
+                }
                 
             } catch (error) {
                 console.error('Auth error:', error);
-                localStorage.removeItem('admin.auth.token');
-                localStorage.removeItem('admin.user.info');
-                window.location.href = '/login.html';
+                // Don't auto-redirect on errors, show error message instead
+                const analytics = document.getElementById('analytics');
+                if (analytics) {
+                    analytics.innerHTML = '<div class="error">Authentication error. Please <a href="/login">login again</a>.</div>';
+                }
             }
         });
     </script>
