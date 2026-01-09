@@ -124,7 +124,7 @@ app.post('/webhook', async (req, res) => {
       await processMessage(message, value);
     }
 
-    res.status(200).json({ status: 'received' });
+    res.status(200).json({ status: 'processed' });
   } catch (error) {
     console.error('Webhook processing error:', error);
     res.status(500).json({ error: 'Processing failed' });

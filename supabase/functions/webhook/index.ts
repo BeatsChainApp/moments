@@ -6,6 +6,54 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Region selection helper functions
+function isRegionSelection(text: string): boolean {
+  const validRegions = ['kzn', 'wc', 'gp', 'ec', 'fs', 'lp', 'mp', 'nc', 'nw']
+  const words = text.split(/\s+/)
+  return words.length > 0 && words.every(word => validRegions.includes(word.toLowerCase()))
+}
+
+async function handleRegionSelection(phoneNumber: string, regionString: string, supabase: any) {
+  try {
+    const regionCodes = regionString.toUpperCase().split(/\s+/)
+    const regionMap: { [key: string]: string } = {
+      'KZN': 'KwaZulu-Natal',
+      'WC': 'Western Cape', 
+      'GP': 'Gauteng',
+      'EC': 'Eastern Cape',
+      'FS': 'Free State',
+      'LP': 'Limpopo',
+      'MP': 'Mpumalanga',
+      'NC': 'Northern Cape',
+      'NW': 'North West'
+    }
+    
+    const selectedRegions = regionCodes.map(code => regionMap[code]).filter(Boolean)
+    
+    if (selectedRegions.length === 0) {
+      await sendWhatsAppMessage(phoneNumber, '❌ Invalid region codes. Reply REGIONS to see valid options.')
+      return
+    }
+    
+    await supabase
+      .from('subscriptions')
+      .upsert({
+        phone_number: phoneNumber,
+        regions: selectedRegions,
+        last_activity: new Date().toISOString(),
+        opted_in: true
+      }, { onConflict: 'phone_number' })
+    
+    const confirmMessage = `✅ Regions updated!\n\nYou'll now receive community signals from:\n${selectedRegions.map(region => `📍 ${region}`).join('\n')}\n\n💬 Submit moments by messaging here\n🌐 Browse all: moments.unamifoundation.org/moments`
+    
+    await sendWhatsAppMessage(phoneNumber, confirmMessage)
+    console.log(`User ${phoneNumber} updated regions to: ${selectedRegions.join(', ')}`)
+  } catch (error) {
+    console.error('Region selection error:', error)
+    await sendWhatsAppMessage(phoneNumber, '❌ Error updating regions. Please try again or contact support.')
+  }
+}
+
 // WhatsApp API helper function
 async function sendWhatsAppMessage(to: string, message: string) {
   const token = Deno.env.get('WHATSAPP_TOKEN')
@@ -135,11 +183,21 @@ serve(async (req) => {
               
               console.log('User unsubscribed with confirmation:', message.from)
             } else if (['help', 'info', 'menu', '?'].includes(text)) {
-              // Help command with WhatsApp compliant messaging
-              const helpMsg = `📱 Unami Foundation Moments\n\nAvailable commands:\n• START - Join community updates\n• STOP - Leave updates\n• HELP - Show this menu\n\nShare community reports by sending messages.\n\n🌐 Browse all: moments.unamifoundation.org\n📞 Contact: info@unamifoundation.org`
+              // Help command with all available commands
+              const helpMsg = `📡 Community Signal Service Commands:\n\n🔄 START - Subscribe to community signals\n🛑 STOP - Unsubscribe from signals\n❓ HELP - Show this help menu\n📍 REGIONS - Choose your areas\n\n🌍 Available Regions:\nKZN, WC, GP, EC, FS, LP, MP, NC, NW\n\n💬 Submit moments by messaging here\n🌐 Full community feed: moments.unamifoundation.org/moments\n\nThis is YOUR community sharing platform.`
               await sendWhatsAppMessage(message.from, helpMsg)
               
               console.log('Help sent to:', message.from)
+            } else if (['regions', 'region', 'areas'].includes(text)) {
+              // Regions command
+              const regionsMsg = `📍 Choose your regions (reply with region codes):\n\n🏖️ KZN - KwaZulu-Natal\n🍷 WC - Western Cape\n🏙️ GP - Gauteng\n🌊 EC - Eastern Cape\n🌾 FS - Free State\n🌳 LP - Limpopo\n⛰️ MP - Mpumalanga\n🏜️ NC - Northern Cape\n💎 NW - North West\n\nReply with codes like: KZN WC GP`
+              await sendWhatsAppMessage(message.from, regionsMsg)
+              
+              console.log('Regions sent to:', message.from)
+            } else if (isRegionSelection(text)) {
+              // Handle region selection
+              await handleRegionSelection(message.from, text, supabase)
+              console.log('Region selection processed for:', message.from)
             } else {
               // Process as community content with Supabase MCP
               try {
