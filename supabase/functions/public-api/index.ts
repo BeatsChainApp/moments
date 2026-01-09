@@ -51,16 +51,9 @@ serve(async (req) => {
         .from('moments')
         .select(`
           *, 
-          sponsors(*),
-          moment_comments!left(
-            id, content, created_at, featured, reply_count, phone_number,
-            replies:moment_comments!parent_comment_id(
-              id, content, created_at, phone_number
-            )
-          )
+          sponsors(*)
         `)
         .eq('status', 'broadcasted')
-        .eq('moment_comments.approved', true)
         .order('broadcasted_at', { ascending: false })
         .limit(25)
 
@@ -90,21 +83,28 @@ serve(async (req) => {
         campaignsQuery
       ])
 
-      // Process moments with comments
-      const processedMoments = (momentsResult.data || []).map(moment => ({
-        ...moment,
-        comments: moment.moment_comments
-          ?.filter(c => c.approved !== false)
-          ?.map(comment => ({
-            ...comment,
-            phone_number: comment.phone_number.replace(/\d(?=\d{4})/g, '*'),
-            replies: comment.replies?.slice(0, 2).map(reply => ({
-              ...reply,
-              phone_number: reply.phone_number.replace(/\d(?=\d{4})/g, '*')
+      // Fetch comments separately for each moment
+      const processedMoments = await Promise.all(
+        (momentsResult.data || []).map(async moment => {
+          const { data: comments } = await supabase
+            .from('moment_comments')
+            .select('*')
+            .eq('moment_id', moment.id)
+            .eq('approved', true)
+            .is('parent_comment_id', null)
+            .order('featured', { ascending: false })
+            .order('created_at', { ascending: false })
+            .limit(3)
+          
+          return {
+            ...moment,
+            comments: (comments || []).map(comment => ({
+              ...comment,
+              phone_number: comment.phone_number.replace(/\d(?=\d{4})/g, '*')
             }))
-          }))
-          ?.sort((a, b) => b.featured - a.featured || new Date(b.created_at) - new Date(a.created_at))
-      }))
+          }
+        })
+      )
 
       // Transform campaigns to match moments structure
       const transformedCampaigns = (campaignsResult.data || []).map(campaign => ({
@@ -138,12 +138,7 @@ serve(async (req) => {
       
       const { data: comments, error } = await supabase
         .from('moment_comments')
-        .select(`
-          *,
-          replies:moment_comments!parent_comment_id(
-            id, content, created_at, phone_number
-          )
-        `)
+        .select('*')
         .eq('moment_id', momentId)
         .eq('approved', true)
         .is('parent_comment_id', null)
@@ -152,14 +147,27 @@ serve(async (req) => {
       
       if (error) throw error
       
-      const processedComments = comments.map(comment => ({
-        ...comment,
-        phone_number: comment.phone_number.replace(/\d(?=\d{4})/g, '*'),
-        replies: comment.replies?.map(reply => ({
-          ...reply,
-          phone_number: reply.phone_number.replace(/\d(?=\d{4})/g, '*')
-        }))
-      }))
+      // Fetch replies for each comment
+      const processedComments = await Promise.all(
+        (comments || []).map(async comment => {
+          const { data: replies } = await supabase
+            .from('moment_comments')
+            .select('*')
+            .eq('parent_comment_id', comment.id)
+            .eq('approved', true)
+            .order('created_at', { ascending: true })
+            .limit(5)
+          
+          return {
+            ...comment,
+            phone_number: comment.phone_number.replace(/\d(?=\d{4})/g, '*'),
+            replies: (replies || []).map(reply => ({
+              ...reply,
+              phone_number: reply.phone_number.replace(/\d(?=\d{4})/g, '*')
+            }))
+          }
+        })
+      )
       
       return new Response(JSON.stringify({ 
         comments: processedComments 
