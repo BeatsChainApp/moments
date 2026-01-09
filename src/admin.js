@@ -792,4 +792,87 @@ router.post('/admin-users', async (req, res) => {
   }
 });
 
+// Comment management endpoints
+router.post('/comments/:id/approve', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('moment_comments')
+      .update({ approved: true, moderated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    res.json({ success: true, comment: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/comments/:id/feature', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('moment_comments')
+      .update({ featured: true, approved: true, moderated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    res.json({ success: true, comment: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/comments/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('moment_comments')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Campaign activation and deletion
+router.post('/campaigns/:id/activate', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { data, error } = await supabase
+      .from('campaigns')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    res.json({ success: true, campaign: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.delete('/campaigns/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('campaigns')
+      .delete()
+      .eq('id', id);
+    
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;

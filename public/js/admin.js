@@ -169,6 +169,18 @@ function handleAction(action, element) {
     }
 }
 
+// Preview message function
+function previewMessage(id) {
+    // Simple preview - could be enhanced with modal
+    const message = document.querySelector(`[data-id="${id}"]`);
+    if (message) {
+        const content = message.closest('.moment-item').querySelector('.moment-content');
+        if (content) {
+            alert('Message Preview:\n\n' + content.textContent.replace('Content: ', ''));
+        }
+    }
+}
+
 // Load analytics with MCP and n8n integration
 async function loadAnalytics() {
     try {
