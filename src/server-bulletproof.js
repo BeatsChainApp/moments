@@ -124,7 +124,7 @@ app.post('/webhook', async (req, res) => {
       await processMessage(message, value);
     }
 
-    res.status(200).json({ status: 'processed' });
+    res.status(200).json({ status: 'received' });
   } catch (error) {
     console.error('Webhook processing error:', error);
     res.status(500).json({ error: 'Processing failed' });
@@ -137,6 +137,8 @@ async function processMessage(message, value) {
     const messageType = message.type;
     let content = '';
     let mediaId = null;
+
+    console.log(`Processing message from ${fromNumber}, type: ${messageType}`);
 
     // Extract content based on message type
     switch (messageType) {
@@ -163,41 +165,51 @@ async function processMessage(message, value) {
         content = `[${messageType} message]`;
     }
 
+    console.log(`Message content: "${content}"`);
+
     // Handle commands
     const command = content.toLowerCase().trim();
+    console.log(`Command detected: "${command}"`);
     
     if (command === 'stop' || command === 'unsubscribe') {
+      console.log('Processing STOP command');
       await handleOptOut(fromNumber);
       return;
     }
     
     if (command === 'start' || command === 'join') {
+      console.log('Processing START command');
       await handleOptIn(fromNumber);
       return;
     }
     
     if (command === 'help') {
+      console.log('Processing HELP command');
       await handleHelp(fromNumber);
       return;
     }
     
     if (command === 'regions') {
+      console.log('Processing REGIONS command');
       await handleRegions(fromNumber);
       return;
     }
     
     // Handle region selection (e.g., "KZN WC GP")
     if (isRegionSelection(command)) {
+      console.log('Processing region selection');
       await handleRegionSelection(fromNumber, command);
       return;
     }
     
     // Handle casual chat attempts
     if (isCasualMessage(command)) {
+      console.log('Processing casual chat');
       await handleCasualChat(fromNumber);
       return;
     }
 
+    console.log('Storing message in database');
     // Store message in database and update 24-hour messaging window
     const { data: messageRecord, error: insertError } = await supabase
       .from('messages')
@@ -408,6 +420,10 @@ South Africans share local opportunities and events here.
 
 async function sendMessage(phoneNumber, message) {
   try {
+    console.log(`Attempting to send message to ${phoneNumber}:`, message);
+    console.log('WHATSAPP_PHONE_ID:', process.env.WHATSAPP_PHONE_ID);
+    console.log('WHATSAPP_TOKEN exists:', !!process.env.WHATSAPP_TOKEN);
+    
     const response = await fetch(
       `https://graph.facebook.com/v18.0/${process.env.WHATSAPP_PHONE_ID}/messages`,
       {
@@ -425,14 +441,16 @@ async function sendMessage(phoneNumber, message) {
       }
     );
     
+    const responseText = await response.text();
+    console.log('WhatsApp API response:', response.status, responseText);
+    
     if (response.ok) {
-      console.log(`Message sent to ${phoneNumber}`);
+      console.log(`✅ Message sent to ${phoneNumber}`);
     } else {
-      const error = await response.text();
-      console.error('Send message error:', error);
+      console.error('❌ Send message error:', responseText);
     }
   } catch (error) {
-    console.error('Send message error:', error.message);
+    console.error('❌ Send message error:', error.message);
   }
 }
 
