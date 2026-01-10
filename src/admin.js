@@ -239,6 +239,24 @@ router.get('/sponsors', async (req, res) => {
   }
 });
 
+// Get single sponsor
+router.get('/sponsors/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('sponsors')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    res.json({ sponsor: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Create sponsor
 router.post('/sponsors', async (req, res) => {
   try {
@@ -637,6 +655,24 @@ router.get('/campaigns', async (req, res) => {
     const { data, error } = await query;
     if (error) throw error;
     res.json({ campaigns: data || [], page: parseInt(page), limit: parseInt(limit) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get single campaign
+router.get('/campaigns/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) throw error;
+    res.json({ campaign: data });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

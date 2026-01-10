@@ -1088,8 +1088,33 @@ function confirmAction() {
     }
 }
 
-function editSponsor(id) {
-    openSponsorModal();
+async function editSponsor(id) {
+    try {
+        // Get sponsor data
+        const response = await apiFetch(`/sponsors/${id}`);
+        if (!response.ok) {
+            showError('Failed to load sponsor data');
+            return;
+        }
+        
+        const data = await response.json();
+        const sponsor = data.sponsor;
+        
+        // Populate form
+        document.getElementById('sponsor-edit-id').value = id;
+        document.querySelector('#sponsor-form [name="name"]').value = sponsor.name || '';
+        document.querySelector('#sponsor-form [name="display_name"]').value = sponsor.display_name || '';
+        document.querySelector('#sponsor-form [name="contact_email"]').value = sponsor.contact_email || '';
+        document.querySelector('#sponsor-form [name="website_url"]').value = sponsor.website_url || '';
+        
+        // Update modal title and button
+        document.getElementById('sponsor-modal-title').textContent = 'Edit Sponsor';
+        document.getElementById('sponsor-submit-btn').textContent = 'Update Sponsor';
+        
+        openSponsorModal();
+    } catch (error) {
+        showError('Failed to load sponsor: ' + error.message);
+    }
 }
 
 function deleteSponsor(id) {
@@ -1211,12 +1236,57 @@ function deleteComment(id) {
         }
     });
 }
-function editCampaign(id) {
-    // Load campaign data and open modal for editing
-    openCampaignModal();
-    document.getElementById('campaign-modal-title').textContent = 'Edit Campaign';
-    document.getElementById('campaign-submit-btn').textContent = 'Update Campaign';
-    document.getElementById('campaign-edit-id').value = id;
+async function editCampaign(id) {
+    try {
+        // Get campaign data
+        const response = await apiFetch(`/campaigns/${id}`);
+        if (!response.ok) {
+            showError('Failed to load campaign data');
+            return;
+        }
+        
+        const data = await response.json();
+        const campaign = data.campaign;
+        
+        // Populate form
+        document.getElementById('campaign-edit-id').value = id;
+        document.querySelector('#campaign-form [name="title"]').value = campaign.title || '';
+        document.querySelector('#campaign-form [name="content"]').value = campaign.content || '';
+        document.querySelector('#campaign-form [name="sponsor_id"]').value = campaign.sponsor_id || '';
+        document.querySelector('#campaign-form [name="budget"]').value = campaign.budget || '';
+        
+        // Handle regions and categories
+        if (campaign.target_regions && campaign.target_regions.length > 0) {
+            document.querySelector('#campaign-form [name="primary_region"]').value = campaign.target_regions[0];
+            // Check additional regions
+            campaign.target_regions.slice(1).forEach(region => {
+                const checkbox = document.querySelector(`#campaign-form input[name="target_regions"][value="${region}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+        
+        if (campaign.target_categories && campaign.target_categories.length > 0) {
+            document.querySelector('#campaign-form [name="primary_category"]').value = campaign.target_categories[0];
+            // Check additional categories
+            campaign.target_categories.slice(1).forEach(category => {
+                const checkbox = document.querySelector(`#campaign-form input[name="target_categories"][value="${category}"]`);
+                if (checkbox) checkbox.checked = true;
+            });
+        }
+        
+        if (campaign.scheduled_at) {
+            const date = new Date(campaign.scheduled_at);
+            document.querySelector('#campaign-form [name="scheduled_at"]').value = date.toISOString().slice(0, 16);
+        }
+        
+        // Update modal title and button
+        document.getElementById('campaign-modal-title').textContent = 'Edit Campaign';
+        document.getElementById('campaign-submit-btn').textContent = 'Update Campaign';
+        
+        openCampaignModal();
+    } catch (error) {
+        showError('Failed to load campaign: ' + error.message);
+    }
 }
 
 function activateCampaign(id) {
@@ -1619,6 +1689,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
+            const isEdit = !!data.id;
             
             // Handle media files first
             const mediaFiles = formData.getAll('campaign_media');
@@ -1676,19 +1747,22 @@ document.addEventListener('DOMContentLoaded', () => {
             delete data.primary_category;
             
             try {
-                const response = await apiFetch('/campaigns', {
-                    method: 'POST',
+                const url = isEdit ? `/campaigns/${data.id}` : '/campaigns';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                const response = await apiFetch(url, {
+                    method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
                 });
                 
                 const result = await response.json();
                 if (response.ok) {
-                    showSuccess(`Campaign created successfully! ${result.auto_approved ? '(Auto-approved)' : '(Pending review)'}`);
+                    showSuccess(`Campaign ${isEdit ? 'updated' : 'created'} successfully! ${result.auto_approved ? '(Auto-approved)' : '(Pending review)'}`);
                     closeCampaignModal();
                     loadCampaigns();
                 } else {
-                    showError(result.error || 'Failed to create campaign');
+                    showError(result.error || `Failed to ${isEdit ? 'update' : 'create'} campaign`);
                 }
             } catch (error) {
                 showError('Failed to create campaign');
