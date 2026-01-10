@@ -499,26 +499,34 @@ function authenticateAdmin(req, res, next) {
 // Basic admin endpoints
 app.get('/admin/analytics', authenticateAdmin, async (req, res) => {
   try {
-    const [momentsResult, subscribersResult, broadcastsResult, communityResult] = await Promise.all([
-      supabase.from('moments').select('id', { count: 'exact', head: true }),
-      supabase.from('subscriptions').select('id').eq('opted_in', true).then(r => ({ count: r.data?.length || 0 })),
-      supabase.from('broadcasts').select('id', { count: 'exact', head: true }),
-      supabase.from('moments').select('id').eq('content_source', 'community').then(r => ({ count: r.data?.length || 0 }))
-    ]);
+    const { data, error } = await supabase.rpc('get_admin_analytics');
     
-    const totalMoments = momentsResult.count || 0;
-    const communityMoments = communityResult.count || 0;
-    const adminMoments = totalMoments - communityMoments;
+    if (error) {
+      console.error('Analytics RPC error:', error);
+      // Fallback to manual calculation
+      const [momentsResult, subscribersResult, broadcastsResult, communityResult] = await Promise.all([
+        supabase.from('moments').select('id', { count: 'exact', head: true }),
+        supabase.from('subscriptions').select('id').eq('opted_in', true).then(r => ({ count: r.data?.length || 0 })),
+        supabase.from('broadcasts').select('id', { count: 'exact', head: true }),
+        supabase.from('moments').select('id').eq('content_source', 'community').then(r => ({ count: r.data?.length || 0 }))
+      ]);
+      
+      const totalMoments = momentsResult.count || 0;
+      const communityMoments = communityResult.count || 0;
+      const adminMoments = totalMoments - communityMoments;
+      
+      return res.json({
+        totalMoments,
+        communityMoments,
+        adminMoments,
+        activeSubscribers: subscribersResult.count || 0,
+        totalBroadcasts: broadcastsResult.count || 0,
+        successRate: 95,
+        timestamp: new Date().toISOString()
+      });
+    }
     
-    res.json({
-      totalMoments,
-      communityMoments,
-      adminMoments,
-      activeSubscribers: subscribersResult.count || 0,
-      totalBroadcasts: broadcastsResult.count || 0,
-      successRate: 95,
-      timestamp: new Date().toISOString()
-    });
+    res.json(data);
   } catch (error) {
     console.error('Analytics error:', error);
     res.json({
@@ -869,6 +877,30 @@ app.post('/admin/sponsors', authenticateAdmin, async (req, res) => {
   } catch (error) {
     console.error('Create sponsor error:', error);
     res.status(500).json({ error: 'Failed to create sponsor' });
+  }
+});
+
+// Budget calculation endpoint
+app.post('/admin/budget-estimate', authenticateAdmin, async (req, res) => {
+  try {
+    const { target_regions, target_categories, cost_per_recipient } = req.body;
+    
+    const { data, error } = await supabase.rpc('calculate_campaign_budget', {
+      p_target_regions: target_regions || [],
+      p_target_categories: target_categories || [],
+      p_cost_per_recipient: cost_per_recipient || 0.50
+    });
+    
+    if (error) {
+      console.error('Budget calculation error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+    
+    res.json(data);
+    
+  } catch (error) {
+    console.error('Budget estimate error:', error);
+    res.status(500).json({ error: 'Failed to calculate budget' });
   }
 });
 

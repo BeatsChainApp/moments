@@ -3,9 +3,11 @@
 -- Sponsors table
 CREATE TABLE IF NOT EXISTS sponsors (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
+  name TEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
   contact_email TEXT,
+  website_url TEXT,
+  logo_url TEXT,
   active BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
