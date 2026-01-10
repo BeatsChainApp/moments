@@ -181,34 +181,27 @@ function previewMessage(id) {
     }
 }
 
-// Load analytics with direct Supabase queries
+// Load analytics with correct admin endpoint
 async function loadAnalytics() {
     try {
-        const [momentsResponse, subscribersResponse, broadcastsResponse] = await Promise.all([
-            apiFetch('/moments?select=count'),
-            apiFetch('/subscriptions?select=count&opted_in=eq.true'),
-            apiFetch('/broadcasts?select=count')
-        ]);
-        
-        const momentsCount = await momentsResponse.json();
-        const subscribersCount = await subscribersResponse.json();
-        const broadcastsCount = await broadcastsResponse.json();
+        const response = await apiFetch('/analytics');
+        const data = await response.json();
         
         document.getElementById('analytics').innerHTML = `
             <div class="stat-card">
-                <div class="stat-number">${momentsCount.length || 0}</div>
+                <div class="stat-number">${data.totalMoments || 0}</div>
                 <div class="stat-label">Total Moments</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${subscribersCount.length || 0}</div>
+                <div class="stat-number">${data.activeSubscribers || 0}</div>
                 <div class="stat-label">Active Subscribers</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${broadcastsCount.length || 0}</div>
+                <div class="stat-number">${data.totalBroadcasts || 0}</div>
                 <div class="stat-label">Total Broadcasts</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">95%</div>
+                <div class="stat-number">${data.successRate || '0'}%</div>
                 <div class="stat-label">Success Rate</div>
             </div>
         `;
@@ -1375,6 +1368,12 @@ document.addEventListener('DOMContentLoaded', () => {
         mediaFilesInput.addEventListener('change', handleFilePreview);
     }
     
+    // Sponsor logo preview functionality
+    const sponsorLogoInput = document.getElementById('sponsor-logo-file');
+    if (sponsorLogoInput) {
+        sponsorLogoInput.addEventListener('change', handleSponsorLogoPreview);
+    }
+    
     const createForm = document.getElementById('create-form');
     if (createForm) {
         createForm.addEventListener('submit', async (e) => {
@@ -1487,10 +1486,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = Object.fromEntries(formData);
             const isEdit = !!data.id;
             
-            // Handle logo upload
+            // Handle logo upload with preview
             const logoFile = formData.get('logo_file');
             if (logoFile && logoFile.size > 0) {
                 try {
+                    // Show upload progress
+                    const logoPreview = document.getElementById('sponsor-logo-preview');
+                    const logoProgressBar = document.getElementById('sponsor-upload-progress-bar');
+                    const logoProgress = document.getElementById('sponsor-upload-progress');
+                    
+                    if (logoProgress) logoProgress.style.display = 'block';
+                    if (logoProgressBar) logoProgressBar.style.width = '10%';
+                    
                     const logoFormData = new FormData();
                     logoFormData.append('media_files', logoFile);
                     
@@ -1499,14 +1506,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         body: logoFormData
                     });
                     
+                    if (logoProgressBar) logoProgressBar.style.width = '90%';
+                    
                     const uploadResult = await uploadResponse.json();
                     if (uploadResult.success && uploadResult.files.length > 0) {
                         data.logo_url = uploadResult.files[0].publicUrl;
+                        if (logoProgressBar) logoProgressBar.style.width = '100%';
                         showSuccess('Logo uploaded successfully');
                     }
+                    
+                    // Hide progress after delay
+                    setTimeout(() => {
+                        if (logoProgress) logoProgress.style.display = 'none';
+                    }, 1000);
                 } catch (uploadError) {
                     console.error('Logo upload failed:', uploadError);
                     showError('Logo upload failed, but sponsor will be saved without logo');
+                    const logoProgress = document.getElementById('sponsor-upload-progress');
+                    if (logoProgress) logoProgress.style.display = 'none';
                 }
             }
             
@@ -1660,6 +1677,44 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+function handleSponsorLogoPreview(event) {
+    const files = event.target.files;
+    const preview = document.getElementById('sponsor-logo-preview');
+    const previewList = document.getElementById('sponsor-logo-preview-list');
+    
+    if (files.length === 0) {
+        preview.style.display = 'none';
+        return;
+    }
+    
+    preview.style.display = 'block';
+    previewList.innerHTML = '';
+    
+    const file = files[0];
+    const fileItem = document.createElement('div');
+    fileItem.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0;';
+    
+    const fileSize = formatFileSize(file.size);
+    
+    fileItem.innerHTML = `
+        <span style="font-size: 1.25rem;">🖼️</span>
+        <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 0.875rem; font-weight: 500; truncate;">${file.name}</div>
+            <div style="font-size: 0.75rem; color: #6b7280;">${fileSize} • ${file.type}</div>
+        </div>
+        <button type="button" onclick="clearSponsorLogo()" style="background: none; border: none; color: #dc2626; cursor: pointer; padding: 0.25rem;">✕</button>
+    `;
+    
+    previewList.appendChild(fileItem);
+}
+
+function clearSponsorLogo() {
+    const input = document.getElementById('sponsor-logo-file');
+    const preview = document.getElementById('sponsor-logo-preview');
+    input.value = '';
+    preview.style.display = 'none';
+}
 
 // Load more campaigns function
 function loadMoreCampaigns() {
