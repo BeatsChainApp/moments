@@ -177,12 +177,9 @@ async function processMessage(message, value) {
         message_timestamp: new Date().toISOString()
       });
       
-      // Also analyze as potential comment
-      await supabase.rpc('mcp_comment_analysis', {
-        message_id: messageRecord.id,
-        content: content,
-        phone_number: fromNumber
-      });
+      // Note: Soft moderation trigger will automatically process this message
+      // if it meets auto-approval criteria (see supabase/soft-moderation.sql)
+      
     } catch (mcpError) {
       console.error('MCP analysis error:', mcpError);
     }
