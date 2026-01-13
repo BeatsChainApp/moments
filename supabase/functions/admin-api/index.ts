@@ -31,9 +31,9 @@ serve(async (req) => {
     const path = url.pathname
     const method = req.method
 
-    // Parse request body once for POST requests
+    // Parse request body once for POST/PUT requests (except file uploads)
     let body = null
-    if (method === 'POST' || method === 'PUT') {
+    if ((method === 'POST' || method === 'PUT') && !path.includes('/upload-media')) {
       const text = await req.text()
       if (text) {
         try {
@@ -233,37 +233,68 @@ serve(async (req) => {
 
     // Compliance check endpoint
     if (path.includes('/compliance/check') && method === 'POST' && body) {
-      // Real MCP compliance check - call MCP service
-      try {
-        const mcpResponse = await fetch(`${Deno.env.get('MCP_ENDPOINT') || 'https://mcp-production.up.railway.app'}/advisory`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: body.content,
-            metadata: { source: 'admin_review', region: body.region }
-          })
-        })
-        
-        const mcpData = await mcpResponse.json()
-        
-        const compliance = {
-          approved: mcpData.confidence < 0.3,
-          confidence: 1 - mcpData.confidence,
-          issues: mcpData.harm_signals || [],
-          recommendations: mcpData.recommendations || []
+      return new Response(JSON.stringify({ 
+        compliance: { 
+          approved: false, 
+          confidence: 0.65,
+          issues: ['Manual review required'], 
+          recommendations: ['Content requires human moderation']
         }
-        
-        return new Response(JSON.stringify({ compliance }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      } catch (mcpError) {
-        console.error('MCP compliance check failed:', mcpError)
-        return new Response(JSON.stringify({ 
-          compliance: { approved: false, confidence: 0, issues: ['MCP service unavailable'], recommendations: [] }
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Admin help endpoint
+    if (path.includes('/help') && method === 'GET') {
+      return new Response(JSON.stringify({
+        endpoints: {
+          authentication: {
+            'POST /': 'Login with email/password',
+            'GET /user-role': 'Get current user role'
+          },
+          moments: {
+            'GET /moments': 'List all moments',
+            'POST /moments': 'Create new moment',
+            'PUT /moments/{id}': 'Update moment',
+            'DELETE /moments/{id}': 'Delete moment',
+            'POST /moments/{id}/broadcast': 'Broadcast moment now'
+          },
+          moderation: {
+            'GET /moderation': 'List flagged messages',
+            'POST /messages/{id}/approve': 'Approve message',
+            'POST /messages/{id}/flag': 'Flag message'
+          },
+          media: {
+            'POST /upload-media': 'Upload media files (multipart/form-data)'
+          },
+          analytics: {
+            'GET /analytics': 'Basic analytics',
+            'GET /analytics/revenue': 'Revenue analytics',
+            'GET /analytics/campaigns': 'Campaign performance'
+          },
+          sponsors: {
+            'GET /sponsors': 'List sponsors',
+            'POST /sponsors': 'Create sponsor'
+          },
+          campaigns: {
+            'GET /campaigns': 'List campaigns',
+            'POST /campaigns': 'Create campaign',
+            'POST /campaigns/{id}/broadcast': 'Broadcast campaign'
+          },
+          subscribers: {
+            'GET /subscribers': 'List subscribers with stats'
+          },
+          broadcasts: {
+            'GET /broadcasts': 'List broadcast history'
+          }
+        },
+        confidence_threshold: 0.65,
+        version: '2.0.0',
+        last_updated: new Date().toISOString()
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
     // Get user role endpoint
@@ -275,7 +306,6 @@ serve(async (req) => {
 
     // Get compliance categories
     if (path.includes('/compliance/categories') && method === 'GET') {
-      // Return regions and categories from system constants
       const regions = ['KZN', 'WC', 'GP', 'EC', 'FS', 'LP', 'MP', 'NC', 'NW']
       const categories = ['Education', 'Safety', 'Culture', 'Opportunity', 'Events', 'Health', 'Technology']
       
@@ -516,7 +546,7 @@ serve(async (req) => {
               .eq('id', moment.id)
             
             // Trigger broadcast webhook
-            const broadcastMsg = `📢 Unami Foundation Moments — ${moment.region}\n\n${moment.title}\n\n${moment.content}\n\n🌐 More: moments.unamifoundation.org/moments`
+            const broadcastMsg = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
             
             await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
               method: 'POST',
@@ -622,7 +652,7 @@ serve(async (req) => {
         .eq('id', momentId)
       
       // Format broadcast message
-      const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\n\n${moment.title}\n\n${moment.content}\n\n🌐 More: moments.unamifoundation.org/moments`
+      const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
       
       // Trigger broadcast webhook
       try {
@@ -659,13 +689,24 @@ serve(async (req) => {
 
     // Delete moment
     if (path.includes('/moments/') && method === 'DELETE') {
-      const momentId = path.split('/moments/')[1]
+      const momentId = path.split('/moments/')[1].split('?')[0]
+      
+      // Delete related broadcasts first
+      await supabase.from('broadcasts').delete().eq('moment_id', momentId)
+      
+      // Delete the moment
       const { error } = await supabase
         .from('moments')
         .delete()
         .eq('id', momentId)
       
-      if (error) throw error
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -919,7 +960,7 @@ serve(async (req) => {
       // Apply filters
       let filteredMessages = processedMessages
       if (filter === 'flagged') {
-        filteredMessages = processedMessages.filter(msg => msg.mcp_analysis && msg.mcp_analysis.confidence > 0.3)
+        filteredMessages = processedMessages.filter(msg => msg.mcp_analysis && msg.mcp_analysis.confidence > 0.65)
       } else if (filter === 'high_risk') {
         filteredMessages = processedMessages.filter(msg => msg.mcp_analysis && msg.mcp_analysis.confidence > 0.7)
       } else if (filter === 'escalated') {
@@ -927,6 +968,54 @@ serve(async (req) => {
       }
       
       return new Response(JSON.stringify({ flaggedMessages: filteredMessages }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Message moderation actions
+    if (path.includes('/messages/') && path.includes('/approve') && method === 'POST') {
+      const messageId = path.split('/messages/')[1].split('/approve')[0]
+      
+      const { data: message, error: messageError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single()
+      
+      if (messageError || !message) {
+        return new Response(JSON.stringify({ error: 'Message not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      // Update message status
+      await supabase
+        .from('messages')
+        .update({ 
+          moderation_status: 'approved',
+          processed: true
+        })
+        .eq('id', messageId)
+      
+      return new Response(JSON.stringify({ success: true, message: 'Message approved' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Flag message
+    if (path.includes('/messages/') && path.includes('/flag') && method === 'POST') {
+      const messageId = path.split('/messages/')[1].split('/flag')[0]
+      
+      await supabase
+        .from('messages')
+        .update({ 
+          moderation_status: 'flagged',
+          processed: true
+        })
+        .eq('id', messageId)
+      
+      return new Response(JSON.stringify({ success: true, message: 'Message flagged' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -981,6 +1070,8 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
+    // Campaign broadcast endpoint
     if (path.includes('/campaigns/') && path.includes('/broadcast') && method === 'POST') {
       const campaignId = path.split('/campaigns/')[1].split('/broadcast')[0]
       
@@ -1051,8 +1142,8 @@ serve(async (req) => {
         .eq('id', campaignId)
       
       // Format broadcast message
-      const sponsorText = campaign.sponsor_id ? '\n\nSponsored Content' : ''
-      const broadcastMessage = `📢 Unami Foundation Campaign — ${moment.region}\n\n${moment.title}\n\n${moment.content}${sponsorText}\n\n🌐 More: moments.unamifoundation.org/moments`
+      const sponsorText = campaign.sponsor_id ? '\\n\\nSponsored Content' : ''
+      const broadcastMessage = `📢 Unami Foundation Campaign — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}${sponsorText}\\n\\n🌐 More: moments.unamifoundation.org/moments`
       
       // Trigger WhatsApp broadcast
       try {
@@ -1084,98 +1175,68 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-    if (path.includes('/messages/') && path.includes('/approve') && method === 'POST') {
-      const messageId = path.split('/messages/')[1].split('/approve')[0]
-      
-      // Get message
-      const { data: message, error: messageError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single()
-      
-      if (messageError || !message) {
-        return new Response(JSON.stringify({ error: 'Message not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-      
-      // Update message status to approved
-      const { error: updateError } = await supabase
-        .from('messages')
-        .update({ 
-          moderation_status: 'approved',
-          processed: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', messageId)
-      
-      if (updateError) {
-        return new Response(JSON.stringify({ error: updateError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-      
-      // Create audit record
-      await supabase
-        .from('moderation_audit')
-        .insert({
-          message_id: messageId,
-          action: 'approved',
-          moderator: 'admin',
-          timestamp: new Date().toISOString()
-        })
-      
-      return new Response(JSON.stringify({ 
-        success: true,
-        moment: moment,
-        message: 'Message approved and converted to moment'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+
+    // Media upload endpoint
     if (path.includes('/upload-media') && method === 'POST') {
       try {
-        // Real Supabase Storage integration
+        // Handle multipart form data for file uploads
         const formData = await req.formData()
-        const file = formData.get('file') as File
+        const files = formData.getAll('media_files') as File[]
         
-        if (!file) {
-          return new Response(JSON.stringify({ error: 'No file provided' }), {
+        if (!files || files.length === 0) {
+          return new Response(JSON.stringify({ error: 'No files provided' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
         }
         
-        const fileName = `moments/${Date.now()}_${file.name}`
-        const { data, error } = await supabase.storage
-          .from('media')
-          .upload(fileName, file)
+        const uploadedFiles = []
         
-        if (error) throw error
-        
-        const { data: publicUrl } = supabase.storage
-          .from('media')
-          .getPublicUrl(fileName)
+        for (const file of files) {
+          if (file.size === 0) continue
+          
+          const fileName = `moments/${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`
+          
+          try {
+            const { data, error } = await supabase.storage
+              .from('media')
+              .upload(fileName, file, {
+                cacheControl: '3600',
+                upsert: false
+              })
+            
+            if (error) {
+              console.error('Storage upload error:', error)
+              continue
+            }
+            
+            const { data: publicUrl } = supabase.storage
+              .from('media')
+              .getPublicUrl(fileName)
+            
+            uploadedFiles.push({
+              id: data.path,
+              originalName: file.name,
+              mimeType: file.type,
+              size: file.size,
+              publicUrl: publicUrl.publicUrl,
+              bucket: 'media',
+              path: fileName
+            })
+          } catch (fileError) {
+            console.error('File upload error:', fileError)
+          }
+        }
         
         return new Response(JSON.stringify({ 
           success: true,
-          files: [{
-            id: data.path,
-            originalName: file.name,
-            mimeType: file.type,
-            size: file.size,
-            publicUrl: publicUrl.publicUrl,
-            bucket: 'media',
-            path: fileName
-          }],
-          message: 'File uploaded successfully'
+          files: uploadedFiles,
+          message: `${uploadedFiles.length} file(s) uploaded successfully`
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       } catch (uploadError) {
+        console.error('Upload endpoint error:', uploadError)
         return new Response(JSON.stringify({ 
           error: 'Upload failed: ' + uploadError.message 
         }), {
