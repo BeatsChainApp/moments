@@ -27,9 +27,9 @@
         .header h1 { font-size: clamp(1.5rem, 5vw, 2.5rem); margin-bottom: 0.5rem; }
         .header p { opacity: 0.9; font-size: clamp(0.875rem, 3vw, 1.125rem); }
         .stats-bar { display: flex; justify-content: space-around; background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 0.5rem; margin-top: 1rem; }
-        .stat { text-align: center; }
-        .stat-number { font-size: 1.5rem; font-weight: bold; }
-        .stat-label { font-size: 0.75rem; opacity: 0.8; }
+        .stat { text-align: center; color: white; }
+        .stat-number { font-size: 1.5rem; font-weight: bold; color: white; }
+        .stat-label { font-size: 0.75rem; opacity: 0.9; color: white; }
         .filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
         .filter-select { padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; font-size: 1rem; }
         .moments-grid { display: grid; gap: 1.5rem; }
@@ -47,9 +47,39 @@
         .moment-content.collapsed::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1.5em; background: linear-gradient(transparent, white); }
         .expand-content { background: none; border: none; color: #2563eb; font-size: 0.875rem; cursor: pointer; padding: 0; margin-top: 0.5rem; }
         .expand-content:hover { text-decoration: underline; }
-        .moment-media { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
-        .media-preview { position: relative; border-radius: 0.5rem; overflow: hidden; aspect-ratio: 1; background: #f3f4f6; display: block; }
-        .media-preview img, .media-preview video { width: 100%; height: 100%; object-fit: cover; cursor: pointer; display: block; }
+        .moment-media { 
+            display: grid; 
+            gap: 0.5rem; 
+            margin: 1rem 0; 
+        }
+        .moment-media.single { grid-template-columns: 1fr; }
+        .moment-media.double { grid-template-columns: 1fr 1fr; }
+        .moment-media.triple { grid-template-columns: 1fr 1fr 1fr; }
+        .moment-media.multiple { grid-template-columns: 1fr 1fr; }
+        
+        .media-preview { 
+            position: relative; 
+            border-radius: 0.5rem; 
+            overflow: hidden; 
+            background: #f3f4f6; 
+            display: block;
+            cursor: pointer;
+        }
+        .media-preview.single { aspect-ratio: 16/9; max-height: 300px; }
+        .media-preview.double { aspect-ratio: 1; }
+        .media-preview.triple { aspect-ratio: 1; }
+        .media-preview.multiple { aspect-ratio: 1; }
+        
+        .media-preview img, .media-preview video { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            display: block;
+            transition: transform 0.2s;
+        }
+        .media-preview:hover img, .media-preview:hover video {
+            transform: scale(1.05);
+        }
         .media-overlay { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(0,0,0,0.7); color: white; font-size: 0.75rem; padding: 0.25rem 0.5rem; border-radius: 0.25rem; }
         .media-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 2rem; color: #6b7280; }
         .moment-comments { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
@@ -83,7 +113,26 @@
             .container { padding: 0.5rem; }
             .filters { grid-template-columns: 1fr; }
             .moment-meta { flex-direction: column; gap: 0.5rem; }
-            .stats-bar { flex-direction: column; gap: 1rem; }
+            .stats-bar { 
+                flex-direction: column; 
+                gap: 1rem; 
+                text-align: center;
+            }
+            .stat {
+                padding: 0.5rem;
+                background: rgba(255,255,255,0.15);
+                border-radius: 0.375rem;
+            }
+            .stat-number {
+                font-size: 1.75rem;
+                color: white !important;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            }
+            .stat-label {
+                color: white !important;
+                opacity: 0.95;
+                font-weight: 500;
+            }
             .nav-container { padding: 0 0.5rem; }
             .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
             .nav-links.active { display: flex; }
@@ -284,50 +333,56 @@
         function renderMedia(mediaUrls) {
             if (!mediaUrls || mediaUrls.length === 0) return '';
             
-            const mediaItems = mediaUrls.slice(0, 4); // Show max 4 items
+            const mediaItems = mediaUrls.filter(url => url && url.trim() !== '').slice(0, 4);
+            if (mediaItems.length === 0) return '';
+            
             const hasMore = mediaUrls.length > 4;
+            let gridClass = 'single';
+            if (mediaItems.length === 2) gridClass = 'double';
+            else if (mediaItems.length === 3) gridClass = 'triple';
+            else if (mediaItems.length >= 4) gridClass = 'multiple';
             
             return `
-                <div class="moment-media">
+                <div class="moment-media ${gridClass}" onclick="openMediaGallery(${JSON.stringify(mediaUrls).replace(/"/g, '&quot;')})">
                     ${mediaItems.map((url, index) => {
-                        if (!url || url.trim() === '') return '';
-                        
                         const ext = url.split('.').pop()?.toLowerCase() || '';
+                        const mediaClass = gridClass === 'single' ? 'single' : (gridClass === 'double' ? 'double' : (gridClass === 'triple' ? 'triple' : 'multiple'));
+                        
                         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
                             return `
-                                <div class="media-preview">
-                                    <img src="${escapeHtml(url)}" alt="Moment image" onclick="openMedia('${escapeHtml(url)}')" loading="lazy" style="display: block;" onerror="this.style.opacity='0.5'; this.alt='Image loading failed'">
-                                    ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                                <div class="media-preview ${mediaClass}">
+                                    <img src="${escapeHtml(url)}" alt="Moment image" loading="lazy" onerror="this.style.opacity='0.5'; this.alt='Image loading failed'">
+                                    ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4} more</div>` : ''}
                                 </div>
                             `;
                         } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
                             return `
-                                <div class="media-preview">
-                                    <video preload="metadata" onclick="openMedia('${escapeHtml(url)}')">
+                                <div class="media-preview ${mediaClass}">
+                                    <video preload="metadata" muted>
                                         <source src="${escapeHtml(url)}">
                                     </video>
                                     <div class="media-icon">▶️</div>
-                                    ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                                    ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4} more</div>` : ''}
                                 </div>
                             `;
                         } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
                             return `
-                                <div class="media-preview">
+                                <div class="media-preview ${mediaClass}">
                                     <div class="media-icon">🎧</div>
-                                    <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px;">
+                                    <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px; opacity: 0.9;">
                                         <source src="${escapeHtml(url)}">
                                     </audio>
                                 </div>
                             `;
                         } else {
                             return `
-                                <div class="media-preview">
+                                <div class="media-preview ${mediaClass}">
                                     <div class="media-icon">📄</div>
                                     <a href="${escapeHtml(url)}" target="_blank" style="position: absolute; inset: 0;"></a>
                                 </div>
                             `;
                         }
-                    }).filter(Boolean).join('')}
+                    }).join('')}
                 </div>
             `;
         }
@@ -374,8 +429,71 @@
             toggleMomentContent(button);
         }
         
-        function openMedia(url) {
-            window.open(url, '_blank');
+        function openMediaGallery(mediaUrls) {
+            if (!mediaUrls || mediaUrls.length === 0) return;
+            
+            // Create modal gallery
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                background: rgba(0,0,0,0.9); z-index: 1000;
+                display: flex; align-items: center; justify-content: center;
+                padding: 1rem;
+            `;
+            
+            const gallery = document.createElement('div');
+            gallery.style.cssText = `
+                max-width: 90vw; max-height: 90vh;
+                background: white; border-radius: 1rem;
+                overflow: hidden; position: relative;
+            `;
+            
+            let currentIndex = 0;
+            
+            function renderGalleryItem(url, index) {
+                const ext = url.split('.').pop()?.toLowerCase() || '';
+                
+                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+                    return `<img src="${escapeHtml(url)}" style="max-width: 100%; max-height: 80vh; object-fit: contain;">`;
+                } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
+                    return `<video controls style="max-width: 100%; max-height: 80vh;"><source src="${escapeHtml(url)}"></video>`;
+                } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
+                    return `<audio controls style="width: 100%;"><source src="${escapeHtml(url)}"></audio>`;
+                }
+                return `<iframe src="${escapeHtml(url)}" style="width: 100%; height: 80vh;"></iframe>`;
+            }
+            
+            function updateGallery() {
+                gallery.innerHTML = `
+                    <div style="padding: 1rem; text-align: center;">
+                        <div style="margin-bottom: 1rem;">
+                            ${renderGalleryItem(mediaUrls[currentIndex], currentIndex)}
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <button onclick="this.closest('.gallery-modal').previousIndex()" ${currentIndex === 0 ? 'disabled' : ''} 
+                                style="padding: 0.5rem 1rem; border: none; background: #2563eb; color: white; border-radius: 0.5rem; cursor: pointer;">Previous</button>
+                            <span style="color: #6b7280;">${currentIndex + 1} of ${mediaUrls.length}</span>
+                            <button onclick="this.closest('.gallery-modal').nextIndex()" ${currentIndex === mediaUrls.length - 1 ? 'disabled' : ''}
+                                style="padding: 0.5rem 1rem; border: none; background: #2563eb; color: white; border-radius: 0.5rem; cursor: pointer;">Next</button>
+                        </div>
+                        <button onclick="this.closest('.gallery-modal').remove()" 
+                            style="position: absolute; top: 1rem; right: 1rem; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer;">×</button>
+                    </div>
+                `;
+            }
+            
+            modal.className = 'gallery-modal';
+            modal.previousIndex = () => { if (currentIndex > 0) { currentIndex--; updateGallery(); } };
+            modal.nextIndex = () => { if (currentIndex < mediaUrls.length - 1) { currentIndex++; updateGallery(); } };
+            
+            modal.appendChild(gallery);
+            updateGallery();
+            
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) modal.remove();
+            });
+            
+            document.body.appendChild(modal);
         }
         
         async function loadMoreComments(button) {

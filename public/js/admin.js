@@ -787,30 +787,55 @@ async function loadBroadcasts() {
         const data = await response.json();
         
         if (data.broadcasts && data.broadcasts.length > 0) {
-            const html = data.broadcasts.map(broadcast => `
-                <div class="moment-item">
-                    <div class="moment-header">
-                        <div class="moment-info">
-                            <div class="moment-title">Broadcast #${broadcast.id.slice(0, 8)}</div>
-                            <div class="moment-meta">${new Date(broadcast.broadcast_started_at).toLocaleString()}</div>
+            const html = data.broadcasts.map(broadcast => {
+                const momentTitle = broadcast.moments?.title || 'Unknown Moment';
+                const momentRegion = broadcast.moments?.region || 'Unknown';
+                const momentCategory = broadcast.moments?.category || 'General';
+                const successRate = broadcast.recipient_count > 0 ? 
+                    Math.round((broadcast.success_count / broadcast.recipient_count) * 100) : 0;
+                
+                return `
+                    <div class="moment-item">
+                        <div class="moment-header">
+                            <div class="moment-info">
+                                <div class="moment-title">${momentTitle}</div>
+                                <div class="moment-meta">
+                                    ${momentRegion} • ${momentCategory} • ${new Date(broadcast.broadcast_started_at).toLocaleString()}
+                                    ${broadcast.status === 'completed' ? ` • ${successRate}% success rate` : ''}
+                                </div>
+                            </div>
+                            <div class="moment-actions">
+                                <span class="status-badge status-${broadcast.status}">${broadcast.status}</span>
+                            </div>
                         </div>
-                        <div class="moment-actions">
-                            <span class="status-badge status-${broadcast.status}">${broadcast.status}</span>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #374151;">${broadcast.recipient_count || 0}</div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">Recipients</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #16a34a;">${broadcast.success_count || 0}</div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">Delivered</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #dc2626;">${broadcast.failure_count || 0}</div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">Failed</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #2563eb;">${successRate}%</div>
+                                <div style="font-size: 0.75rem; color: #6b7280;">Success Rate</div>
+                            </div>
                         </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-top: 0.5rem;">
-                        <div><strong>${broadcast.recipient_count}</strong><br><small>Recipients</small></div>
-                        <div><strong>${broadcast.success_count}</strong><br><small>Success</small></div>
-                        <div><strong>${broadcast.failure_count}</strong><br><small>Failed</small></div>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
             document.getElementById('broadcasts-list').innerHTML = html;
         } else {
             document.getElementById('broadcasts-list').innerHTML = `
                 <div class="empty-state">
                     <div class="empty-state-icon">📡</div>
                     <div>No broadcasts yet</div>
+                    <p>Broadcasts will appear here when moments are sent to subscribers.</p>
                 </div>
             `;
         }
@@ -835,7 +860,7 @@ async function loadModeration() {
             const html = messages.map(item => {
                 const analysis = item.advisories?.[0];
                 const riskLevel = analysis ? 
-                    (analysis.confidence > 0.7 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low') : 'unknown';
+                    (analysis.confidence > 0.65 ? 'high' : analysis.confidence > 0.4 ? 'medium' : 'low') : 'unknown';
                 const riskColor = {
                     high: '#dc2626',
                     medium: '#f59e0b', 
@@ -1187,6 +1212,7 @@ function approveMessage(id) {
                 showError(error.error || 'Failed to approve message');
             }
         } catch (error) {
+            console.error('Approve error:', error);
             showError('Failed to approve message: ' + error.message);
         }
     });
@@ -1208,6 +1234,7 @@ function flagMessage(id) {
                 showError(error.error || 'Failed to flag message');
             }
         } catch (error) {
+            console.error('Flag error:', error);
             showError('Failed to flag message: ' + error.message);
         }
     });
