@@ -1266,12 +1266,30 @@
                     await loadAnalytics();
                 } catch (e) {
                     console.warn('Analytics load failed:', e.message);
+                    const analytics = document.getElementById('analytics');
+                    if (analytics) {
+                        analytics.innerHTML = '<div class="error">Failed to load analytics: ' + e.message + '</div>';
+                    }
                 }
                 
                 try {
                     await loadRecentActivity();
                 } catch (e) {
                     console.warn('Recent activity load failed:', e.message);
+                    const recentActivity = document.getElementById('recent-activity');
+                    if (recentActivity) {
+                        recentActivity.innerHTML = '<div class="error">Failed to load recent activity</div>';
+                    }
+                }
+                
+                try {
+                    await loadPipelineStatus();
+                } catch (e) {
+                    console.warn('Pipeline status load failed:', e.message);
+                    const pipelineStatus = document.getElementById('pipeline-status');
+                    if (pipelineStatus) {
+                        pipelineStatus.innerHTML = '<div class="error">Failed to load pipeline status</div>';
+                    }
                 }
                 
                 try {
