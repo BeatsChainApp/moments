@@ -1156,8 +1156,11 @@ async function loadSubscribers() {
 // Load settings
 async function loadSettings() {
     try {
-        // Update last updated timestamp
-        document.getElementById('last-updated').textContent = new Date().toLocaleDateString();
+        // Update last updated timestamp safely
+        const lastUpdatedEl = document.getElementById('last-updated');
+        if (lastUpdatedEl) {
+            lastUpdatedEl.textContent = new Date().toLocaleDateString();
+        }
         
         // Hardcoded system info for reliability
         const systemInfo = document.getElementById('system-info');
@@ -1188,6 +1191,19 @@ async function loadSettings() {
             settingsMessage.innerHTML = '<div class="error">Failed to load settings</div>';
         }
     }
+}
+
+// Budget settings function
+function saveBudgetSettings() {
+    const settings = {
+        monthly_budget: document.getElementById('monthly-budget')?.value || 10000,
+        warning_threshold: document.getElementById('warning-threshold')?.value || 80,
+        message_cost: document.getElementById('message-cost')?.value || 0.12,
+        daily_limit: document.getElementById('daily-limit')?.value || 500
+    };
+    
+    localStorage.setItem('budget_settings', JSON.stringify(settings));
+    showSuccess('Budget settings saved successfully!');
 }
 
 // Save settings function
