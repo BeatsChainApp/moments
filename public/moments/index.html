@@ -37,8 +37,8 @@
         .moment-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
         .moment-title { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.75rem; color: #1f2937; }
         .moment-content { color: #374151; margin-bottom: 1rem; }
-        .moment-meta { display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap; }
-        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+        .moment-meta { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; display: inline-block; white-space: nowrap; }
         .region-badge { background: #dbeafe; color: #1e40af; }
         .category-badge { background: #f3e8ff; color: #7c3aed; }
         .sponsored-badge { background: #fef3c7; color: #92400e; }
@@ -112,7 +112,8 @@
         @media (max-width: 768px) {
             .container { padding: 0.5rem; }
             .filters { grid-template-columns: 1fr; }
-            .moment-meta { flex-direction: column; gap: 0.5rem; }
+            .moment-meta { gap: 0.375rem; }
+            .badge { padding: 0.2rem 0.6rem; font-size: 0.7rem; }
             .stats-bar { 
                 flex-direction: column; 
                 gap: 1rem; 
@@ -407,17 +408,25 @@
         function renderMedia(mediaUrls) {
             if (!mediaUrls || mediaUrls.length === 0) return '';
             
-            const mediaItems = mediaUrls.filter(url => url && url.trim() !== '').slice(0, 4);
-            if (mediaItems.length === 0) return '';
+            // Decode HTML entities from URLs
+            const cleanUrls = mediaUrls.map(url => {
+                if (!url) return '';
+                const textarea = document.createElement('textarea');
+                textarea.innerHTML = url;
+                return textarea.value.trim();
+            }).filter(url => url && url.startsWith('http'));
             
-            const hasMore = mediaUrls.length > 4;
+            if (cleanUrls.length === 0) return '';
+            
+            const mediaItems = cleanUrls.slice(0, 4);
+            const hasMore = cleanUrls.length > 4;
             let gridClass = 'single';
             if (mediaItems.length === 2) gridClass = 'double';
             else if (mediaItems.length === 3) gridClass = 'triple';
             else if (mediaItems.length >= 4) gridClass = 'multiple';
             
             return `
-                <div class="moment-media ${gridClass}" onclick="openMediaGallery(${JSON.stringify(mediaUrls).replace(/"/g, '&quot;')})">
+                <div class="moment-media ${gridClass}" onclick="openMediaGallery(${JSON.stringify(cleanUrls).replace(/"/g, '&quot;')})">
                     ${mediaItems.map((url, index) => {
                         const ext = url.split('.').pop()?.toLowerCase() || '';
                         const mediaClass = gridClass === 'single' ? 'single' : (gridClass === 'double' ? 'double' : (gridClass === 'triple' ? 'triple' : 'multiple'));
