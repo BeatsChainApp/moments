@@ -98,6 +98,40 @@
         .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
         .page-btn { padding: 0.5rem 0.75rem; border: 1px solid #d1d5db; background: white; border-radius: 0.375rem; cursor: pointer; }
         .page-btn.active { background: #2563eb; color: white; border-color: #2563eb; }
+        
+        /* Ensure headings have good contrast */
+        h1, h2, h3, h4, h5, h6 { color: #1f2937; margin-bottom: 0.5rem; }
+        .card h2, .card h3 { color: #1f2937; }
+        .section h2 { color: #1f2937; font-weight: 600; }
+        
+        /* Mobile form improvements - hide modals on mobile, use inline sections */
+        @media (max-width: 768px) {
+            .modal { display: none !important; }
+            .modal.active { display: none !important; }
+            
+            /* Show inline form sections instead on mobile */
+            .form-section { display: none; }
+            .form-section.active { display: block; }
+            
+            /* Hide checkboxes on mobile - use dropdowns instead */
+            .checkbox-group { display: none; }
+            .dropdown-group { display: block; }
+            
+            /* Better form spacing on mobile */
+            .form-group { margin-bottom: 1rem; }
+            .form-group input, .form-group textarea, .form-group select {
+                width: 100%;
+                padding: 0.75rem;
+                font-size: 1rem;
+            }
+        }
+        
+        /* Desktop - show modals normally */
+        @media (min-width: 769px) {
+            .checkbox-group { display: block; }
+            .dropdown-group { display: none; }
+        }
+        
         @media (max-width: 768px) {
             .nav.collapsed .nav-toggle-admin { display: block; }
             .nav:not(.collapsed) .nav-toggle-admin { display: none; }
@@ -479,6 +513,206 @@
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button type="submit" class="btn" id="submit-btn">Create Moment</button>
                         <button type="button" class="btn btn-secondary" data-action="reset-form">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Campaign Form Section (Inline on Mobile) -->
+        <div id="campaign-form-section" class="form-section section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Create Campaign</h2>
+                    <button class="btn btn-secondary" data-action="close-campaign-form">← Back</button>
+                </div>
+                <div id="campaign-message"></div>
+                <form id="campaign-form">
+                    <input type="hidden" id="campaign-edit-id" name="id">
+                    <div class="form-group">
+                        <label>Campaign Title *</label>
+                        <input type="text" name="title" required placeholder="Campaign title">
+                    </div>
+                    <div class="form-group">
+                        <label>Content *</label>
+                        <textarea name="content" required rows="4" placeholder="Campaign content..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Sponsor</label>
+                        <select name="sponsor_id" id="campaign-sponsor-select">
+                            <option value="">No Sponsor</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Budget (R)</label>
+                        <div style="position: relative;">
+                            <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #6b7280; font-weight: 500;">R</span>
+                            <input type="number" name="budget" min="0" step="100" placeholder="5000" style="padding-left: 2rem;">
+                        </div>
+                        <small style="color: #6b7280;">Campaign budget in South African Rand</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Region *</label>
+                        <select name="primary_region" required>
+                            <option value="">Select Primary Region</option>
+                            <option value="KZN">KwaZulu-Natal</option>
+                            <option value="WC">Western Cape</option>
+                            <option value="GP">Gauteng</option>
+                            <option value="EC">Eastern Cape</option>
+                            <option value="FS">Free State</option>
+                            <option value="LP">Limpopo</option>
+                            <option value="MP">Mpumalanga</option>
+                            <option value="NC">Northern Cape</option>
+                            <option value="NW">North West</option>
+                            <option value="National">National</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Category *</label>
+                        <select name="primary_category" required id="campaign-category-select">
+                            <option value="">Select Primary Category</option>
+                            <optgroup label="✅ Safe Categories (Low Risk)">
+                                <option value="Community Education">📚 Community Education</option>
+                                <option value="Safety Awareness">🛡️ Safety Awareness</option>
+                                <option value="Cultural Events">🎭 Cultural Events</option>
+                                <option value="Job Opportunities">💼 Job Opportunities</option>
+                                <option value="Local Services">🏪 Local Services</option>
+                                <option value="Environmental Initiatives">🌱 Environmental Initiatives</option>
+                                <option value="Youth Programs">🏃 Youth Programs</option>
+                            </optgroup>
+                            <optgroup label="⚠️ Restricted Categories (Requires Approval)">
+                                <option value="Government Services">🏛️ Government Services</option>
+                                <option value="Financial Literacy">💰 Financial Literacy</option>
+                                <option value="Healthcare Services">🏥 Healthcare Services</option>
+                                <option value="Religious Events">⛪ Religious Events</option>
+                            </optgroup>
+                        </select>
+                        <small style="color: #6b7280;">Prohibited categories are hidden to prevent account suspension</small>
+                    </div>
+                    
+                    <!-- Desktop: Checkboxes -->
+                    <div class="checkbox-group">
+                        <div class="form-group">
+                            <label>Additional Regions (optional)</label>
+                            <div style="max-height: 120px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem;">
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="KZN" style="margin-right: 0.5rem;"> KwaZulu-Natal</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="WC" style="margin-right: 0.5rem;"> Western Cape</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="GP" style="margin-right: 0.5rem;"> Gauteng</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="EC" style="margin-right: 0.5rem;"> Eastern Cape</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="FS" style="margin-right: 0.5rem;"> Free State</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="LP" style="margin-right: 0.5rem;"> Limpopo</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="MP" style="margin-right: 0.5rem;"> Mpumalanga</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="NC" style="margin-right: 0.5rem;"> Northern Cape</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_regions" value="NW" style="margin-right: 0.5rem;"> North West</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Additional Categories (optional)</label>
+                            <div style="max-height: 100px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 0.375rem; padding: 0.5rem;">
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Education" style="margin-right: 0.5rem;"> Education</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Safety" style="margin-right: 0.5rem;"> Safety</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Culture" style="margin-right: 0.5rem;"> Culture</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Opportunity" style="margin-right: 0.5rem;"> Opportunity</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Events" style="margin-right: 0.5rem;"> Events</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Health" style="margin-right: 0.5rem;"> Health</label>
+                                <label style="display: block; margin-bottom: 0.25rem;"><input type="checkbox" name="target_categories" value="Technology" style="margin-right: 0.5rem;"> Technology</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mobile: Dropdowns -->
+                    <div class="dropdown-group">
+                        <div class="form-group">
+                            <label>Additional Regions (optional)</label>
+                            <select name="target_regions" multiple size="5">
+                                <option value="KZN">KwaZulu-Natal</option>
+                                <option value="WC">Western Cape</option>
+                                <option value="GP">Gauteng</option>
+                                <option value="EC">Eastern Cape</option>
+                                <option value="FS">Free State</option>
+                                <option value="LP">Limpopo</option>
+                                <option value="MP">Mpumalanga</option>
+                                <option value="NC">Northern Cape</option>
+                                <option value="NW">North West</option>
+                            </select>
+                            <small style="color: #6b7280;">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Additional Categories (optional)</label>
+                            <select name="target_categories" multiple size="5">
+                                <option value="Education">Education</option>
+                                <option value="Safety">Safety</option>
+                                <option value="Culture">Culture</option>
+                                <option value="Opportunity">Opportunity</option>
+                                <option value="Events">Events</option>
+                                <option value="Health">Health</option>
+                                <option value="Technology">Technology</option>
+                            </select>
+                            <small style="color: #6b7280;">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Campaign Media (optional)</label>
+                        <input type="file" name="campaign_media" id="campaign_media" multiple accept="image/*,video/*,audio/*">
+                        <small style="color: #6b7280;">Upload images, videos, or audio for the campaign</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Scheduled For</label>
+                        <input type="datetime-local" name="scheduled_at">
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="submit" class="btn" id="campaign-submit-btn">Create Campaign</button>
+                        <button type="button" class="btn btn-secondary" data-action="reset-campaign-form">Reset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sponsor Form Section (Inline on Mobile) -->
+        <div id="sponsor-form-section" class="form-section section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>Create Sponsor</h2>
+                    <button class="btn btn-secondary" data-action="close-sponsor-form">← Back</button>
+                </div>
+                <div id="sponsor-message"></div>
+                <form id="sponsor-form">
+                    <input type="hidden" id="sponsor-edit-id" name="id">
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" name="name" required placeholder="sponsor_name">
+                        <small style="color: #6b7280;">Must be unique - use underscores for spaces</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Display Name *</label>
+                        <input type="text" name="display_name" required placeholder="Sponsor Display Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Email</label>
+                        <input type="email" name="contact_email" placeholder="contact@sponsor.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Website URL</label>
+                        <input type="url" name="website_url" placeholder="https://sponsor.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Logo Upload</label>
+                        <input type="file" name="logo_file" id="sponsor-logo-file" accept="image/*">
+                        <div id="sponsor-logo-preview" style="display: none; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.375rem; background: #f8fafc;">
+                            <div style="font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Selected Logo:</div>
+                            <div id="sponsor-logo-preview-list"></div>
+                            <div id="sponsor-upload-progress" style="display: none; margin-top: 0.5rem;">
+                                <div style="background: #e5e7eb; border-radius: 0.25rem; overflow: hidden;">
+                                    <div id="sponsor-upload-progress-bar" style="background: #2563eb; height: 4px; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                                <div style="font-size: 0.75rem; color: #6b7280; margin-top: 0.25rem;">Uploading logo...</div>
+                            </div>
+                        </div>
+                        <small style="color: #6b7280;">Upload sponsor logo (recommended: 200x100px)</small>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="submit" class="btn" id="sponsor-submit-btn">Create Sponsor</button>
+                        <button type="button" class="btn btn-secondary" data-action="reset-sponsor-form">Reset</button>
                     </div>
                 </form>
             </div>

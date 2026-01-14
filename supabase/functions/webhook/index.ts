@@ -191,23 +191,86 @@ serve(async (req) => {
         
         for (const message of messages) {
           try {
-            // Store message in database
-            const { error: insertError } = await supabase.from('messages').insert({
-              whatsapp_id: message.id,
-              from_number: message.from,
-              message_type: message.type,
-              content: message.text?.body || message.caption || '',
-              timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
-              processed: false
-            })
+            // Check if message is a command first
+            const text = (message.text?.body || '').toLowerCase().trim()
+            const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
+                               'help', 'info', 'menu', '?', 'moments', 'share', 'submit',
+                               'regions', 'region', 'areas', 'interests', 'categories', 'topics'].includes(text) ||
+                              isRegionSelection(text) || isCategorySelection(text)
+            
+            // DON'T store commands in messages table
+            if (!isCommand) {
+              const { data: messageRecord, error: insertError } = await supabase.from('messages').insert({
+                whatsapp_id: message.id,
+                from_number: message.from,
+                message_type: message.type,
+                content: message.text?.body || message.caption || '',
+                timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
+                processed: false
+              }).select().single()
 
-            if (insertError) {
-              console.error('Failed to insert message:', insertError)
-              continue
+              if (insertError) {
+                console.error('Failed to insert message:', insertError)
+                continue
+              }
+              
+              // Handle media download
+              if (message.type === 'image' || message.type === 'video' || message.type === 'audio') {
+                try {
+                  const mediaId = message.image?.id || message.video?.id || message.audio?.id
+                  if (mediaId) {
+                    // Get media URL from WhatsApp
+                    const mediaResponse = await fetch(
+                      `https://graph.facebook.com/v18.0/${mediaId}`,
+                      { headers: { 'Authorization': `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}` } }
+                    )
+                    const mediaData = await mediaResponse.json()
+                    
+                    if (mediaData.url) {
+                      // Download media
+                      const mediaFile = await fetch(mediaData.url, {
+                        headers: { 'Authorization': `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}` }
+                      })
+                      const mediaBlob = await mediaFile.blob()
+                      
+                      // Upload to Supabase Storage
+                      const fileName = `whatsapp/${Date.now()}_${message.from}_${mediaId}`
+                      const { data: uploadData } = await supabase.storage
+                        .from('media')
+                        .upload(fileName, mediaBlob, { contentType: message.type })
+                      
+                      if (uploadData) {
+                        // Get public URL
+                        const { data: publicUrl } = supabase.storage
+                          .from('media')
+                          .getPublicUrl(fileName)
+                        
+                        // Store in media table
+                        await supabase.from('media').insert({
+                          message_id: messageRecord.id,
+                          whatsapp_media_id: mediaId,
+                          media_type: message.type,
+                          original_url: mediaData.url,
+                          storage_path: fileName,
+                          file_size: mediaBlob.size,
+                          mime_type: mediaBlob.type,
+                          processed: true
+                        })
+                        
+                        // Update message with media URL
+                        await supabase.from('messages')
+                          .update({ media_url: publicUrl.publicUrl })
+                          .eq('id', messageRecord.id)
+                      }
+                    }
+                  }
+                } catch (error) {
+                  console.error('Media download failed:', error)
+                }
+              }
             }
 
             // Handle subscription commands
-            const text = (message.text?.body || '').toLowerCase().trim()
             if (['start', 'join', 'subscribe'].includes(text)) {
               const { data: existingSub } = await supabase
                 .from('subscriptions')

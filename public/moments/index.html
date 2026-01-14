@@ -256,6 +256,9 @@
     <script>
         // Immersive PWA functionality
         let currentFilters = { region: '', category: '', source: '' };
+        let currentPage = 1;
+        let itemsPerPage = 10;
+        let allMoments = [];
         
         // Mobile navigation toggle
         document.getElementById('nav-toggle').addEventListener('click', () => {
@@ -291,14 +294,24 @@
                 if (currentFilters.region) params.append('region', currentFilters.region);
                 if (currentFilters.category) params.append('category', currentFilters.category);
                 if (currentFilters.source) params.append('source', currentFilters.source);
+                // Add order param for latest first
+                params.append('order', 'created_at.desc');
                 
                 const response = await fetch(`https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/moments?status=eq.broadcasted&publish_to_pwa=eq.true&select=*&${params}`, {
                     headers: {
                         'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4bWR6Y3hlamN4YmluZ2h0eWZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNzMzOTYsImV4cCI6MjA4Mzc0OTM5Nn0.ccwWS_LPLjUrY8zqHD0Q7pTEamdN-QV0bv6f0B1uBUU'
                     }
                 });
-                const moments = await response.json();
-                displayMoments(moments || []);
+                let moments = await response.json();
+                
+                // Sort by created_at descending (latest first) as backup
+                if (moments && Array.isArray(moments)) {
+                    moments = moments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                }
+                
+                allMoments = moments || [];
+                currentPage = 1;
+                displayMoments();
             } catch (error) {
                 console.error('Failed to load moments:', error);
                 document.getElementById('moments-container').innerHTML = 
@@ -306,9 +319,70 @@
             }
         }
 
-        function displayMoments(moments) {
+        function displayMoments() {
             // Use the enhanced Markdown renderer
-            displayMomentsWithMarkdown(moments);
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedMoments = allMoments.slice(startIndex, endIndex);
+            
+            displayMomentsWithMarkdown(paginatedMoments);
+            
+            // Add pagination controls
+            addPaginationControls(Math.ceil(allMoments.length / itemsPerPage));
+        }
+        
+        function addPaginationControls(totalPages) {
+            const container = document.getElementById('moments-container');
+            if (totalPages <= 1) return;
+            
+            let paginationHtml = '<div style="display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem; flex-wrap: wrap;">';
+            
+            // Previous button
+            if (currentPage > 1) {
+                paginationHtml += `<button onclick="goToPage(${currentPage - 1})" class="btn btn-secondary" style="background: #6b7280;">← Previous</button>`;
+            }
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === currentPage) {
+                    paginationHtml += `<button class="btn" style="background: #2563eb; cursor: default;">${i}</button>`;
+                } else if (i <= 3 || i > totalPages - 3 || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    paginationHtml += `<button onclick="goToPage(${i})" class="btn btn-secondary" style="background: #e5e7eb; color: #374151;">${i}</button>`;
+                } else if (i === 4 || i === totalPages - 3) {
+                    paginationHtml += `<span class="btn" style="background: transparent; cursor: default;">...</span>`;
+                }
+            }
+            
+            // Next button
+            if (currentPage < totalPages) {
+                paginationHtml += `<button onclick="goToPage(${currentPage + 1})" class="btn btn-secondary" style="background: #6b7280;">Next →</button>`;
+            }
+            
+            paginationHtml += '</div>';
+            container.insertAdjacentHTML('afterend', paginationHtml);
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            displayMoments();
+            // Scroll to top
+            document.querySelector('.header').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function displayMoments() {
+            // Use the enhanced Markdown renderer
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedMoments = allMoments.slice(startIndex, endIndex);
+            
+            // Remove old pagination before displaying
+            const oldPagination = document.querySelector('[style*="justify-content: center"]');
+            if (oldPagination) oldPagination.remove();
+            
+            displayMomentsWithMarkdown(paginatedMoments);
+            
+            // Add pagination controls
+            addPaginationControls(Math.ceil(allMoments.length / itemsPerPage));
         }
         
         function renderSponsorBranding(sponsor, isSponsored) {

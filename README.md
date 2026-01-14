@@ -6,8 +6,8 @@
 
 ### Core Components
 - **WhatsApp Business API** (+27 65 829 5041) - Message distribution
-- **Supabase** - Database, media storage, real-time features
-- **MCP Advisory System** - Content moderation and intelligence
+- **Supabase** - Database, media storage, real-time features, MCP edge functions
+- **Native MCP Advisory** - Content moderation via Supabase edge functions
 - **PWA Admin Dashboard** - Content management interface
 - **n8n Workflows** - Automation and orchestration
 
@@ -172,7 +172,7 @@ Brought to you by Unami Foundation Partners
 
 ## 🚀 Deployment
 
-### Railway Configuration
+### Environment Configuration
 ```bash
 # Environment variables required:
 WHATSAPP_TOKEN=your_business_api_token
@@ -180,7 +180,7 @@ WHATSAPP_PHONE_ID=your_phone_number_id
 WEBHOOK_VERIFY_TOKEN=your_webhook_token
 SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_KEY=your_service_key
-MCP_ENDPOINT=https://mcp-production.up.railway.app/advisory
+# MCP is now native - no external endpoint needed
 ```
 
 ### WhatsApp Business API Setup
@@ -225,14 +225,14 @@ npm run dev  # Start with file watching
 5. Update documentation in `/docs/`
 
 ### MCP Integration
-- Advisory endpoint: `/advisory`
-- Input: Message content, metadata
+- Native Supabase function: `mcp_advisory()`
+- Input: Message content, language, type, metadata
 - Output: Structured advisory with confidence scores
-- Fallback: Safe defaults when MCP unavailable
+- Fallback: Safe defaults when function unavailable
 
 ## 🔗 Related Services
 
-- **MCP Railway Service**: Content intelligence and moderation
+- **Supabase Edge Functions**: Native MCP content intelligence
 - **n8n Workflows**: Message routing and automation
 - **Supabase**: Database and real-time features
 - **WhatsApp Business API**: Message distribution

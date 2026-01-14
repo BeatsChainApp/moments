@@ -289,21 +289,34 @@ function renderSponsorAttribution(sponsor, isSponsored) {
     return `<span style="font-size: 0.75rem; color: #6b7280;">by ${escapeHtml(sponsor.display_name)}</span>`;
 }
 
-// Date formatting function
+// Date formatting function - shows date and time
 function formatDate(dateString) {
+    if (!dateString) return 'Recently';
+    
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now - date;
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
     
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+    // Show time if within last hour
+    if (diffMinutes < 60) {
+        return diffMinutes === 0 ? 'Just now' : `${diffMinutes}m ago`;
+    }
     
-    return date.toLocaleDateString('en-ZA', { 
+    // Show hours if within 24 hours
+    if (diffHours < 24) {
+        return `${diffHours}h ago`;
+    }
+    
+    // Show full date with time for older moments
+    return date.toLocaleString('en-ZA', { 
         year: 'numeric', 
         month: 'short', 
-        day: 'numeric' 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
     });
 }
 

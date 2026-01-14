@@ -14,6 +14,7 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
 serve(async (req) => {
@@ -879,26 +880,42 @@ serve(async (req) => {
       })
     }
 
-    // Broadcasts endpoint
+    // Broadcasts endpoint with pagination
     if (path.includes('/broadcasts') && method === 'GET') {
-      const { data: broadcasts } = await supabase
-        .from('broadcasts')
-        .select('*, moments(title, region, category)')
-        .order('broadcast_started_at', { ascending: false })
-        .limit(50)
+      const page = parseInt(url.searchParams.get('page') || '1')
+      const limit = parseInt(url.searchParams.get('limit') || '20')
+      const offset = (page - 1) * limit
       
-      return new Response(JSON.stringify({ broadcasts: broadcasts || [] }), {
+      const { data: broadcasts, count } = await supabase
+        .from('broadcasts')
+        .select('*, moments(title, region, category)', { count: 'exact' })
+        .range(offset, offset + limit - 1)
+        .order('broadcast_started_at', { ascending: false })
+      
+      return new Response(JSON.stringify({ 
+        broadcasts: broadcasts || [],
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit)
+        }
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    // Subscribers endpoint with real-time data
+    // Subscribers endpoint with real-time data and pagination
     if (path.includes('/subscribers') && method === 'GET') {
       const filter = url.searchParams.get('filter') || 'all'
+      const page = parseInt(url.searchParams.get('page') || '1')
+      const limit = parseInt(url.searchParams.get('limit') || '20')
+      const offset = (page - 1) * limit
       
       let query = supabase
         .from('subscriptions')
-        .select('*')
+        .select('*', { count: 'exact' })
+        .range(offset, offset + limit - 1)
         .order('last_activity', { ascending: false })
       
       if (filter === 'active') {
@@ -907,7 +924,7 @@ serve(async (req) => {
         query = query.eq('opted_in', false)
       }
       
-      const { data: subscribers } = await query
+      const { data: subscribers, count } = await query
       
       // Get real stats
       const { data: allSubs } = await supabase
@@ -920,7 +937,13 @@ serve(async (req) => {
       
       return new Response(JSON.stringify({ 
         subscribers: subscribers || [], 
-        stats: { total, active, inactive, commands_used: 0 }
+        stats: { total, active, inactive, commands_used: 0 },
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit)
+        }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -929,30 +952,55 @@ serve(async (req) => {
     // Moderation endpoint with real data and MCP analysis
     if (path.includes('/moderation') && method === 'GET') {
       const filter = url.searchParams.get('filter') || 'all'
+      const page = parseInt(url.searchParams.get('page') || '1')
+      const limit = parseInt(url.searchParams.get('limit') || '20')
+      const offset = (page - 1) * limit
       
       let query = supabase
         .from('messages')
         .select(`
           *,
           advisories(*)
-        `)
+        `, { count: 'exact' })
+        .range(offset, offset + limit - 1)
         .order('created_at', { ascending: false })
-        .limit(50)
       
-      const { data: messages } = await query
+      const { data: messages, count } = await query
       
-      // Process messages to include MCP analysis
+      // Process messages to include MCP analysis and auto-approve
       const processedMessages = (messages || []).map(msg => {
         const advisory = msg.advisories?.[0]
+        const overallRisk = advisory?.confidence || 0
+        
+        // AUTO-APPROVE if risk < 0.3 and create audit record
+        if (overallRisk < 0.3 && msg.moderation_status === 'pending') {
+          supabase.from('messages')
+            .update({ 
+              moderation_status: 'approved',
+              processed: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', msg.id)
+            .then(async () => {
+              await supabase.from('moderation_audit').insert({
+                message_id: msg.id,
+                action: 'approved',
+                moderator: 'system_auto',
+                reason: `Auto-approved: low risk ${overallRisk.toFixed(2)}`
+              })
+              console.log(`✅ Auto-approved message ${msg.id} risk=${overallRisk.toFixed(2)}`)
+            })
+          msg.moderation_status = 'approved'
+        }
         
         return {
           ...msg,
           mcp_analysis: advisory ? {
-            confidence: advisory.confidence || 0,
+            confidence: overallRisk,
             harm_signals: advisory.harm_signals || {},
             spam_indicators: advisory.spam_indicators || {},
             urgency_level: advisory.urgency_level || 'low',
-            escalation_suggested: advisory.escalation_suggested || false
+            escalation_suggested: overallRisk > 0.7
           } : null
         }
       })
@@ -967,7 +1015,15 @@ serve(async (req) => {
         filteredMessages = processedMessages.filter(msg => msg.mcp_analysis && msg.mcp_analysis.escalation_suggested)
       }
       
-      return new Response(JSON.stringify({ flaggedMessages: filteredMessages }), {
+      return new Response(JSON.stringify({ 
+        flaggedMessages: filteredMessages,
+        pagination: {
+          page,
+          limit,
+          total: count || 0,
+          totalPages: Math.ceil((count || 0) / limit)
+        }
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -989,16 +1045,24 @@ serve(async (req) => {
         })
       }
       
-      // Update message status
-      await supabase
+      // Update message status with timestamp
+      const { error: updateError } = await supabase
         .from('messages')
         .update({ 
           moderation_status: 'approved',
-          processed: true
+          processed: true,
+          moderation_timestamp: new Date().toISOString()
         })
         .eq('id', messageId)
       
-      return new Response(JSON.stringify({ success: true, message: 'Message approved' }), {
+      if (updateError) {
+        return new Response(JSON.stringify({ error: updateError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify({ success: true, message: 'Message approved successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -1007,15 +1071,23 @@ serve(async (req) => {
     if (path.includes('/messages/') && path.includes('/flag') && method === 'POST') {
       const messageId = path.split('/messages/')[1].split('/flag')[0]
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('messages')
         .update({ 
           moderation_status: 'flagged',
-          processed: true
+          processed: true,
+          moderation_timestamp: new Date().toISOString()
         })
         .eq('id', messageId)
       
-      return new Response(JSON.stringify({ success: true, message: 'Message flagged' }), {
+      if (updateError) {
+        return new Response(JSON.stringify({ error: updateError.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      return new Response(JSON.stringify({ success: true, message: 'Message flagged successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }

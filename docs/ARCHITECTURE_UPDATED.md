@@ -4,7 +4,7 @@
 
 1. **PWA is a first-class immersive product** - Public PWA for community engagement
 2. **Supabase is the system of record** - All data and MCP hosted in Supabase
-3. **Railway MCP is permanently deprecated** - MCP migrated to Supabase Edge Functions
+3. **Native MCP implementation** - MCP runs as Supabase database functions
 4. **WhatsApp is a distribution layer, not a UI** - Community receives content via WhatsApp
 5. **Compliance-first, zero-budget aware** - Meta policies and privacy protection
 
@@ -13,7 +13,7 @@
 ### Core Components
 - **WhatsApp Cloud API (Meta)** - Message distribution and webhook processing
 - **Express.js API** - Moments API server at `moments-api.unamifoundation.org`
-- **Supabase** - Database, Auth, Storage, Edge Functions (including MCP)
+- **Supabase** - Database, Auth, Storage, native MCP functions
 - **Admin Dashboard** - Role-based content management PWA
 - **Public PWA** - Immersive community moments experience at `moments.unamifoundation.org`
 - **n8n Workflows** - Automation and orchestration (local Docker)
@@ -24,7 +24,7 @@ WhatsApp Cloud API
        ↓
 Express.js Webhook (/webhook)
        ↓
-Supabase MCP Analysis (Edge Functions)
+Supabase MCP Analysis (native function)
        ↓
 Database Storage (messages, advisories)
        ↓
@@ -76,15 +76,14 @@ Public PWA (community engagement)
 - **Access**: Public, no authentication required
 
 ### MCP Advisory System
-- **Current**: Railway service (to be deprecated)
-- **Target**: Supabase Edge Functions
+- **Implementation**: Native Supabase database function `mcp_advisory()`
 - **Purpose**: Content analysis and moderation intelligence
 - **Features**:
   - Language detection (South African context)
   - Harm signal detection
   - Spam pattern recognition
   - Escalation recommendations
-- **Integration**: Called from webhook processing
+- **Integration**: Called directly from webhook processing
 
 ### WhatsApp Integration
 - **Business API**: +27 65 829 5041
@@ -178,14 +177,13 @@ npm test  # Run all tests
 - ✅ Supabase database and storage
 - ✅ WhatsApp webhook processing
 - ✅ Basic broadcast system
+- ✅ Native MCP implementation
 
 ### In Progress
-- 🔄 MCP migration to Supabase Edge Functions
 - 🔄 Public PWA implementation
 - 🔄 Documentation cleanup
 
 ### Planned
-- 📋 Railway MCP deprecation
 - 📋 Enhanced broadcast scheduling
 - 📋 Advanced analytics dashboard
 

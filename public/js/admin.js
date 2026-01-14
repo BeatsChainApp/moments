@@ -101,11 +101,18 @@ function handleAction(action, element) {
         case 'reset-form':
             resetForm();
             break;
+        case 'reset-campaign-form':
+            document.getElementById('campaign-form').reset();
+            break;
+        case 'reset-sponsor-form':
+            document.getElementById('sponsor-form').reset();
+            break;
         case 'new-sponsor':
             openSponsorModal();
             break;
         case 'close-sponsor-modal':
         case 'cancel-sponsor':
+        case 'close-sponsor-form':
             closeSponsorModal();
             break;
         case 'close-confirm-modal':
@@ -135,6 +142,7 @@ function handleAction(action, element) {
             break;
         case 'close-campaign-modal':
         case 'cancel-campaign':
+        case 'close-campaign-form':
             closeCampaignModal();
             break;
         case 'new-admin-user':
@@ -308,6 +316,9 @@ function filterMoments() {
         return matchesStatus && matchesRegion && matchesCategory && matchesSearch;
     });
 
+    // Sort by latest first (descending)
+    filteredMoments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
     displayMoments();
 }
 
@@ -341,13 +352,24 @@ function displayMoments() {
             </div>` :
             `<div class="moment-content">${escapeHtml(moment.content)}</div>`;
         
+        // Format date and time
+        const createdDate = new Date(moment.created_at);
+        const formattedDateTime = createdDate.toLocaleString('en-ZA', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
+        });
+        
         return `
             <div class="moment-item">
                 <div class="moment-header">
                     <div class="moment-info">
                         <div class="moment-title">${escapeHtml(moment.title)}</div>
                         <div class="moment-meta">
-                            ${moment.region} • ${moment.category} • ${new Date(moment.created_at).toLocaleDateString()}
+                            ${moment.region} • ${moment.category} • ${formattedDateTime}
                             ${moment.is_sponsored ? ` • Sponsored by ${moment.sponsors?.display_name || 'Unknown'}` : ''}
                         </div>
                     </div>
@@ -360,7 +382,7 @@ function displayMoments() {
                 </div>
                 ${contentPreview}
                 ${mediaPreview}
-                ${moment.scheduled_at ? `<div style="font-size: 0.75rem; color: #2563eb; margin-top: 0.5rem;">Scheduled: ${new Date(moment.scheduled_at).toLocaleString()}</div>` : ''}
+                ${moment.scheduled_at ? `<div style="font-size: 0.75rem; color: #2563eb; margin-top: 0.5rem;">Scheduled: ${new Date(moment.scheduled_at).toLocaleString('en-ZA')}</div>` : ''}
             </div>
         `;
     }).join('');
@@ -869,6 +891,23 @@ async function loadModeration() {
                 }[riskLevel];
                 
                 const phoneDisplay = item.from_number?.replace(/\d(?=\d{4})/g, '*');
+                const createdTime = new Date(item.created_at).toLocaleString('en-ZA', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const statusColor = {
+                    approved: '#10b981',
+                    flagged: '#ef4444',
+                    pending: '#f59e0b'
+                };
+                
+                const currentStatus = item.moderation_status || 'pending';
+                const statusBadgeColor = statusColor[currentStatus] || '#6b7280';
                 
                 return `
                     <div class="moment-item" style="border-left: 4px solid ${riskColor};">
@@ -878,19 +917,20 @@ async function loadModeration() {
                                     📱 Message from ${phoneDisplay}
                                 </div>
                                 <div class="moment-meta">
-                                    ${new Date(item.created_at).toLocaleString()} • 
+                                    ${createdTime} • 
                                     Risk: <span style="color: ${riskColor}; font-weight: 500;">${riskLevel.toUpperCase()}</span>
                                     ${analysis ? ` • Confidence: ${Math.round(analysis.confidence * 100)}%` : ''}
+                                    • Status: <span style="color: ${statusBadgeColor}; font-weight: 500; background: ${statusBadgeColor}20; padding: 2px 8px; border-radius: 4px;">${currentStatus.toUpperCase()}</span>
                                 </div>
                             </div>
                             <div class="moment-actions">
-                                <button class="btn btn-sm btn-success" data-action="approve-message" data-id="${item.id}">✅ Approve</button>
-                                <button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${item.id}">🚫 Flag</button>
+                                ${currentStatus !== 'approved' ? `<button class="btn btn-sm btn-success" data-action="approve-message" data-id="${item.id}">✅ Approve</button>` : '<button class="btn btn-sm" style="background: #10b981; cursor: default;" disabled>✅ Approved</button>'}
+                                ${currentStatus !== 'flagged' ? `<button class="btn btn-sm btn-danger" data-action="flag-message" data-id="${item.id}">🚫 Flag</button>` : '<button class="btn btn-sm" style="background: #ef4444; cursor: default;" disabled>🚫 Flagged</button>'}
                                 <button class="btn btn-sm" data-action="preview-message" data-id="${item.id}">👁️ Preview</button>
                             </div>
                         </div>
                         <div class="moment-content" style="margin-bottom: 0.5rem;">
-                            <strong>Content:</strong> ${item.content || 'No text content'}
+                            <strong>Content:</strong> ${item.content || 'No text content - (Check image display in media preview)'}
                         </div>
                         ${analysis ? `
                             <div style="background: #f8fafc; padding: 0.5rem; border-radius: 0.25rem; font-size: 0.75rem;">
@@ -1080,19 +1120,40 @@ async function testWebhook() {
     }
 }
 
-// Modal functions
+// Modal/Inline Form functions - responsive to mobile
 function openSponsorModal() {
-    document.getElementById('sponsor-modal').classList.add('active');
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        // On mobile, show inline form section
+        showSection('sponsor-form-section');
+    } else {
+        // On desktop, show modal
+        document.getElementById('sponsor-modal').classList.add('active');
+    }
     document.getElementById('sponsor-form').reset();
 }
 
 function closeSponsorModal() {
-    document.getElementById('sponsor-modal').classList.remove('active');
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        // On mobile, go back to sponsors section
+        showSection('sponsors');
+    } else {
+        // On desktop, close modal
+        document.getElementById('sponsor-modal').classList.remove('active');
+    }
     document.getElementById('sponsor-form').reset();
 }
 
 function openCampaignModal() {
-    document.getElementById('campaign-modal').classList.add('active');
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        // On mobile, show inline form section
+        showSection('campaign-form-section');
+    } else {
+        // On desktop, show modal
+        document.getElementById('campaign-modal').classList.add('active');
+    }
     document.getElementById('campaign-form').reset();
     
     // Load sponsors for campaign form
@@ -1115,7 +1176,14 @@ async function loadSponsorsForCampaign() {
 }
 
 function closeCampaignModal() {
-    document.getElementById('campaign-modal').classList.remove('active');
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+        // On mobile, go back to campaigns section
+        showSection('campaigns');
+    } else {
+        // On desktop, close modal
+        document.getElementById('campaign-modal').classList.remove('active');
+    }
     document.getElementById('campaign-form').reset();
 }
 
