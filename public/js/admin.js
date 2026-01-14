@@ -1182,15 +1182,18 @@ async function loadSettings() {
         }
         
         // Update system info with real status
-        systemInfo.innerHTML = `
+        const systemInfo = document.getElementById('system-info');
+        if (systemInfo) {
+            systemInfo.innerHTML = `
             <strong>Database:</strong> ${dbCheck.ok ? 'Supabase Connected' : 'Connection Error'}<br>
             <strong>Storage:</strong> Supabase Storage<br>
             <strong>MCP:</strong> Internal Function<br>
             <strong>n8n:</strong> ${n8nCheck.ok ? 'Automation Active' : 'Offline'}<br>
             <strong>Environment:</strong> Production<br>
             <strong>Version:</strong> 1.0.0<br>
-            <strong>Last Updated:</strong> <span id="last-updated">${new Date().toLocaleDateString()}</span>
+            <strong>Last Updated:</strong> ${new Date().toLocaleDateString()}
         `;
+        }
         
     } catch (error) {
         console.error('Settings load error:', error);
