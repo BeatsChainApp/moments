@@ -17,11 +17,37 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
 }
 
+// Rate limiting
+async function checkRateLimit(supabase: any, identifier: string, endpoint: string, limit = 100): Promise<boolean> {
+  const windowStart = new Date(Date.now() - 60000).toISOString()
+  const { data } = await supabase.from('rate_limits').select('request_count').eq('identifier', identifier).eq('endpoint', endpoint).gte('window_start', windowStart).single()
+  if (data && data.request_count >= limit) return false
+  await supabase.from('rate_limits').upsert({ identifier, endpoint, request_count: (data?.request_count || 0) + 1, window_start: new Date().toISOString() })
+  return true
+}
+
+// Audit logging
+async function logAudit(supabase: any, userId: string, action: string, resourceType: string, resourceId: string, changes: any) {
+  await supabase.from('audit_logs').insert({ user_id: userId, action, resource_type: resourceType, resource_id: resourceId, changes })
+}
+
+// Feature flags
+async function isFeatureEnabled(supabase: any, flagKey: string): Promise<boolean> {
+  const { data } = await supabase.from('feature_flags').select('enabled').eq('flag_key', flagKey).single()
+  return data?.enabled || false
+}
+
+// Error tracking
+async function logError(supabase: any, errorType: string, errorMessage: string, context: any, severity = 'medium') {
+  await supabase.from('error_logs').insert({ error_type: errorType, error_message: errorMessage, context, severity })
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
+  const startTime = Date.now()
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -417,6 +443,7 @@ serve(async (req) => {
 
     // Create moment with auto-broadcast logic
     if (path.includes('/moments') && method === 'POST' && body) {
+      await logAudit(supabase, 'admin', 'create', 'moment', '', body)
       const { data: moment, error } = await supabase
         .from('moments')
         .insert({
@@ -576,6 +603,7 @@ serve(async (req) => {
     // Update moment
     if (path.includes('/moments/') && method === 'PUT' && body) {
       const momentId = path.split('/moments/')[1]
+      await logAudit(supabase, 'admin', 'update', 'moment', momentId, body)
       const { data, error } = await supabase
         .from('moments')
         .update(body)
@@ -691,6 +719,7 @@ serve(async (req) => {
     // Delete moment
     if (path.includes('/moments/') && method === 'DELETE') {
       const momentId = path.split('/moments/')[1].split('?')[0]
+      await logAudit(supabase, 'admin', 'delete', 'moment', momentId, {})
       
       // Delete related broadcasts first
       await supabase.from('broadcasts').delete().eq('moment_id', momentId)
@@ -1112,6 +1141,20 @@ serve(async (req) => {
     if (path.match(/\/moments\/[^\/]+\/comments$/) && method === 'POST') {
       const momentId = path.split('/moments/')[1].split('/comments')[0]
       
+      if (!await isFeatureEnabled(supabase, 'comments_enabled')) {
+        return new Response(JSON.stringify({ error: 'Comments are currently disabled' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      if (!await checkRateLimit(supabase, body.from_number || 'anonymous', '/comments', 10)) {
+        return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
       const { data: comment, error } = await supabase
         .from('comments')
         .insert({
@@ -1441,6 +1484,8 @@ serve(async (req) => {
     })
 
   } catch (error) {
+    const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+    await logError(supabase, 'api_error', error.message, { path: new URL(req.url).pathname }, 'high')
     return new Response(JSON.stringify({ 
       error: error.message,
       path: new URL(req.url).pathname
@@ -1448,5 +1493,11 @@ serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
+  } finally {
+    const responseTime = Date.now() - startTime
+    if (responseTime > 1000) {
+      const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
+      await supabase.from('performance_metrics').insert({ endpoint: new URL(req.url).pathname, response_time_ms: responseTime, status_code: 200 })
+    }
   }
 })
