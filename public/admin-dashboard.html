@@ -1054,13 +1054,11 @@
                 
                 <div class="card" style="margin-top: 1rem;">
                     <h3>System Information</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <div>
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 0.5rem;">
+                        <div style="font-size: 0.875rem;">
                             <strong>Database:</strong> Supabase Connected<br>
                             <strong>Storage:</strong> Supabase Storage<br>
-                            <strong>MCP:</strong> Internal Function
-                        </div>
-                        <div>
+                            <strong>MCP:</strong> Internal Function<br>
                             <strong>Environment:</strong> Production<br>
                             <strong>Version:</strong> 1.0.0<br>
                             <strong>Last Updated:</strong> <span id="last-updated">Loading...</span>
@@ -1078,12 +1076,12 @@
                         </div>
                         <small style="color: #6b7280;">Upload organization logo (recommended: 200x100px)</small>
                     </div>
-                    <button class="btn" onclick="uploadLogo(this)">Update Logo</button>
+                    <button class="btn" onclick="uploadLogo(this)" style="width: 100%; margin-top: 0.5rem;">Update Logo</button>
                 </div>
                 
-                <div style="margin-top: 1rem;">
-                    <button class="btn" onclick="saveSettings()">Save Settings</button>
-                    <button class="btn btn-secondary" onclick="testWebhook(this)" style="margin-left: 0.5rem;">Test Webhook</button>
+                <div style="margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    <button class="btn" onclick="saveSettings()" style="width: 100%;">Save Settings</button>
+                    <button class="btn btn-secondary" onclick="testWebhook(this)" style="width: 100%;">Test Webhook</button>
                 </div>
             </div>
         </div>
