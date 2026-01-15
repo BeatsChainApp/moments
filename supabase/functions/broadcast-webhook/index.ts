@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+console.log('🚀 broadcast-webhook function initializing...')
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -67,7 +69,10 @@ async function sendWhatsAppMessage(to: string, message: string, attempt = 1): Pr
 }
 
 serve(async (req) => {
+  console.log(`📨 Request received: ${req.method} ${new URL(req.url).pathname}`)
+  
   if (req.method === 'OPTIONS') {
+    console.log('✅ CORS preflight OK')
     return new Response('ok', { headers: corsHeaders })
   }
 
