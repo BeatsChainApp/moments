@@ -2209,6 +2209,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = isEdit ? `/campaigns/${data.id}` : '/campaigns';
                 const method = isEdit ? 'PUT' : 'POST';
                 
+                console.log(`🔄 ${method} ${url}`, data);
+                
                 const response = await apiFetch(url, {
                     method,
                     headers: { 'Content-Type': 'application/json' },
@@ -2216,15 +2218,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 const result = await response.json();
+                console.log(`📥 Response:`, response.status, result);
+                
                 if (response.ok) {
                     showSuccess(`Campaign ${isEdit ? 'updated' : 'created'} successfully! ${result.auto_approved ? '(Auto-approved)' : '(Pending review)'}`);
                     closeCampaignModal();
                     loadCampaigns();
                 } else {
+                    console.error('❌ Campaign save failed:', result);
                     showError(result.error || `Failed to ${isEdit ? 'update' : 'create'} campaign`);
                 }
             } catch (error) {
-                showError('Failed to create campaign');
+                console.error('❌ Campaign save error:', error);
+                showError('Failed to save campaign: ' + error.message);
             } finally {
                 setButtonLoading(submitBtn, false);
             }
