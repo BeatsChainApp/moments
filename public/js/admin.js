@@ -2209,7 +2209,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const url = isEdit ? `/campaigns/${data.id}` : '/campaigns';
                 const method = isEdit ? 'PUT' : 'POST';
                 
-                console.log(`🔄 ${method} ${url}`, data);
+                console.log(`🔄 ${method} ${url}`, JSON.stringify(data, null, 2));
                 
                 const response = await apiFetch(url, {
                     method,
