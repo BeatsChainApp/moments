@@ -18,6 +18,12 @@ async function apiFetch(path, opts = {}) {
     const token = getAuthToken();
     if (token) opts.headers['Authorization'] = `Bearer ${token}`;
     
+    // Disable cache for GET requests
+    if (!opts.method || opts.method === 'GET') {
+        opts.cache = 'no-store';
+        opts.headers['Cache-Control'] = 'no-cache';
+    }
+    
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
     const cacheKey = `${opts.method || 'GET'}_${url}`;
     
