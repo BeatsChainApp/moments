@@ -64,15 +64,46 @@ async function processBatchedBroadcast(broadcastId: string, message: string, rec
     })
     .eq('id', broadcastId)
   
-  // Process batches sequentially for now (parallel processing in next step)
+  // Process batches in parallel
+  console.log(`⚡ Processing ${batches.length} batches in parallel...`)
+  
+  const batchPromises = batches.map(async (batch) => {
+    try {
+      const processorUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-batch-processor`
+      const response = await fetch(processorUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          batch_id: batch.id,
+          message: message
+        })
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        return { success: result.success_count, failure: result.failure_count }
+      } else {
+        console.error(`❌ Batch processor failed for batch ${batch.batch_number}`)
+        return { success: 0, failure: batch.recipients.length }
+      }
+    } catch (error) {
+      console.error(`❌ Batch processor error for batch ${batch.batch_number}: ${error.message}`)
+      return { success: 0, failure: batch.recipients.length }
+    }
+  })
+  
+  const results = await Promise.all(batchPromises)
+  
   let totalSuccess = 0
   let totalFailure = 0
   
-  for (const batch of batches) {
-    const result = await processBatch(batch, message)
+  results.forEach(result => {
     totalSuccess += result.success
     totalFailure += result.failure
-  }
+  })
   
   // Update final broadcast results
   await supabase
