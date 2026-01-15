@@ -1069,8 +1069,6 @@ async function loadSubscribers() {
         const response = await apiFetch(`/subscribers?filter=${filter}`);
         const data = await response.json();
         
-        console.log('Subscribers data:', data); // Debug log
-        
         // Update stats
         const statsEl = document.getElementById('subscriber-stats');
         if (statsEl && data.stats) {
