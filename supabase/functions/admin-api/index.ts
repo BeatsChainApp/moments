@@ -1585,6 +1585,8 @@ serve(async (req) => {
     if (path.includes('/campaigns/') && path.includes('/broadcast') && method === 'POST') {
       const campaignId = path.split('/campaigns/')[1].split('/broadcast')[0]
 
+      console.log('📢 Broadcasting campaign:', campaignId)
+
       // Get campaign details
       const { data: campaign, error: campaignError } = await supabase
         .from('campaigns')
@@ -1593,6 +1595,7 @@ serve(async (req) => {
         .single()
 
       if (campaignError || !campaign) {
+        console.error('❌ Campaign not found:', campaignError)
         return new Response(JSON.stringify({ error: 'Campaign not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1600,30 +1603,37 @@ serve(async (req) => {
       }
 
       // Convert campaign to moment for broadcasting
+      const momentData = {
+        title: campaign.title,
+        content: campaign.content,
+        region: Array.isArray(campaign.target_regions) ? campaign.target_regions[0] : 'National',
+        category: Array.isArray(campaign.target_categories) ? campaign.target_categories[0] : 'General',
+        sponsor_id: campaign.sponsor_id || null,
+        is_sponsored: !!campaign.sponsor_id,
+        content_source: 'campaign',
+        status: 'broadcasted',
+        created_by: 'campaign_system',
+        broadcasted_at: new Date().toISOString(),
+        media_urls: campaign.media_urls || []
+      }
+
+      console.log('📝 Creating moment:', momentData)
+
       const { data: moment, error: momentError } = await supabase
         .from('moments')
-        .insert({
-          title: campaign.title,
-          content: campaign.content,
-          region: campaign.target_regions?.[0] || 'GP',
-          category: campaign.target_categories?.[0] || 'Events',
-          sponsor_id: campaign.sponsor_id,
-          is_sponsored: !!campaign.sponsor_id,
-          content_source: 'campaign',
-          status: 'broadcasted',
-          created_by: 'campaign_system',
-          broadcasted_at: new Date().toISOString(),
-          media_urls: campaign.media_urls || []
-        })
+        .insert(momentData)
         .select()
         .single()
 
       if (momentError) {
+        console.error('❌ Moment creation failed:', momentError)
         return new Response(JSON.stringify({ error: momentError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+
+      console.log('✅ Moment created:', moment.id)
 
       // Get active subscribers
       const { data: subscribers } = await supabase
@@ -1632,6 +1642,7 @@ serve(async (req) => {
         .eq('opted_in', true)
 
       const recipientCount = subscribers?.length || 0
+      console.log('👥 Recipients:', recipientCount)
 
       // Create broadcast record
       const { data: broadcast } = await supabase
@@ -1648,6 +1659,8 @@ serve(async (req) => {
       // Update campaign to published
       await supabase
         .from('campaigns')
+        .update({ status: 'published' })
+        .eq('id', campaignId)
         .update({ status: 'published' })
         .eq('id', campaignId)
 
