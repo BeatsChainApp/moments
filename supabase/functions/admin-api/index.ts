@@ -1036,62 +1036,78 @@ serve(async (req) => {
       })
     }
 
-    // Subscribers endpoint with real-time data and pagination
+    // Subscribers endpoint - query from messages table for WhatsApp users
     if (path.includes('/subscribers') && method === 'GET') {
       const filter = url.searchParams.get('filter') || 'all'
       const page = parseInt(url.searchParams.get('page') || '1')
       const limit = parseInt(url.searchParams.get('limit') || '20')
       const offset = (page - 1) * limit
 
-      let query = supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact' })
-        .range(offset, offset + limit - 1)
-        .order('last_activity', { ascending: false })
+      // Get unique WhatsApp users from messages table
+      const { data: messageUsers } = await supabase
+        .from('messages')
+        .select('from_number, created_at')
+        .order('created_at', { ascending: false })
 
-      if (filter === 'active') {
-        query = query.eq('opted_in', true)
-      } else if (filter === 'inactive') {
-        query = query.eq('opted_in', false)
-      }
+      // Group by phone number and get latest activity
+      const userMap = new Map()
+      messageUsers?.forEach(msg => {
+        if (!userMap.has(msg.from_number)) {
+          userMap.set(msg.from_number, msg.created_at)
+        }
+      })
 
-      const { data: subscribers, count, error: queryError } = await query
+      // Get subscription status for each user
+      const subscribers = await Promise.all(
+        Array.from(userMap.entries()).map(async ([phone, lastActivity]) => {
+          const { data: sub } = await supabase
+            .from('subscriptions')
+            .select('*')
+            .or(`phone_number.eq.${phone},phone_number.eq.+${phone}`)
+            .single()
 
-      if (queryError) {
-        console.error('Subscribers query error:', queryError)
-        return new Response(JSON.stringify({ 
-          error: queryError.message,
-          subscribers: [],
-          stats: { total: 0, active: 0, inactive: 0, commands_used: 0 }
-        }), {
-          status: 500,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          return {
+            phone_number: phone.startsWith('+') ? phone : `+${phone}`,
+            opted_in: sub?.opted_in ?? true,
+            regions: sub?.regions || ['National'],
+            categories: sub?.categories || ['Education', 'Safety', 'Opportunity'],
+            language_preference: sub?.language_preference || 'eng',
+            opted_in_at: sub?.opted_in_at || lastActivity,
+            opted_out_at: sub?.opted_out_at,
+            last_activity: sub?.last_activity || lastActivity,
+            created_at: sub?.created_at || lastActivity
+          }
         })
+      )
+
+      // Apply filter
+      let filteredSubs = subscribers
+      if (filter === 'active') {
+        filteredSubs = subscribers.filter(s => s.opted_in)
+      } else if (filter === 'inactive') {
+        filteredSubs = subscribers.filter(s => !s.opted_in)
       }
 
-      // Get real stats
-      const { data: allSubs, error: statsError } = await supabase
-        .from('subscriptions')
-        .select('opted_in')
+      // Sort by last activity
+      filteredSubs.sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime())
 
-      if (statsError) {
-        console.error('Subscribers stats error:', statsError)
-      }
+      // Paginate
+      const paginatedSubs = filteredSubs.slice(offset, offset + limit)
 
-      const total = allSubs?.length || 0
-      const active = allSubs?.filter(s => s.opted_in).length || 0
+      const total = subscribers.length
+      const active = subscribers.filter(s => s.opted_in).length
       const inactive = total - active
 
-      console.log(`📊 Subscribers: total=${total}, active=${active}, inactive=${inactive}, returned=${subscribers?.length || 0}`)
+      console.log(`📊 WhatsApp Subscribers: total=${total}, active=${active}, inactive=${inactive}`)
 
       return new Response(JSON.stringify({
-        subscribers: subscribers || [],
+        subscribers: paginatedSubs,
         stats: { total, active, inactive, commands_used: 0 },
         pagination: {
           page,
           limit,
-          total: count || 0,
-          totalPages: Math.ceil((count || 0) / limit)
+          total: filteredSubs.length,
+          totalPages: Math.ceil(filteredSubs.length / limit)
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
