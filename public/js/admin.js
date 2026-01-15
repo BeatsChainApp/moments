@@ -1202,11 +1202,15 @@ async function loadSettings() {
 
 // Load budget controls with real-time data
 async function loadBudgetControls() {
+    console.log('loadBudgetControls called');
     try {
-        // Load settings first
-        const settingsResponse = await apiFetch('/budget/settings');
+        // Load settings first with cache bust
+        console.log('Fetching /budget/settings...');
+        const cacheBust = `?_=${Date.now()}`;
+        const settingsResponse = await apiFetch(`/budget/settings${cacheBust}`);
         const settingsData = await settingsResponse.json();
         const settings = settingsData.settings || {};
+        console.log('Settings loaded:', settings);
         
         const [budgetResponse, sponsorsResponse, transactionsResponse] = await Promise.all([
             apiFetch('/budget/overview'),
@@ -1424,8 +1428,12 @@ window.saveBudgetSettings = async function() {
         
         if (response.ok) {
             showSuccess('Budget settings saved successfully');
+            console.log('Budget saved, reloading in 500ms...');
             // Force reload with cache bust
-            setTimeout(() => loadBudgetControls(), 500);
+            setTimeout(() => {
+                console.log('Calling loadBudgetControls...');
+                loadBudgetControls();
+            }, 500);
         } else {
             showError('Failed to save budget settings');
         }

@@ -74,7 +74,7 @@ serve(async (req) => {
     // Handle login - check for email/password in body
     if (method === 'POST' && body && body.email && body.password) {
       const { email, password } = body
-      
+
       // Get admin user from database
       const { data: admin, error } = await supabase
         .from('admin_users')
@@ -82,7 +82,7 @@ serve(async (req) => {
         .eq('email', email)
         .eq('active', true)
         .single()
-      
+
       if (error || !admin) {
         console.log('Admin user lookup failed:', error?.message)
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
@@ -90,7 +90,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Verify password - use fallback for initial setup
       let validPassword = false
       if (email === 'info@unamifoundation.org' && (password === 'Proof321#' || password === 'Proof321#moments')) {
@@ -102,18 +102,18 @@ serve(async (req) => {
           console.log('Password verification failed:', verifyError.message)
         }
       }
-      
+
       if (!validPassword) {
         return new Response(JSON.stringify({ error: 'Invalid credentials' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Create session token and store in database
       const sessionToken = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours
-      
+
       // Store session in database
       const { error: sessionError } = await supabase
         .from('admin_sessions')
@@ -123,12 +123,12 @@ serve(async (req) => {
           expires_at: expiresAt,
           created_at: new Date().toISOString()
         })
-      
+
       if (sessionError) {
         console.log('Session storage failed:', sessionError.message)
         // Continue anyway - session validation will be bypassed temporarily
       }
-      
+
       return new Response(JSON.stringify({
         success: true,
         token: sessionToken,
@@ -143,7 +143,7 @@ serve(async (req) => {
     }
 
     // Public API endpoints for PWA (NO AUTH REQUIRED)
-    
+
     // Unified analytics endpoint (used by PWA)
     if (path.includes('/analytics') && method === 'GET' && !path.includes('/dashboard') && !path.includes('/revenue') && !path.includes('/campaigns')) {
       const { data } = await supabase.from('unified_analytics').select('*').single()
@@ -161,14 +161,14 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-    
+
     if (path.includes('/api/stats') && method === 'GET') {
       const [momentsResult, subscribersResult, broadcastsResult] = await Promise.all([
         supabase.from('moments').select('id', { count: 'exact', head: true }),
         supabase.from('subscriptions').select('id').eq('opted_in', true).then(r => ({ count: r.data?.length || 0 })),
         supabase.from('broadcasts').select('id', { count: 'exact', head: true })
       ])
-      
+
       return new Response(JSON.stringify({
         totalMoments: momentsResult.count || 0,
         activeSubscribers: subscribersResult.count || 0,
@@ -177,12 +177,12 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-    
+
     if (path.includes('/api/moments') && method === 'GET') {
       const region = url.searchParams.get('region')
       const category = url.searchParams.get('category')
       const source = url.searchParams.get('source')
-      
+
       let query = supabase
         .from('moments')
         .select(`
@@ -192,13 +192,13 @@ serve(async (req) => {
         .eq('status', 'broadcasted')
         .order('broadcasted_at', { ascending: false })
         .limit(50)
-      
+
       if (region) query = query.eq('region', region)
       if (category) query = query.eq('category', category)
       if (source) query = query.eq('content_source', source)
-      
+
       const { data: moments } = await query
-      
+
       return new Response(JSON.stringify({ moments: moments || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -214,7 +214,7 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '')
-    
+
     // Handle both session tokens and service role tokens
     if (token.startsWith('session_')) {
       const { data: session, error: sessionError } = await supabase
@@ -244,7 +244,7 @@ serve(async (req) => {
         .from('admin_users')
         .select('id, email, name, active, created_at, last_login')
         .order('created_at', { ascending: false })
-      
+
       return new Response(JSON.stringify({ users: users || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -254,7 +254,7 @@ serve(async (req) => {
     if (path.includes('/admin-users') && method === 'POST' && body) {
       // Skip password hashing for now
       const passwordHash = 'temp_hash'
-      
+
       const { data, error } = await supabase
         .from('admin_users')
         .insert({
@@ -265,7 +265,7 @@ serve(async (req) => {
         })
         .select('id, email, name, active, created_at')
         .single()
-      
+
       if (error) throw error
       return new Response(JSON.stringify({ user: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -274,11 +274,11 @@ serve(async (req) => {
 
     // Compliance check endpoint
     if (path.includes('/compliance/check') && method === 'POST' && body) {
-      return new Response(JSON.stringify({ 
-        compliance: { 
-          approved: false, 
+      return new Response(JSON.stringify({
+        compliance: {
+          approved: false,
           confidence: 0.65,
-          issues: ['Manual review required'], 
+          issues: ['Manual review required'],
           recommendations: ['Content requires human moderation']
         }
       }), {
@@ -349,20 +349,20 @@ serve(async (req) => {
     if (path.includes('/compliance/categories') && method === 'GET') {
       const regions = ['KZN', 'WC', 'GP', 'EC', 'FS', 'LP', 'MP', 'NC', 'NW']
       const categories = ['Education', 'Safety', 'Culture', 'Opportunity', 'Events', 'Health', 'Technology']
-      
+
       const formattedCategories = [
-        ...regions.map((region, index) => ({ 
-          id: index + 1, 
-          category_type: 'region', 
-          category_name: region 
+        ...regions.map((region, index) => ({
+          id: index + 1,
+          category_type: 'region',
+          category_name: region
         })),
-        ...categories.map((category, index) => ({ 
-          id: regions.length + index + 1, 
-          category_type: 'category', 
-          category_name: category 
+        ...categories.map((category, index) => ({
+          id: regions.length + index + 1,
+          category_type: 'category',
+          category_name: category
         }))
       ]
-      
+
       return new Response(JSON.stringify({ categories: formattedCategories }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -372,7 +372,7 @@ serve(async (req) => {
     if (path.includes('/analytics/revenue') && method === 'GET') {
       const [campaigns, revenue, budgets, intents] = await Promise.all([
         supabase.from('campaigns').select('*', { count: 'exact' }),
-        supabase.from('revenue_events').select('revenue_amount').gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString()),
+        supabase.from('revenue_events').select('revenue_amount').gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
         supabase.from('campaign_budgets').select('total_budget, spent_amount'),
         supabase.from('moment_intents').select('*').eq('channel', 'whatsapp').eq('status', 'sent')
       ])
@@ -411,10 +411,10 @@ serve(async (req) => {
         .order('created_at', { ascending: false })
         .limit(10)
 
-      return new Response(JSON.stringify({ 
+      return new Response(JSON.stringify({
         campaigns: campaignPerformance || [],
         summary: {
-          topPerforming: campaignPerformance?.sort((a, b) => 
+          topPerforming: campaignPerformance?.sort((a, b) =>
             (b.campaign_metrics?.[0]?.conversion_rate || 0) - (a.campaign_metrics?.[0]?.conversion_rate || 0)
           ).slice(0, 5) || []
         }
@@ -432,7 +432,7 @@ serve(async (req) => {
         supabase.from('template_analytics').select('*').limit(30),
         supabase.from('template_adoption').select('*').single()
       ])
-      
+
       return new Response(JSON.stringify({
         daily: daily.data || [],
         regional: regional.data || [],
@@ -483,7 +483,7 @@ serve(async (req) => {
         .select('*, sponsors(*)')
         .order('created_at', { ascending: false })
         .limit(50)
-      
+
       return new Response(JSON.stringify({ moments: moments || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -500,14 +500,14 @@ serve(async (req) => {
       if (body.content && body.content.toLowerCase().includes('urgent') && !body.sponsor_id) {
         complianceIssues.push('Urgency language detected - ensure compliance with Meta guidelines')
       }
-      
+
       // Log compliance check
       if (complianceIssues.length > 0) {
         console.warn('Compliance warnings:', complianceIssues)
       }
-      
+
       await logAudit(supabase, 'admin', 'create', 'moment', '', { ...body, compliance_warnings: complianceIssues })
-      
+
       // Build partner attribution
       let partnerAttribution = null
       if (body.sponsor_id) {
@@ -516,12 +516,12 @@ serve(async (req) => {
           .select('display_name')
           .eq('id', body.sponsor_id)
           .single()
-        
+
         if (sponsor) {
           partnerAttribution = `Presented by ${sponsor.display_name} via Unami Foundation Moments App`
         }
       }
-      
+
       const { data: moment, error } = await supabase
         .from('moments')
         .insert({
@@ -543,7 +543,7 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (error) {
         console.error('Moment creation error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
@@ -551,13 +551,13 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Auto-broadcast admin moments if not scheduled
       if (!body.scheduled_at) {
         // Create intents directly in admin API
         try {
           const createdIntents = []
-          
+
           // PWA intent
           if (moment.publish_to_pwa !== false) {
             const { data: existingPwa } = await supabase
@@ -566,7 +566,7 @@ serve(async (req) => {
               .eq('moment_id', moment.id)
               .eq('channel', 'pwa')
               .single()
-            
+
             if (!existingPwa) {
               const { data: pwaIntent } = await supabase
                 .from('moment_intents')
@@ -583,11 +583,11 @@ serve(async (req) => {
                 })
                 .select('id')
                 .single()
-              
+
               if (pwaIntent) createdIntents.push(pwaIntent.id)
             }
           }
-          
+
           // WhatsApp intent
           if (moment.publish_to_whatsapp) {
             const { data: existingWa } = await supabase
@@ -596,7 +596,7 @@ serve(async (req) => {
               .eq('moment_id', moment.id)
               .eq('channel', 'whatsapp')
               .single()
-            
+
             if (!existingWa) {
               const { data: waIntent } = await supabase
                 .from('moment_intents')
@@ -614,11 +614,11 @@ serve(async (req) => {
                 })
                 .select('id')
                 .single()
-              
+
               if (waIntent) createdIntents.push(waIntent.id)
             }
           }
-          
+
           console.log(`✅ Created ${createdIntents.length} intents for moment ${moment.id}`)
         } catch (intentError) {
           console.error('❌ Intent creation failed:', intentError.message)
@@ -629,7 +629,7 @@ serve(async (req) => {
             .from('subscriptions')
             .select('phone_number')
             .eq('opted_in', true)
-          
+
           if (subscribers && subscribers.length > 0) {
             // Create broadcast record
             const { data: broadcast } = await supabase
@@ -642,19 +642,19 @@ serve(async (req) => {
               })
               .select()
               .single()
-            
+
             // Update moment to broadcasted
             await supabase
               .from('moments')
-              .update({ 
+              .update({
                 status: 'broadcasted',
                 broadcasted_at: new Date().toISOString()
               })
               .eq('id', moment.id)
-            
+
             // Trigger broadcast webhook
             const broadcastMsg = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
-            
+
             await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
               method: 'POST',
               headers: {
@@ -673,7 +673,7 @@ serve(async (req) => {
           console.error('Auto-broadcast failed:', broadcastError)
         }
       }
-      
+
       return new Response(JSON.stringify({ moment }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -689,7 +689,7 @@ serve(async (req) => {
         .eq('id', momentId)
         .select()
         .single()
-      
+
       if (error) throw error
       return new Response(JSON.stringify({ moment: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -699,36 +699,36 @@ serve(async (req) => {
     // Broadcast moment endpoint
     if (path.includes('/moments/') && path.includes('/broadcast') && method === 'POST') {
       const momentId = path.split('/moments/')[1].split('/broadcast')[0]
-      
+
       // Get moment details
       const { data: moment, error: momentError } = await supabase
         .from('moments')
         .select('*')
         .eq('id', momentId)
         .single()
-      
+
       if (momentError || !moment) {
         return new Response(JSON.stringify({ error: 'Moment not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Get active subscribers
       const { data: subscribers } = await supabase
         .from('subscriptions')
         .select('phone_number')
         .eq('opted_in', true)
-      
+
       const recipientCount = subscribers?.length || 0
-      
+
       if (recipientCount === 0) {
         return new Response(JSON.stringify({ error: 'No active subscribers' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Create broadcast record
       const { data: broadcast, error: broadcastError } = await supabase
         .from('broadcasts')
@@ -742,26 +742,26 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (broadcastError) {
         return new Response(JSON.stringify({ error: broadcastError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Update moment status
       await supabase
         .from('moments')
-        .update({ 
+        .update({
           status: 'broadcasted',
           broadcasted_at: new Date().toISOString()
         })
         .eq('id', momentId)
-      
+
       // Format broadcast message
       const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}\\n\\n🌐 More: moments.unamifoundation.org/moments`
-      
+
       // Trigger broadcast webhook
       try {
         const webhookResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
@@ -777,16 +777,16 @@ serve(async (req) => {
             moment_id: momentId
           })
         })
-        
+
         if (!webhookResponse.ok) {
           console.error('Broadcast webhook failed:', await webhookResponse.text())
         }
       } catch (webhookError) {
         console.error('Webhook trigger error:', webhookError)
       }
-      
-      return new Response(JSON.stringify({ 
-        success: true, 
+
+      return new Response(JSON.stringify({
+        success: true,
         broadcast_id: broadcast.id,
         message: `Broadcasting "${moment.title}" to ${recipientCount} subscribers`,
         recipient_count: recipientCount
@@ -799,23 +799,23 @@ serve(async (req) => {
     if (path.includes('/moments/') && method === 'DELETE') {
       const momentId = path.split('/moments/')[1].split('?')[0]
       await logAudit(supabase, 'admin', 'delete', 'moment', momentId, {})
-      
+
       // Delete related broadcasts first
       await supabase.from('broadcasts').delete().eq('moment_id', momentId)
-      
+
       // Delete the moment
       const { error } = await supabase
         .from('moments')
         .delete()
         .eq('id', momentId)
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -830,7 +830,7 @@ serve(async (req) => {
         .eq('sponsor_id', sponsorId)
         .eq('is_active', true)
         .order('created_at', { ascending: false })
-      
+
       return new Response(JSON.stringify({ assets: assets || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -839,14 +839,14 @@ serve(async (req) => {
     // Upload sponsor asset
     if (path.includes('/sponsors/') && path.includes('/assets') && method === 'POST') {
       const sponsorId = path.split('/sponsors/')[1].split('/assets')[0]
-      
+
       if (!body) {
         return new Response(JSON.stringify({ error: 'Request body required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       const { data, error } = await supabase
         .from('sponsor_assets')
         .insert({
@@ -858,7 +858,7 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (error) throw error
       return new Response(JSON.stringify({ asset: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -875,7 +875,7 @@ serve(async (req) => {
         `)
         .eq('active', true)
         .order('tier DESC, name')
-      
+
       return new Response(JSON.stringify({ sponsors: sponsors || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -892,13 +892,13 @@ serve(async (req) => {
         logo_url: body.logo_url || null,
         active: true
       }
-      
+
       const { data, error } = await supabase
         .from('sponsors')
         .insert(cleanBody)
         .select()
         .single()
-      
+
       if (error) {
         console.error('Sponsor creation error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
@@ -906,7 +906,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ sponsor: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -918,7 +918,7 @@ serve(async (req) => {
         .from('system_settings')
         .select('*')
         .order('setting_key')
-      
+
       return new Response(JSON.stringify({ settings: settings || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -929,14 +929,14 @@ serve(async (req) => {
       const settingKey = path.split('/settings/')[1]
       const { data, error } = await supabase
         .from('system_settings')
-        .update({ 
+        .update({
           setting_value: body.value,
           updated_at: new Date().toISOString()
         })
         .eq('setting_key', settingKey)
         .select()
         .single()
-      
+
       if (error) throw error
       return new Response(JSON.stringify({ setting: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -961,7 +961,7 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (error) {
         console.error('Campaign creation error:', error)
         return new Response(JSON.stringify({ error: error.message }), {
@@ -969,7 +969,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ campaign: data, auto_approved: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -978,21 +978,21 @@ serve(async (req) => {
     // Activate campaign endpoint
     if (path.includes('/campaigns/') && path.includes('/activate') && method === 'POST') {
       const campaignId = path.split('/campaigns/')[1].split('/activate')[0]
-      
+
       const { data, error } = await supabase
         .from('campaigns')
         .update({ status: 'active', updated_at: new Date().toISOString() })
         .eq('id', campaignId)
         .select()
         .single()
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true, campaign: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1005,7 +1005,7 @@ serve(async (req) => {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
-      
+
       return new Response(JSON.stringify({ campaigns: campaigns || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1016,14 +1016,14 @@ serve(async (req) => {
       const page = parseInt(url.searchParams.get('page') || '1')
       const limit = parseInt(url.searchParams.get('limit') || '20')
       const offset = (page - 1) * limit
-      
+
       const { data: broadcasts, count } = await supabase
         .from('broadcasts')
         .select('*, moments(title, region, category)', { count: 'exact' })
         .range(offset, offset + limit - 1)
         .order('broadcast_started_at', { ascending: false })
-      
-      return new Response(JSON.stringify({ 
+
+      return new Response(JSON.stringify({
         broadcasts: broadcasts || [],
         pagination: {
           page,
@@ -1042,32 +1042,32 @@ serve(async (req) => {
       const page = parseInt(url.searchParams.get('page') || '1')
       const limit = parseInt(url.searchParams.get('limit') || '20')
       const offset = (page - 1) * limit
-      
+
       let query = supabase
         .from('subscriptions')
         .select('*', { count: 'exact' })
         .range(offset, offset + limit - 1)
         .order('last_activity', { ascending: false })
-      
+
       if (filter === 'active') {
         query = query.eq('opted_in', true)
       } else if (filter === 'inactive') {
         query = query.eq('opted_in', false)
       }
-      
+
       const { data: subscribers, count } = await query
-      
+
       // Get real stats
       const { data: allSubs } = await supabase
         .from('subscriptions')
         .select('opted_in')
-      
+
       const total = allSubs?.length || 0
       const active = allSubs?.filter(s => s.opted_in).length || 0
       const inactive = total - active
-      
-      return new Response(JSON.stringify({ 
-        subscribers: subscribers || [], 
+
+      return new Response(JSON.stringify({
+        subscribers: subscribers || [],
         stats: { total, active, inactive, commands_used: 0 },
         pagination: {
           page,
@@ -1086,7 +1086,7 @@ serve(async (req) => {
       const page = parseInt(url.searchParams.get('page') || '1')
       const limit = parseInt(url.searchParams.get('limit') || '20')
       const offset = (page - 1) * limit
-      
+
       let query = supabase
         .from('messages')
         .select(`
@@ -1095,18 +1095,18 @@ serve(async (req) => {
         `, { count: 'exact' })
         .range(offset, offset + limit - 1)
         .order('created_at', { ascending: false })
-      
+
       const { data: messages, count } = await query
-      
+
       // Process messages to include MCP analysis and auto-approve
       const processedMessages = (messages || []).map(msg => {
         const advisory = msg.advisories?.[0]
         const overallRisk = advisory?.confidence || 0
-        
+
         // AUTO-APPROVE if risk < 0.3 and create audit record
         if (overallRisk < 0.3 && msg.moderation_status === 'pending') {
           supabase.from('messages')
-            .update({ 
+            .update({
               moderation_status: 'approved',
               processed: true,
               updated_at: new Date().toISOString()
@@ -1123,7 +1123,7 @@ serve(async (req) => {
             })
           msg.moderation_status = 'approved'
         }
-        
+
         return {
           ...msg,
           mcp_analysis: advisory ? {
@@ -1135,7 +1135,7 @@ serve(async (req) => {
           } : null
         }
       })
-      
+
       // Apply filters
       let filteredMessages = processedMessages
       if (filter === 'flagged') {
@@ -1145,8 +1145,8 @@ serve(async (req) => {
       } else if (filter === 'escalated') {
         filteredMessages = processedMessages.filter(msg => msg.mcp_analysis && msg.mcp_analysis.escalation_suggested)
       }
-      
-      return new Response(JSON.stringify({ 
+
+      return new Response(JSON.stringify({
         flaggedMessages: filteredMessages,
         pagination: {
           page,
@@ -1162,37 +1162,37 @@ serve(async (req) => {
     // Message moderation actions
     if (path.includes('/messages/') && path.includes('/approve') && method === 'POST') {
       const messageId = path.split('/messages/')[1].split('/approve')[0]
-      
+
       const { data: message, error: messageError } = await supabase
         .from('messages')
         .select('*')
         .eq('id', messageId)
         .single()
-      
+
       if (messageError || !message) {
         return new Response(JSON.stringify({ error: 'Message not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Update message status with timestamp
       const { error: updateError } = await supabase
         .from('messages')
-        .update({ 
+        .update({
           moderation_status: 'approved',
           processed: true,
           moderation_timestamp: new Date().toISOString()
         })
         .eq('id', messageId)
-      
+
       if (updateError) {
         return new Response(JSON.stringify({ error: updateError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true, message: 'Message approved successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1201,23 +1201,23 @@ serve(async (req) => {
     // Flag message
     if (path.includes('/messages/') && path.includes('/flag') && method === 'POST') {
       const messageId = path.split('/messages/')[1].split('/flag')[0]
-      
+
       const { error: updateError } = await supabase
         .from('messages')
-        .update({ 
+        .update({
           moderation_status: 'flagged',
           processed: true,
           moderation_timestamp: new Date().toISOString()
         })
         .eq('id', messageId)
-      
+
       if (updateError) {
         return new Response(JSON.stringify({ error: updateError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true, message: 'Message flagged successfully' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1233,7 +1233,7 @@ serve(async (req) => {
         .eq('moment_id', momentId)
         .eq('moderation_status', 'approved')
         .order('created_at', { ascending: false })
-      
+
       return new Response(JSON.stringify({ comments: comments || [] }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1242,21 +1242,21 @@ serve(async (req) => {
     // POST /moments/:id/comments
     if (path.match(/\/moments\/[^\/]+\/comments$/) && method === 'POST') {
       const momentId = path.split('/moments/')[1].split('/comments')[0]
-      
+
       if (!await isFeatureEnabled(supabase, 'comments_enabled')) {
         return new Response(JSON.stringify({ error: 'Comments are currently disabled' }), {
           status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       if (!await checkRateLimit(supabase, body.from_number || 'anonymous', '/comments', 10)) {
         return new Response(JSON.stringify({ error: 'Rate limit exceeded' }), {
           status: 429,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       const { data: comment, error } = await supabase
         .from('comments')
         .insert({
@@ -1267,14 +1267,14 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ comment }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1283,22 +1283,22 @@ serve(async (req) => {
     // POST /comments/:id/approve
     if (path.match(/\/comments\/[^\/]+\/approve$/) && method === 'POST') {
       const commentId = path.split('/comments/')[1].split('/approve')[0]
-      
+
       const { error } = await supabase
         .from('comments')
-        .update({ 
+        .update({
           moderation_status: 'approved',
           updated_at: new Date().toISOString()
         })
         .eq('id', commentId)
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1307,22 +1307,22 @@ serve(async (req) => {
     // POST /comments/:id/feature
     if (path.match(/\/comments\/[^\/]+\/feature$/) && method === 'POST') {
       const commentId = path.split('/comments/')[1].split('/feature')[0]
-      
+
       const { error } = await supabase
         .from('comments')
-        .update({ 
+        .update({
           featured: true,
           updated_at: new Date().toISOString()
         })
         .eq('id', commentId)
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1331,19 +1331,19 @@ serve(async (req) => {
     // DELETE /comments/:id
     if (path.match(/\/comments\/[^\/]+$/) && method === 'DELETE') {
       const commentId = path.split('/comments/')[1].split('?')[0]
-      
+
       const { error } = await supabase
         .from('comments')
         .delete()
         .eq('id', commentId)
-      
+
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -1357,21 +1357,21 @@ serve(async (req) => {
         .eq('status', 'scheduled')
         .lte('scheduled_at', new Date().toISOString())
         .limit(10)
-      
+
       let processedCount = 0
       const results = []
-      
+
       for (const moment of scheduledMoments || []) {
         try {
           // Update to draft status (ready for broadcast)
           const { error: updateError } = await supabase
             .from('moments')
-            .update({ 
+            .update({
               status: 'draft',
               scheduled_at: null
             })
             .eq('id', moment.id)
-          
+
           if (!updateError) {
             processedCount++
             results.push({
@@ -1389,7 +1389,7 @@ serve(async (req) => {
           })
         }
       }
-      
+
       return new Response(JSON.stringify({
         success: true,
         processed_count: processedCount,
@@ -1403,21 +1403,21 @@ serve(async (req) => {
     // Campaign broadcast endpoint
     if (path.includes('/campaigns/') && path.includes('/broadcast') && method === 'POST') {
       const campaignId = path.split('/campaigns/')[1].split('/broadcast')[0]
-      
+
       // Get campaign details
       const { data: campaign, error: campaignError } = await supabase
         .from('campaigns')
         .select('*')
         .eq('id', campaignId)
         .single()
-      
+
       if (campaignError || !campaign) {
         return new Response(JSON.stringify({ error: 'Campaign not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Convert campaign to moment for broadcasting
       const { data: moment, error: momentError } = await supabase
         .from('moments')
@@ -1436,22 +1436,22 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       if (momentError) {
         return new Response(JSON.stringify({ error: momentError.message }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      
+
       // Get active subscribers
       const { data: subscribers } = await supabase
         .from('subscriptions')
         .select('phone_number')
         .eq('opted_in', true)
-      
+
       const recipientCount = subscribers?.length || 0
-      
+
       // Create broadcast record
       const { data: broadcast } = await supabase
         .from('broadcasts')
@@ -1463,17 +1463,17 @@ serve(async (req) => {
         })
         .select()
         .single()
-      
+
       // Update campaign to published
       await supabase
         .from('campaigns')
         .update({ status: 'published' })
         .eq('id', campaignId)
-      
+
       // Format broadcast message
       const sponsorText = campaign.sponsor_id ? '\\n\\nSponsored Content' : ''
       const broadcastMessage = `📢 Unami Foundation Campaign — ${moment.region}\\n\\n${moment.title}\\n\\n${moment.content}${sponsorText}\\n\\n🌐 More: moments.unamifoundation.org/moments`
-      
+
       // Trigger WhatsApp broadcast
       try {
         await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`, {
@@ -1492,8 +1492,8 @@ serve(async (req) => {
       } catch (webhookError) {
         console.error('Campaign broadcast webhook error:', webhookError)
       }
-      
-      return new Response(JSON.stringify({ 
+
+      return new Response(JSON.stringify({
         success: true,
         campaign_id: campaignId,
         moment_id: moment.id,
@@ -1511,21 +1511,21 @@ serve(async (req) => {
         // Handle multipart form data for file uploads
         const formData = await req.formData()
         const files = formData.getAll('media_files') as File[]
-        
+
         if (!files || files.length === 0) {
           return new Response(JSON.stringify({ error: 'No files provided' }), {
             status: 400,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
         }
-        
+
         const uploadedFiles = []
-        
+
         for (const file of files) {
           if (file.size === 0) continue
-          
+
           const fileName = `moments/${Date.now()}_${Math.random().toString(36).substr(2, 9)}_${file.name}`
-          
+
           try {
             const { data, error } = await supabase.storage
               .from('media')
@@ -1533,16 +1533,16 @@ serve(async (req) => {
                 cacheControl: '3600',
                 upsert: false
               })
-            
+
             if (error) {
               console.error('Storage upload error:', error)
               continue
             }
-            
+
             const { data: publicUrl } = supabase.storage
               .from('media')
               .getPublicUrl(fileName)
-            
+
             uploadedFiles.push({
               id: data.path,
               originalName: file.name,
@@ -1556,8 +1556,8 @@ serve(async (req) => {
             console.error('File upload error:', fileError)
           }
         }
-        
-        return new Response(JSON.stringify({ 
+
+        return new Response(JSON.stringify({
           success: true,
           files: uploadedFiles,
           message: `${uploadedFiles.length} file(s) uploaded successfully`
@@ -1566,8 +1566,8 @@ serve(async (req) => {
         })
       } catch (uploadError) {
         console.error('Upload endpoint error:', uploadError)
-        return new Response(JSON.stringify({ 
-          error: 'Upload failed: ' + uploadError.message 
+        return new Response(JSON.stringify({
+          error: 'Upload failed: ' + uploadError.message
         }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1581,22 +1581,22 @@ serve(async (req) => {
         .from('budget_transactions')
         .select('amount, created_at')
         .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
-      
+
       const sponsorData = await supabase
         .from('sponsors')
         .select('monthly_budget');
-      
+
       const messageCount = await supabase
         .from('moment_intents')
         .select('id', { count: 'exact' })
         .eq('status', 'sent')
         .gte('created_at', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString());
-      
+
       const totalBudget = sponsorData.data?.reduce((sum, s) => sum + (s.monthly_budget || 0), 0) || 10000;
       const totalSpent = budgetData.data?.reduce((sum, t) => sum + t.amount, 0) || 0;
       const messageCost = 0.12;
       const messagesSent = messageCount.count || 0;
-      
+
       return new Response(JSON.stringify({
         success: true,
         data: {
@@ -1626,14 +1626,14 @@ serve(async (req) => {
           id, display_name, monthly_budget,
           budget_transactions(amount)
         `);
-      
+
       const sponsorBudgets = sponsors?.map(sponsor => ({
         id: sponsor.id,
         display_name: sponsor.display_name,
         budget: sponsor.monthly_budget || 1000,
         spent: sponsor.budget_transactions?.reduce((sum, t) => sum + t.amount, 0) || 0
       })) || [];
-      
+
       return new Response(JSON.stringify({
         success: true,
         sponsors: sponsorBudgets
@@ -1649,7 +1649,7 @@ serve(async (req) => {
         `)
         .order('created_at', { ascending: false })
         .limit(10);
-      
+
       const formattedTransactions = transactions?.map(tx => ({
         amount: tx.amount,
         created_at: tx.created_at,
@@ -1657,7 +1657,7 @@ serve(async (req) => {
         status: tx.status || 'completed',
         sponsor_name: tx.campaigns?.sponsors?.display_name || 'System'
       })) || [];
-      
+
       return new Response(JSON.stringify({
         success: true,
         transactions: formattedTransactions
@@ -1670,17 +1670,17 @@ serve(async (req) => {
         .from('system_settings')
         .select('setting_key, setting_value')
         .in('setting_key', ['monthly_budget', 'warning_threshold', 'message_cost', 'daily_limit'])
-      
+
       const settingsObj = {}
       settings?.forEach(s => {
         settingsObj[s.setting_key] = parseFloat(s.setting_value)
       })
-      
+
       return new Response(JSON.stringify({ success: true, settings: settingsObj }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
-    
+
     // Budget settings PUT endpoint
     if (path.includes('/budget/settings') && method === 'PUT' && body) {
       const settings = [
@@ -1689,7 +1689,7 @@ serve(async (req) => {
         { key: 'message_cost', value: body.message_cost },
         { key: 'daily_limit', value: body.daily_limit }
       ];
-      
+
       for (const setting of settings) {
         if (setting.value !== undefined) {
           await supabase
@@ -1701,14 +1701,14 @@ serve(async (req) => {
             }, { onConflict: 'setting_key' });
         }
       }
-      
+
       return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
     }
 
   } catch (error) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
     await logError(supabase, 'api_error', error.message, { path: new URL(req.url).pathname }, 'high')
-    return new Response(JSON.stringify({ 
+    return new Response(JSON.stringify({
       error: error.message,
       path: new URL(req.url).pathname
     }), {
