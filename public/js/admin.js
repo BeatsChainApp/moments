@@ -687,6 +687,7 @@ async function loadSponsors() {
     try {
         const response = await apiFetch('/sponsors');
         const data = await response.json();
+        console.log('📊 Sponsors loaded:', data.sponsors?.length || 0);
         
         const sponsorSelect = document.getElementById('sponsor-select');
         if (sponsorSelect) {
@@ -695,6 +696,11 @@ async function loadSponsors() {
         }
         
         const sponsorsList = document.getElementById('sponsors-list');
+        if (!sponsorsList) {
+            console.error('❌ sponsors-list element not found');
+            return;
+        }
+        
         if (sponsorsList) {
             if (data.sponsors && data.sponsors.length > 0) {
                 const html = data.sponsors.map(sponsor => `
@@ -802,6 +808,7 @@ async function loadCampaigns() {
     try {
         const response = await apiFetch('/campaigns');
         const data = await response.json();
+        console.log('📊 Campaigns loaded:', data.campaigns?.length || 0);
         
         // Load sponsors for filter
         const sponsorsResponse = await apiFetch('/sponsors');
@@ -810,6 +817,12 @@ async function loadCampaigns() {
         if (campaignSponsorFilter && sponsorsData.sponsors) {
             campaignSponsorFilter.innerHTML = '<option value="">All Sponsors</option>' + 
                 sponsorsData.sponsors.map(s => `<option value="${s.id}">${s.display_name}</option>`).join('');
+        }
+        
+        const campaignsList = document.getElementById('campaigns-list');
+        if (!campaignsList) {
+            console.error('❌ campaigns-list element not found');
+            return;
         }
         
         if (data.campaigns && data.campaigns.length > 0) {
