@@ -55,12 +55,15 @@ async function processBatchedBroadcast(broadcastId: string, message: string, rec
   
   console.log(`✅ Created ${batches.length} batches for broadcast ${broadcastId}`)
   
-  // Update broadcast status
+  // Update broadcast status with batch count
   await supabase
     .from('broadcasts')
     .update({
       status: 'processing',
-      broadcast_started_at: new Date().toISOString()
+      broadcast_started_at: new Date().toISOString(),
+      batches_total: batches.length,
+      batches_completed: 0,
+      progress_percentage: 0
     })
     .eq('id', broadcastId)
   

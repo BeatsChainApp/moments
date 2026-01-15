@@ -155,6 +155,26 @@ serve(async (req) => {
       })
       .eq('id', batch_id)
 
+    // Update broadcast progress
+    const { data: broadcast } = await supabase
+      .from('broadcasts')
+      .select('batches_total, batches_completed')
+      .eq('id', batch.broadcast_id)
+      .single()
+
+    if (broadcast) {
+      const newCompleted = (broadcast.batches_completed || 0) + 1
+      const progress = (newCompleted / broadcast.batches_total) * 100
+      
+      await supabase
+        .from('broadcasts')
+        .update({
+          batches_completed: newCompleted,
+          progress_percentage: progress
+        })
+        .eq('id', batch.broadcast_id)
+    }
+
     console.log(`✅ Batch ${batch.batch_number} completed: ${successCount} success, ${failureCount} failed`)
 
     return new Response(JSON.stringify({
