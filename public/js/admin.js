@@ -1392,8 +1392,8 @@ function saveSettings() {
     showSuccess('Settings saved successfully');
 }
 
-// Save budget settings function
-async function saveBudgetSettings() {
+// Save budget settings function (globally accessible)
+window.saveBudgetSettings = async function() {
     const monthlyBudget = document.getElementById('monthly-budget')?.value;
     const warningThreshold = document.getElementById('warning-threshold')?.value;
     const messageCost = document.getElementById('message-cost')?.value;
@@ -2054,11 +2054,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const sponsorForm = document.getElementById('sponsor-form');
-    if (sponsorForm) {
-        sponsorForm.addEventListener('submit', async (e) => {
+    const sponsorFormInline = document.getElementById('sponsor-form-inline');
+    
+    [sponsorForm, sponsorFormInline].filter(f => f).forEach(form => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const submitBtn = document.getElementById('sponsor-submit-btn');
-            const messageEl = document.getElementById('sponsor-message');
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const messageEl = form.querySelector('[id*="sponsor-message"]') || document.getElementById('sponsor-message');
             
             // Clear previous messages
             messageEl.innerHTML = '';
@@ -2164,10 +2166,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const campaignForm = document.getElementById('campaign-form');
-    if (campaignForm) {
-        campaignForm.addEventListener('submit', async (e) => {
+    const campaignFormInline = document.getElementById('campaign-form-inline');
+    
+    [campaignForm, campaignFormInline].filter(f => f).forEach(form => {
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const submitBtn = document.getElementById('campaign-submit-btn');
+            const submitBtn = form.querySelector('button[type="submit"]');
             setButtonLoading(submitBtn, true);
             
             const formData = new FormData(e.target);
