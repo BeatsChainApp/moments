@@ -1740,20 +1740,21 @@ async function editCampaign(id) {
 }
 
 function activateCampaign(id) {
-    showConfirm('Activate this campaign?', async () => {
+    showConfirm('Broadcast this campaign to all subscribers now?', async () => {
         try {
-            const response = await apiFetch(`/campaigns/${id}/activate`, {
+            const response = await apiFetch(`/campaigns/${id}/broadcast`, {
                 method: 'POST'
             });
             
             if (response.ok) {
-                showSuccess('Campaign activated successfully');
+                const result = await response.json();
+                showSuccess(`Campaign broadcasted to ${result.recipient_count || 0} subscribers`);
                 loadCampaigns();
             } else {
-                showError('Failed to activate campaign');
+                showError('Failed to broadcast campaign');
             }
         } catch (error) {
-            showError('Failed to activate campaign');
+            showError('Failed to broadcast campaign');
         }
     });
 }
