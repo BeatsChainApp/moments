@@ -389,6 +389,18 @@ serve(async (req) => {
         
         for (const message of messages) {
           try {
+            // NEW: Handle interactive button/list responses
+            if (message.type === 'interactive') {
+              const buttonId = message.interactive?.button_reply?.id || message.interactive?.list_reply?.id
+              console.log(`🔘 Button tapped: ${buttonId} by ${message.from}`)
+              
+              // For now, just log - we'll add handlers incrementally
+              // This doesn't break anything, just observes
+              
+              // Continue to process as text command if it matches
+              // This allows gradual migration
+            }
+            
             // Check if message is a command first
             const text = (message.text?.body || '').toLowerCase().trim()
             const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
