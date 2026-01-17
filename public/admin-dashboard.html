@@ -1946,11 +1946,14 @@
             }
             
             // Load authority data when section is shown
-            document.addEventListener('click', (e) => {
-                const navItem = e.target.closest('[data-section="authority"]');
-                if (navItem) {
-                    loadAuthorityProfiles();
-                }
+            document.querySelectorAll('[data-section]').forEach(navBtn => {
+                navBtn.addEventListener('click', (e) => {
+                    const section = navBtn.dataset.section;
+                    if (section === 'authority') {
+                        loadAuthorityProfiles();
+                    }
+                    showSection(section);
+                });
             });
             
             // Show authority nav immediately for all admins
