@@ -1978,6 +1978,79 @@ ${moment.content}${sponsorText}
       return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
     }
 
+    // Authority endpoints
+    if (path.includes('/authority') && method === 'GET' && !path.match(/\/authority\/[a-f0-9-]{36}/)) {
+      const page = parseInt(url.searchParams.get('page') || '1')
+      const limit = parseInt(url.searchParams.get('limit') || '20')
+      const offset = (page - 1) * limit
+
+      const { data, error } = await supabase
+        .from('authority_profiles')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      if (error) throw error
+      return new Response(JSON.stringify({ authority_profiles: data || [], page, limit }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'GET') {
+      const id = path.split('/authority/')[1]
+      const { data, error } = await supabase
+        .from('authority_profiles')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (error) throw error
+      return new Response(JSON.stringify({ authority_profile: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.includes('/authority') && method === 'POST' && body) {
+      const { data, error } = await supabase
+        .from('authority_profiles')
+        .insert(body)
+        .select()
+        .single()
+
+      if (error) throw error
+      return new Response(JSON.stringify({ authority_profile: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
+      const id = path.split('/authority/')[1]
+      const { data, error } = await supabase
+        .from('authority_profiles')
+        .update(body)
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      return new Response(JSON.stringify({ authority_profile: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'DELETE') {
+      const id = path.split('/authority/')[1]
+      const { error } = await supabase
+        .from('authority_profiles')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
   } catch (error) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
     await logError(supabase, 'api_error', error.message, { path: new URL(req.url).pathname }, 'high')
