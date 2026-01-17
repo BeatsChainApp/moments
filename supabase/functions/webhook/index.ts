@@ -244,6 +244,104 @@ async function sendWhatsAppMessage(to: string, message: string) {
   }
 }
 
+// NEW: Interactive buttons helper (max 3 buttons)
+async function sendInteractiveButtons(to: string, bodyText: string, buttons: Array<{id: string, title: string}>) {
+  const token = Deno.env.get('WHATSAPP_TOKEN')
+  const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
+  
+  if (!token || !phoneId) {
+    console.error('WhatsApp credentials missing')
+    return false
+  }
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'interactive',
+        interactive: {
+          type: 'button',
+          body: { text: bodyText },
+          action: {
+            buttons: buttons.slice(0, 3).map(btn => ({
+              type: 'reply',
+              reply: { id: btn.id, title: btn.title.substring(0, 20) }
+            }))
+          }
+        }
+      })
+    })
+
+    if (response.ok) {
+      console.log('✅ Interactive buttons sent to', to)
+      return true
+    } else {
+      const error = await response.text()
+      console.error('❌ Interactive buttons error:', error)
+      // Fallback to text message
+      return await sendWhatsAppMessage(to, bodyText)
+    }
+  } catch (error) {
+    console.error('Failed to send interactive buttons:', error)
+    // Fallback to text message
+    return await sendWhatsAppMessage(to, bodyText)
+  }
+}
+
+// NEW: Interactive list helper (for more than 3 options)
+async function sendInteractiveList(to: string, bodyText: string, buttonText: string, sections: any[]) {
+  const token = Deno.env.get('WHATSAPP_TOKEN')
+  const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
+  
+  if (!token || !phoneId) {
+    console.error('WhatsApp credentials missing')
+    return false
+  }
+
+  try {
+    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: to,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: { text: bodyText },
+          action: {
+            button: buttonText.substring(0, 20),
+            sections: sections
+          }
+        }
+      })
+    })
+
+    if (response.ok) {
+      console.log('✅ Interactive list sent to', to)
+      return true
+    } else {
+      const error = await response.text()
+      console.error('❌ Interactive list error:', error)
+      // Fallback to text message
+      return await sendWhatsAppMessage(to, bodyText)
+    }
+  } catch (error) {
+    console.error('Failed to send interactive list:', error)
+    // Fallback to text message
+    return await sendWhatsAppMessage(to, bodyText)
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
