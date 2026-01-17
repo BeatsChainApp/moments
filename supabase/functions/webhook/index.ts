@@ -475,12 +475,53 @@ serve(async (req) => {
                 await handleCategorySelection(message.from, buttonId, supabase)
                 continue
               }
+              
+              // Handle unsubscribe confirmation
+              if (buttonId === 'btn_confirm_unsub') {
+                await supabase.from('subscriptions').update({
+                  opted_in: false,
+                  opted_out_at: new Date().toISOString(),
+                  last_activity: new Date().toISOString()
+                }).eq('phone_number', message.from)
+                
+                await sendWhatsAppMessage(message.from, '✅ Unsubscribed successfully.\n\nThank you for being part of Unami Foundation Moments App.\n\n🌐 moments.unamifoundation.org/moments')
+                continue
+              }
+              
+              if (buttonId === 'btn_pause_instead') {
+                await supabase.from('subscriptions').update({
+                  paused_until: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                  last_activity: new Date().toISOString()
+                }).eq('phone_number', message.from)
+                
+                await sendWhatsAppMessage(message.from, '⏸️ Paused for 7 days.\n\nUnami Foundation Moments App\n\nWe\'ll resume sending updates next week.')
+                continue
+              }
+              
+              if (buttonId === 'btn_cancel') {
+                await sendWhatsAppMessage(message.from, '✅ Cancelled.\n\nUnami Foundation Moments App\n\nYou\'re still subscribed!')
+                continue
+              }
+              
+              // Handle language selection
+              if (['lang_en', 'lang_zu', 'lang_xh'].includes(buttonId)) {
+                const langMap = { lang_en: 'eng', lang_zu: 'zul', lang_xh: 'xho' }
+                const langNames = { lang_en: 'English', lang_zu: 'isiZulu', lang_xh: 'isiXhosa' }
+                
+                await supabase.from('subscriptions').update({
+                  language_preference: langMap[buttonId],
+                  last_activity: new Date().toISOString()
+                }).eq('phone_number', message.from)
+                
+                await sendWhatsAppMessage(message.from, `✅ Language set to ${langNames[buttonId]}\n\nUnami Foundation Moments App\n\n🌐 moments.unamifoundation.org/moments`)
+                continue
+              }
             }
             
             // Check if message is a command first
             const text = (message.text?.body || '').toLowerCase().trim()
             const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
-                               'help', 'info', 'menu', '?', 'moments', 'share', 'submit',
+                               'help', 'info', 'menu', '?', 'moments', 'share', 'submit', 'status', 'settings', 'language',
                                'regions', 'region', 'areas', 'interests', 'categories', 'topics'].includes(text) ||
                               isRegionSelection(text) || isCategorySelection(text)
             
@@ -668,27 +709,17 @@ serve(async (req) => {
               
               console.log('User subscribed and welcomed:', message.from)
             } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
-              // Update existing subscription to opted_in=false
-              const { error: unsubError } = await supabase
-                .from('subscriptions')
-                .update({
-                  opted_in: false,
-                  opted_out_at: new Date().toISOString(),
-                  last_activity: new Date().toISOString()
-                })
-                .eq('phone_number', message.from)
+              // Show confirmation with pause option
+              await sendInteractiveButtons(message.from,
+                '⚠️ Unami Foundation Moments App\n\nAre you sure you want to unsubscribe?\n\nYou\'ll stop receiving community updates.',
+                [
+                  { id: 'btn_pause_instead', title: '⏸️ Pause 7 Days' },
+                  { id: 'btn_confirm_unsub', title: '✅ Yes, Unsubscribe' },
+                  { id: 'btn_cancel', title: '❌ Cancel' }
+                ]
+              )
               
-              if (unsubError) {
-                console.error('Unsubscription error:', unsubError)
-              } else {
-                console.log('✅ User unsubscribed:', message.from)
-              }
-              
-              // WhatsApp compliant goodbye message
-              const goodbyeMsg = `✅ You have been unsubscribed successfully.\n\nThank you for being part of our community.\n\n🌐 Visit: moments.unamifoundation.org/moments`
-              await sendWhatsAppMessage(message.from, goodbyeMsg)
-              
-              console.log('User unsubscribed with confirmation:', message.from)
+              console.log('Unsubscribe confirmation sent to:', message.from)
             } else if (['moments', 'share', 'submit'].includes(text)) {
               // New MOMENTS command - explain what qualifies
               const momentsMsg = `📝 Share Your Community Moments\n\n✅ What we welcome:\n🏫 Local education & training opportunities\n🛡️ Safety alerts & community warnings\n🎭 Cultural events & celebrations\n💼 Job opportunities & skills programs\n🏥 Health services & wellness events\n🌱 Environmental & sustainability initiatives\n\n❌ What we don't accept:\n• Political campaigns or endorsements\n• Financial products or investments\n• Medical advice or treatments\n• Gambling or betting content\n• Personal disputes or complaints\n\n📱 How to share: Simply message us your community update and we'll review it for publication.\n\n🌐 View all: moments.unamifoundation.org/moments`
@@ -713,6 +744,44 @@ serve(async (req) => {
               await sendWhatsAppMessage(message.from, interestsMsg)
               
               console.log('Interests sent to:', message.from)
+            } else if (['status', 'settings'].includes(text)) {
+              // STATUS command - show current settings
+              const { data: sub } = await supabase
+                .from('subscriptions')
+                .select('*')
+                .eq('phone_number', message.from)
+                .single()
+              
+              if (sub) {
+                const regions = sub.regions?.join(', ') || 'None'
+                const topics = sub.categories?.join(', ') || 'None'
+                const status = sub.opted_in ? 'Active' : 'Inactive'
+                
+                await sendInteractiveButtons(message.from,
+                  `⚙️ Unami Foundation Moments App\n\nYour Settings:\n📍 Regions: ${regions}\n🏷️ Topics: ${topics}\n🔔 Status: ${status}`,
+                  [
+                    { id: 'btn_regions', title: '📍 Change Regions' },
+                    { id: 'btn_interests', title: '🏷️ Change Topics' },
+                    { id: 'btn_help', title: '❓ Help' }
+                  ]
+                )
+              } else {
+                await sendWhatsAppMessage(message.from, '❌ No subscription found. Reply START to subscribe.')
+              }
+              
+              console.log('Status sent to:', message.from)
+            } else if (text === 'language') {
+              // LANGUAGE command
+              await sendInteractiveButtons(message.from,
+                '🌍 Unami Foundation Moments App\n\nChoose your language:',
+                [
+                  { id: 'lang_en', title: '🇬🇧 English' },
+                  { id: 'lang_zu', title: '🇿🇦 isiZulu' },
+                  { id: 'lang_xh', title: '🇿🇦 isiXhosa' }
+                ]
+              )
+              
+              console.log('Language selector sent to:', message.from)
             } else if (isRegionSelection(text)) {
               // Handle region selection
               await handleRegionSelection(message.from, text, supabase)
