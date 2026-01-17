@@ -1724,7 +1724,7 @@
             async function loadAuthorityProfiles() {
                 try {
                     const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch('/admin/authority', {
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     
@@ -1771,7 +1771,7 @@
             window.editAuthorityProfile = async function(profileId) {
                 try {
                     const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`/admin/authority/${profileId}`, {
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     
@@ -1805,7 +1805,7 @@
                 
                 try {
                     const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`/admin/authority/${profileId}/suspend`, {
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}/suspend`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -1827,7 +1827,7 @@
             window.activateAuthorityProfile = async function(profileId) {
                 try {
                     const token = localStorage.getItem('admin.auth.token');
-                    const response = await fetch(`/admin/authority/${profileId}`, {
+                    const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/authority/${profileId}`, {
                         method: 'PUT',
                         headers: {
                             'Authorization': `Bearer ${token}`,
@@ -1866,7 +1866,7 @@
                     
                     try {
                         const token = localStorage.getItem('admin.auth.token');
-                        const url = isEdit ? `/admin/authority/${data.id}` : '/admin/authority';
+                        const url = isEdit ? `${SUPABASE_URL}/functions/v1/admin-api/authority/${data.id}` : `${SUPABASE_URL}/functions/v1/admin-api/authority`;
                         const method = isEdit ? 'PUT' : 'POST';
                         
                         const response = await fetch(url, {
