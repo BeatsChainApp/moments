@@ -530,8 +530,114 @@ serve(async (req) => {
                 continue
               }
               
-              if (buttonId.startsWith('report_') || buttonId.startsWith('feedback_')) {
-                await sendWhatsAppMessage(message.from, '✅ Thank you!\n\nUnami Foundation Moments App\nDigital Notice Board')
+              if (buttonId.startsWith('report_')) {
+                await supabase.from('reports').insert({
+                  from_number: message.from,
+                  report_type: buttonId.replace('report_', ''),
+                  created_at: new Date().toISOString()
+                })
+                await sendWhatsAppMessage(message.from, '✅ Report received!\n\nUnami Foundation Moments App\nDigital Notice Board\n\nWe\'ll review this content.')
+                continue
+              }
+              
+              if (buttonId.startsWith('feedback_')) {
+                const feedbackType = buttonId.replace('feedback_', '')
+                if (feedbackType === 'suggest' || feedbackType === 'issue') {
+                  await sendWhatsAppMessage(message.from, '💬 Please send your message now.\n\nUnami Foundation Moments App\nDigital Notice Board')
+                } else {
+                  await supabase.from('feedback').insert({
+                    from_number: message.from,
+                    feedback_type: feedbackType,
+                    created_at: new Date().toISOString()
+                  })
+                  await sendWhatsAppMessage(message.from, '✅ Thank you!\n\nUnami Foundation Moments App\nDigital Notice Board')
+                }
+                continue
+              }
+              
+              if (buttonId.startsWith('search_')) {
+                const searchType = buttonId.replace('search_', '')
+                if (searchType === 'region') {
+                  await sendInteractiveList(message.from,
+                    '🔍 Search by Region:',
+                    'Select Region',
+                    [{
+                      title: 'Provinces',
+                      rows: [
+                        { id: 'search_kzn', title: '🏖️ KZN', description: 'KwaZulu-Natal' },
+                        { id: 'search_wc', title: '🍷 WC', description: 'Western Cape' },
+                        { id: 'search_gp', title: '🏙️ GP', description: 'Gauteng' },
+                        { id: 'search_ec', title: '🌊 EC', description: 'Eastern Cape' }
+                      ]
+                    }]
+                  )
+                } else if (searchType === 'topic') {
+                  await sendInteractiveList(message.from,
+                    '🔍 Search by Topic:',
+                    'Select Topic',
+                    [{
+                      title: 'Categories',
+                      rows: [
+                        { id: 'search_edu', title: '🎓 Education', description: 'Learning' },
+                        { id: 'search_saf', title: '🛡️ Safety', description: 'Security' },
+                        { id: 'search_opp', title: '💼 Opportunity', description: 'Jobs' },
+                        { id: 'search_eve', title: '🎉 Events', description: 'Gatherings' }
+                      ]
+                    }]
+                  )
+                } else if (searchType === 'popular') {
+                  const { data: moments } = await supabase
+                    .from('moments')
+                    .select('title, region')
+                    .eq('status', 'broadcasted')
+                    .order('broadcasted_at', { ascending: false })
+                    .limit(5)
+                  
+                  if (moments?.length) {
+                    const list = moments.map((m, i) => `${i+1}. ${m.title}\n   📍 ${m.region}`).join('\n\n')
+                    await sendWhatsAppMessage(message.from, `🔥 Popular Moments:\n\n${list}\n\n🌐 moments.unamifoundation.org/moments`)
+                  }
+                }
+                continue
+              }
+              
+              if (buttonId.startsWith('search_kzn') || buttonId.startsWith('search_wc') || buttonId.startsWith('search_gp') || buttonId.startsWith('search_ec')) {
+                const region = buttonId.replace('search_', '').toUpperCase()
+                const regionMap = { KZN: 'KwaZulu-Natal', WC: 'Western Cape', GP: 'Gauteng', EC: 'Eastern Cape' }
+                const { data: moments } = await supabase
+                  .from('moments')
+                  .select('title')
+                  .eq('status', 'broadcasted')
+                  .ilike('region', `%${regionMap[region]}%`)
+                  .order('broadcasted_at', { ascending: false })
+                  .limit(5)
+                
+                if (moments?.length) {
+                  const list = moments.map((m, i) => `${i+1}. ${m.title}`).join('\n')
+                  await sendWhatsAppMessage(message.from, `📍 ${regionMap[region]}:\n\n${list}\n\n🌐 moments.unamifoundation.org/moments`)
+                } else {
+                  await sendWhatsAppMessage(message.from, `📍 No moments in ${regionMap[region]} yet.`)
+                }
+                continue
+              }
+              
+              if (buttonId.startsWith('search_edu') || buttonId.startsWith('search_saf') || buttonId.startsWith('search_opp') || buttonId.startsWith('search_eve')) {
+                const cat = buttonId.replace('search_', '')
+                const catMap = { edu: 'Education', saf: 'Safety', opp: 'Opportunity', eve: 'Events' }
+                const { data: moments } = await supabase
+                  .from('moments')
+                  .select('title, region')
+                  .eq('status', 'broadcasted')
+                  .ilike('category', `%${catMap[cat]}%`)
+                  .order('broadcasted_at', { ascending: false })
+                  .limit(5)
+                
+                if (moments?.length) {
+                  const list = moments.map((m, i) => `${i+1}. ${m.title}\n   📍 ${m.region}`).join('\n\n')
+                  await sendWhatsAppMessage(message.from, `🏷️ ${catMap[cat]}:\n\n${list}\n\n🌐 moments.unamifoundation.org/moments`)
+                } else {
+                  await sendWhatsAppMessage(message.from, `🏷️ No ${catMap[cat]} moments yet.`)
+                }
                 continue
               }
               
@@ -575,7 +681,7 @@ serve(async (req) => {
             const text = (message.text?.body || '').toLowerCase().trim()
             const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
                                'help', 'info', 'menu', '?', 'moments', 'share', 'submit', 'status', 'settings', 'language',
-                               'recent', 'report', 'feedback', 'myauthority', 'pause', 'schedule',
+                               'recent', 'report', 'feedback', 'search', 'myauthority', 'pause', 'schedule',
                                'regions', 'region', 'areas', 'interests', 'categories', 'topics'].includes(text) ||
                               isRegionSelection(text) || isCategorySelection(text)
             
@@ -782,7 +888,7 @@ serve(async (req) => {
               console.log('Moments guide sent to:', message.from)
             } else if (['help', 'info', 'menu', '?'].includes(text)) {
               // Enhanced help command with all system commands
-              const helpMsg = `📡 Unami Foundation Moments App\nYour Digital Notice Board\n\n🔄 START - Subscribe\n🛑 STOP - Unsubscribe\n⚙️ STATUS - View settings\n📍 REGIONS - Choose areas\n🏷️ INTERESTS - Manage topics\n🌍 LANGUAGE - Change language\n📰 RECENT - Latest moments\n📝 SUBMIT - Share content\n\n🌐 moments.unamifoundation.org/moments\n📧 info@unamifoundation.org\n\nYour Digital Notice Board 🇿🇦`
+              const helpMsg = `📡 Unami Foundation Moments App\nYour Digital Notice Board\n\n🔄 START - Subscribe\n🛑 STOP - Unsubscribe\n⚙️ STATUS - View settings\n📍 REGIONS - Choose areas\n🏷️ INTERESTS - Manage topics\n🌍 LANGUAGE - Change language\n📰 RECENT - Latest moments\n📝 SUBMIT - Share content\n🔍 SEARCH - Find moments\n💬 FEEDBACK - Share thoughts\n⏸️ PAUSE - Pause updates\n🔔 SCHEDULE - Set delivery\n\n🌐 moments.unamifoundation.org/moments\n📧 info@unamifoundation.org\n\nYour Digital Notice Board 🇿🇦`
               await sendWhatsAppMessage(message.from, helpMsg)
               
               console.log('Help sent to:', message.from)
@@ -882,6 +988,19 @@ serve(async (req) => {
                   { id: 'feedback_suggest', title: '💡 Suggestion' },
                   { id: 'feedback_issue', title: '🐛 Issue' }
                 ]
+              )
+            } else if (text === 'search') {
+              await sendInteractiveList(message.from,
+                '🔍 Unami Foundation Moments App\nDigital Notice Board\n\nSearch moments by:',
+                'Select Filter',
+                [{
+                  title: 'Search Options',
+                  rows: [
+                    { id: 'search_region', title: '📍 By Region', description: 'Filter location' },
+                    { id: 'search_topic', title: '🏷️ By Topic', description: 'Filter category' },
+                    { id: 'search_popular', title: '🔥 Popular', description: 'Most recent' }
+                  ]
+                }]
               )
             } else if (text === 'myauthority') {
               const authority = await lookupAuthority(message.from, supabase)
