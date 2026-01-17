@@ -1155,7 +1155,7 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                     <h2>🔐 Authority Management</h2>
-                    <button class="btn" data-action="create-authority">➕ Assign Authority</button>
+                    <button class="btn" onclick="console.log('Button clicked directly'); document.getElementById('authority-form').reset(); document.getElementById('authority-edit-id').value = ''; document.getElementById('authority-form-title').textContent = 'Assign Authority'; document.getElementById('authority-submit-btn').textContent = 'Assign Authority'; showSection('authority-form-section');">➕ Assign Authority</button>
                 </div>
                 
                 <div class="alert alert-info" style="margin-bottom: 1rem;">
