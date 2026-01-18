@@ -180,6 +180,7 @@
                 }, 2000);
             }
         }
+        setTimeout(testSkeleton, 200);
 
         // Test 5: Empty States
         function testEmptyState() {
@@ -194,6 +195,7 @@
                 document.getElementById('test-empty').className = 'test-pass';
             }
         }
+        setTimeout(testEmptyState, 300);
 
         // Test 6: Performance Monitoring
         function testPerformance() {
@@ -207,6 +209,7 @@
                 }, 100);
             }
         }
+        setTimeout(testPerformance, 400);
 
         // Test 7: Error Handling
         function testErrorHandling() {
@@ -217,6 +220,7 @@
                 document.getElementById('test-error').className = 'test-pass';
             }
         }
+        setTimeout(testErrorHandling, 600);
 
         // Test 8: Notifications
         function testNotification() {
@@ -226,6 +230,7 @@
                 document.getElementById('test-notification').className = 'test-pass';
             }
         }
+        setTimeout(testNotification, 800);
 
         // Test 9: Accessibility
         setTimeout(() => {
@@ -261,11 +266,11 @@
             console.log(`\n✅ Tests Complete: ${passes}/${total} passed`);
             
             if (passes === total) {
-                alert(`🎉 All ${total} optimizations are working!\n\nCheck the console for detailed logs.`);
-            } else {
-                alert(`⚠️ ${passes}/${total} tests passed.\n\nCheck the console for details.`);
+                console.log('🎉 All optimizations working perfectly!');
+            } else if (passes >= 8) {
+                console.log('✅ Most optimizations working!');
             }
-        }, 500);
+        }, 1000);
     </script>
 </body>
 </html>
