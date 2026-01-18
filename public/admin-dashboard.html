@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#2563eb">
     <link rel="stylesheet" href="/css/design-system.css">
     <link rel="stylesheet" href="/css/admin-header.css">
-    <link rel="stylesheet" href="/css/admin-dashboard.css?v=2.0.3">
+    <link rel="stylesheet" href="/css/admin-dashboard.css?v=2.0.4">
     <style>
         /* Minimal inline styles for critical rendering */
         
@@ -372,6 +372,10 @@
                     <button class="admin-nav-item" data-section="budget-controls" aria-label="Budget controls section">
                         <span class="icon icon-budget">💰</span>
                         <span>Budget</span>
+                    </button>
+                    <button class="admin-nav-item" data-section="reports" aria-label="Reports section">
+                        <span class="icon icon-reports">📊</span>
+                        <span>Reports</span>
                     </button>
                     <button class="admin-nav-item" data-section="help" aria-label="Help section">
                         <span class="icon icon-help"></span>
@@ -916,6 +920,53 @@
             </div>
         </div>
 
+        <!-- Reports Section -->
+        <div id="reports" class="section">
+            <div class="card">
+                <h2>📊 Automated Reports</h2>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                    <div class="card" style="background: #f8fafc;">
+                        <h3>Daily Report</h3>
+                        <p style="color: #6b7280; font-size: 0.875rem;">24-hour snapshot of key metrics</p>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-sm" onclick="generateAndShowReport('daily')">Generate</button>
+                            <button class="btn btn-sm btn-secondary" onclick="downloadReport('daily', 'csv')">Download CSV</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="background: #f8fafc;">
+                        <h3>Weekly Report</h3>
+                        <p style="color: #6b7280; font-size: 0.875rem;">7-day performance analysis</p>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-sm" onclick="generateAndShowReport('weekly')">Generate</button>
+                            <button class="btn btn-sm btn-secondary" onclick="downloadReport('weekly', 'csv')">Download CSV</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card" style="background: #f8fafc;">
+                        <h3>Monthly Report</h3>
+                        <p style="color: #6b7280; font-size: 0.875rem;">30-day comprehensive overview</p>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn btn-sm" onclick="generateAndShowReport('monthly')">Generate</button>
+                            <button class="btn btn-sm btn-secondary" onclick="downloadReport('monthly', 'csv')">Download CSV</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="report-container" class="card" style="display: none; margin-top: 2rem;">
+                    <div id="report-content"></div>
+                </div>
+            </div>
+            
+            <div class="card" style="margin-top: 1rem;">
+                <h3>🤖 AI Insights</h3>
+                <div id="ai-insights-container">
+                    <button class="btn" onclick="loadAIInsights()">Generate AI Insights</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Help & Guide Section -->
         <div id="help" class="section">
             <div class="card">
@@ -1399,12 +1450,78 @@
         // Minimal inline script - core functionality moved to admin-dashboard-core.js
         
         // Visual confirmation that optimizations are loaded
-        console.log('🚀 Dashboard Optimizations v2.0.0 Loaded');
+        console.log('🚀 Dashboard Optimizations v2.0.4 Loaded');
         console.log('✅ External CSS: admin-dashboard.css');
         console.log('✅ External JS: admin-dashboard-core.js');
         console.log('✅ Performance monitoring active');
         console.log('✅ Form validation active');
         console.log('✅ Accessibility enhancements active');
+        console.log('✅ Phase 4: Offline, Search, Reports, AI active');
+        
+        // Report functions
+        async function generateAndShowReport(type) {
+            const container = document.getElementById('report-container');
+            const content = document.getElementById('report-content');
+            
+            container.style.display = 'block';
+            content.innerHTML = '<div class="loading">Generating report...</div>';
+            
+            try {
+                const report = await window.reportGenerator.generateReport(type);
+                window.reportGenerator.renderReport(report, 'report-content');
+            } catch (error) {
+                content.innerHTML = '<div class="error">Failed to generate report</div>';
+            }
+        }
+        
+        async function downloadReport(type, format) {
+            try {
+                await window.reportGenerator.downloadReport(type, format);
+            } catch (error) {
+                showNotification('Failed to download report', 'error');
+            }
+        }
+        
+        async function loadAIInsights() {
+            const container = document.getElementById('ai-insights-container');
+            container.innerHTML = '<div class="loading">Generating AI insights...</div>';
+            
+            try {
+                const insights = await window.aiInsights.generateInsights();
+                
+                let html = '<div style="display: grid; gap: 1rem;">';
+                
+                // Engagement insights
+                html += `
+                    <div class="card" style="background: #f0fdf4; border-left: 3px solid #16a34a;">
+                        <h4>Engagement Trend: ${insights.engagement.trend}</h4>
+                        <p>Predicted next week: ${insights.engagement.prediction || 'N/A'}</p>
+                    </div>
+                `;
+                
+                // Subscriber insights
+                html += `
+                    <div class="card" style="background: #dbeafe; border-left: 3px solid #2563eb;">
+                        <h4>Subscriber Trend: ${insights.subscribers.trend}</h4>
+                        <p>Predicted next week: ${insights.subscribers.prediction || 'N/A'}</p>
+                    </div>
+                `;
+                
+                // Recommendations
+                if (insights.recommendations.length > 0) {
+                    html += '<div class="card" style="background: #fef3c7; border-left: 3px solid #f59e0b;"><h4>Recommendations</h4><ul>';
+                    insights.recommendations.forEach(rec => {
+                        html += `<li style="margin-bottom: 0.5rem;"><strong>${rec.category}:</strong> ${rec.message}</li>`;
+                    });
+                    html += '</ul></div>';
+                }
+                
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                container.innerHTML = '<div class="error">Failed to generate insights</div>';
+            }
+        }
         
         // Admin navigation toggle
         function toggleAdminNav() {
@@ -1511,14 +1628,18 @@
             }, 100);
         }
     </script>
-    <script src="/js/admin-dashboard-core.js?v=2.0.3"></script>
-    <script src="/js/dark-mode.js?v=2.0.3"></script>
-    <script src="/js/keyboard-shortcuts.js?v=2.0.3"></script>
-    <script src="/js/export-data.js?v=2.0.3"></script>
-    <script src="/js/bulk-actions.js?v=2.0.3"></script>
-    <script src="/js/phase3-enhancements.js?v=2.0.3"></script>
+    <script src="/js/admin-dashboard-core.js?v=2.0.4"></script>
+    <script src="/js/dark-mode.js?v=2.0.4"></script>
+    <script src="/js/keyboard-shortcuts.js?v=2.0.4"></script>
+    <script src="/js/export-data.js?v=2.0.4"></script>
+    <script src="/js/bulk-actions.js?v=2.0.4"></script>
+    <script src="/js/phase3-enhancements.js?v=2.0.4"></script>
+    <script src="/js/offline-manager.js?v=2.0.4"></script>
+    <script src="/js/advanced-search.js?v=2.0.4"></script>
+    <script src="/js/report-generator.js?v=2.0.4"></script>
+    <script src="/js/ai-insights.js?v=2.0.4"></script>
     <script src="/js/chart.min.js"></script>
-    <script src="/js/admin.js?v=1.1.6"></script>
+    <script src="/js/admin.js?v=1.1.7"></script>
     <script src="/js/analytics.js"></script>
     <script src="/js/compliance.js"></script>
     <script src="/js/admin-header-enhance.js"></script>
