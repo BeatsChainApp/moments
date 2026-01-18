@@ -98,6 +98,7 @@ function showSection(sectionId) {
             case 'moderation': loadModeration().catch(console.warn); break;
             case 'settings': loadSettings().catch(console.warn); break;
             case 'budget-controls': loadBudgetControls().catch(console.warn); break;
+            case 'authority': loadAuthorityProfiles().catch(console.warn); break;
             case 'create': loadSponsors().catch(console.warn); break;
         }
     }, 0);
@@ -224,6 +225,22 @@ async function handleAction(action, element) {
             case 'cancel-admin-user':
             case 'close-admin-user-form':
                 closeAdminUserModal();
+                break;
+            case 'create-authority':
+                document.getElementById('authority-form').reset();
+                document.getElementById('authority-edit-id').value = '';
+                document.getElementById('authority-form-title').textContent = 'Assign Authority';
+                document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
+                showSection('authority-form-section');
+                break;
+            case 'close-authority-form':
+                showSection('authority');
+                break;
+            case 'reset-authority-form':
+                document.getElementById('authority-form').reset();
+                document.getElementById('authority-edit-id').value = '';
+                document.getElementById('authority-form-title').textContent = 'Assign Authority';
+                document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
                 break;
             case 'edit-campaign':
                 await editCampaign(id);
@@ -2271,6 +2288,62 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Authority form submission handler
+    const authorityForm = document.getElementById('authority-form');
+    if (authorityForm) {
+        authorityForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(authorityForm);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Convert numeric fields
+            data.authority_level = parseInt(data.authority_level);
+            data.blast_radius = parseInt(data.blast_radius) || 100;
+            data.risk_threshold = parseFloat(data.risk_threshold) || 0.7;
+            
+            // Remove empty fields
+            Object.keys(data).forEach(key => {
+                if (data[key] === '') delete data[key];
+            });
+            
+            const isEdit = !!data.id;
+            const submitBtn = document.getElementById('authority-submit-btn');
+            
+            setButtonLoading(submitBtn, true);
+            
+            try {
+                const url = isEdit ? `/authority/${data.id}` : '/authority';
+                const method = isEdit ? 'PUT' : 'POST';
+                
+                const response = await apiFetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to save authority profile');
+                }
+                
+                showSuccess(`Authority profile ${isEdit ? 'updated' : 'created'} successfully`);
+                
+                authorityForm.reset();
+                document.getElementById('authority-edit-id').value = '';
+                document.getElementById('authority-form-title').textContent = 'Assign Authority';
+                document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
+                showSection('authority');
+                
+                await loadAuthorityProfiles();
+            } catch (error) {
+                showError('Failed to save authority profile: ' + error.message);
+            } finally {
+                setButtonLoading(submitBtn, false);
+            }
+        });
+    }
 });
 
 function handleSponsorLogoPreview(event) {
@@ -2360,3 +2433,107 @@ async function checkCampaignCompliance() {
     }
 }
 window.checkCampaignCompliance = checkCampaignCompliance;
+
+// Authority Management Functions
+async function loadAuthorityProfiles() {
+    try {
+        const response = await apiFetch('/authority');
+        const data = await response.json();
+        displayAuthorityProfiles(data.authority_profiles || []);
+    } catch (error) {
+        const list = document.getElementById('authority-list');
+        if (list) list.innerHTML = '<div class="error">Failed to load authority profiles</div>';
+    }
+}
+
+function displayAuthorityProfiles(profiles) {
+    const list = document.getElementById('authority-list');
+    if (!list) return;
+    
+    if (profiles.length === 0) {
+        list.innerHTML = `<div class="empty-state"><div class="empty-state-icon">🔐</div><p>No authority profiles assigned yet.</p><button class="btn" data-action="create-authority">Assign First Authority</button></div>`;
+        return;
+    }
+    
+    list.innerHTML = profiles.map(profile => `
+        <div class="moment-item" data-id="${profile.id}">
+            <div class="moment-header">
+                <div class="moment-info">
+                    <div class="moment-title">${profile.role_label}</div>
+                    <div class="moment-meta">📞 ${profile.user_identifier} • Level ${profile.authority_level} • ${profile.scope} • Reach: ${profile.blast_radius}</div>
+                </div>
+                <div class="moment-actions">
+                    <span class="status-badge status-${profile.status}">${profile.status}</span>
+                    <button class="btn btn-sm" onclick="editAuthorityProfile('${profile.id}')">Edit</button>
+                    ${profile.status === 'active' ? 
+                        `<button class="btn btn-sm btn-danger" onclick="suspendAuthorityProfile('${profile.id}')">Suspend</button>` :
+                        `<button class="btn btn-sm btn-success" onclick="activateAuthorityProfile('${profile.id}')">Activate</button>`
+                    }
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+window.editAuthorityProfile = async function(profileId) {
+    try {
+        const response = await apiFetch(`/authority/${profileId}`);
+        if (!response.ok) throw new Error('Failed to load profile');
+        
+        const data = await response.json();
+        const profile = data.authority_profile;
+        
+        document.getElementById('authority-edit-id').value = profile.id;
+        document.querySelector('#authority-form [name="user_identifier"]').value = profile.user_identifier;
+        document.querySelector('#authority-form [name="role_label"]').value = profile.role_label;
+        document.querySelector('#authority-form [name="authority_level"]').value = profile.authority_level;
+        document.querySelector('#authority-form [name="scope"]').value = profile.scope;
+        document.querySelector('#authority-form [name="scope_identifier"]').value = profile.scope_identifier || '';
+        document.querySelector('#authority-form [name="approval_mode"]').value = profile.approval_mode;
+        document.querySelector('#authority-form [name="blast_radius"]').value = profile.blast_radius;
+        document.querySelector('#authority-form [name="risk_threshold"]').value = profile.risk_threshold;
+        
+        document.getElementById('authority-form-title').textContent = 'Edit Authority';
+        document.getElementById('authority-submit-btn').textContent = 'Update Authority';
+        
+        showSection('authority-form-section');
+    } catch (error) {
+        showNotification('Failed to load authority profile: ' + error.message, 'error');
+    }
+};
+
+window.suspendAuthorityProfile = async function(profileId) {
+    if (!confirm('Are you sure you want to suspend this authority profile?')) return;
+    
+    try {
+        const response = await apiFetch(`/authority/${profileId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'suspended' })
+        });
+        
+        if (!response.ok) throw new Error('Failed to suspend profile');
+        
+        showNotification('Authority profile suspended successfully', 'success');
+        await loadAuthorityProfiles();
+    } catch (error) {
+        showNotification('Failed to suspend authority profile: ' + error.message, 'error');
+    }
+};
+
+window.activateAuthorityProfile = async function(profileId) {
+    try {
+        const response = await apiFetch(`/authority/${profileId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'active' })
+        });
+        
+        if (!response.ok) throw new Error('Failed to activate profile');
+        
+        showNotification('Authority profile activated successfully', 'success');
+        await loadAuthorityProfiles();
+    } catch (error) {
+        showNotification('Failed to activate authority profile: ' + error.message, 'error');
+    }
+};
