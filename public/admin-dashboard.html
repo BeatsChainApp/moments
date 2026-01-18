@@ -440,7 +440,24 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                     <h2>All Moments</h2>
-                    <button class="btn" data-action="create-moment">✏️ Create Moment</button>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-secondary" onclick="window.exportData.exportMoments()">📥 Export CSV</button>
+                        <button class="btn" data-action="create-moment">✏️ Create Moment</button>
+                    </div>
+                </div>
+                
+                <!-- Bulk Actions Toolbar -->
+                <div id="bulk-toolbar" style="display: none; background: #f3f4f6; padding: 0.75rem; border-radius: 0.375rem; margin-bottom: 1rem; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                    <span id="bulk-counter" style="font-weight: 500;">0 selected</span>
+                    <button class="btn btn-sm btn-secondary" onclick="window.bulkActions.selectNone()">Clear</button>
+                    <button class="btn btn-sm btn-danger" onclick="window.bulkActions.bulkDelete()">🗑️ Delete</button>
+                    <button class="btn btn-sm btn-secondary" onclick="window.bulkActions.bulkArchive()">🗄️ Archive</button>
+                    <select class="filter-select" onchange="if(this.value) window.bulkActions.bulkChangeStatus(this.value); this.value=''" style="margin-left: auto;">
+                        <option value="">Change Status...</option>
+                        <option value="draft">Draft</option>
+                        <option value="scheduled">Scheduled</option>
+                        <option value="broadcasted">Broadcasted</option>
+                    </select>
                 </div>
                 <div class="filters">
                     <select class="filter-select" id="status-filter" data-filter="status">
@@ -1496,6 +1513,8 @@
     <script src="/js/admin-dashboard-core.js?v=2.0.2"></script>
     <script src="/js/dark-mode.js"></script>
     <script src="/js/keyboard-shortcuts.js"></script>
+    <script src="/js/export-data.js"></script>
+    <script src="/js/bulk-actions.js"></script>
     <script src="/js/chart.min.js"></script>
     <script src="/js/admin.js?v=1.1.5"></script>
     <script src="/js/analytics.js"></script>
