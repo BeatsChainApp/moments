@@ -687,6 +687,18 @@ serve(async (req) => {
             
             // DON'T store commands in messages table
             if (!isCommand) {
+              // Deduplication check
+              const { data: existing } = await supabase
+                .from('messages')
+                .select('id')
+                .eq('whatsapp_id', message.id)
+                .single()
+              
+              if (existing) {
+                console.log(`⏭️ Skipping duplicate message: ${message.id}`)
+                continue
+              }
+              
               // Phase 2: Authority lookup (non-blocking)
               let authorityContext = null;
               try {
