@@ -394,6 +394,56 @@ document.addEventListener('DOMContentLoaded', () => {
     performance.mark('dashboard-loaded');
 });
 
+// Pagination utility
+function createPagination(containerId, totalItems, itemsPerPage, currentPage, onPageChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = '<button class="page-btn" data-page="prev" ' + (currentPage === 1 ? 'disabled' : '') + '>←</button>';
+    
+    // Show first page
+    if (currentPage > 3) {
+        html += '<button class="page-btn" data-page="1">1</button>';
+        if (currentPage > 4) html += '<span class="page-info">...</span>';
+    }
+    
+    // Show pages around current
+    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
+    }
+    
+    // Show last page
+    if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) html += '<span class="page-info">...</span>';
+        html += `<button class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
+    }
+    
+    html += '<button class="page-btn" data-page="next" ' + (currentPage === totalPages ? 'disabled' : '') + '>→</button>';
+    html += `<span class="page-info">${currentPage} / ${totalPages}</span>`;
+    
+    container.innerHTML = html;
+    
+    // Add click handlers
+    container.querySelectorAll('.page-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const page = btn.dataset.page;
+            let newPage = currentPage;
+            
+            if (page === 'prev') newPage = Math.max(1, currentPage - 1);
+            else if (page === 'next') newPage = Math.min(totalPages, currentPage + 1);
+            else newPage = parseInt(page);
+            
+            if (newPage !== currentPage) onPageChange(newPage);
+        });
+    });
+}
+
 // Export utilities for use in other modules
 window.dashboardCore = {
     perf,
@@ -408,5 +458,6 @@ window.dashboardCore = {
     setButtonLoading,
     showNotification,
     showSection,
-    handleAction
+    handleAction,
+    createPagination
 };
