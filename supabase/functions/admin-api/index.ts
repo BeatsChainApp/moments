@@ -1998,16 +1998,27 @@ ${moment.content}${sponsorText}
 
     if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'GET') {
       const id = path.split('/authority/')[1]
-      const { data, error } = await supabase
-        .from('authority_profiles')
-        .select('*')
-        .eq('id', id)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from('authority_profiles')
+          .select('*')
+          .eq('id', id)
+          .single()
 
-      if (error) throw error
-      return new Response(JSON.stringify({ authority_profile: data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+        if (error) {
+          console.error('Authority profile fetch error:', error)
+          throw error
+        }
+        return new Response(JSON.stringify({ authority_profile: data }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (error) {
+        console.error('Authority GET error:', error)
+        return new Response(JSON.stringify({ error: error.message || 'Failed to fetch authority profile' }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
     if (path.includes('/authority') && method === 'POST' && body) {

@@ -1476,9 +1476,15 @@ function openCampaignModal() {
 async function loadSponsorsForCampaign() {
     try {
         const response = await apiFetch('/sponsors');
+        
+        if (!response.ok) {
+            console.error('Failed to load sponsors for campaign: HTTP', response.status);
+            return;
+        }
+        
         const data = await response.json();
         
-        const campaignSponsorSelect = document.getElementById('campaign-sponsor-select');
+        const campaignSponsorSelect = document.getElementById('campaign-sponsor-select-inline');
         if (campaignSponsorSelect && data.sponsors) {
             campaignSponsorSelect.innerHTML = '<option value="">No Sponsor</option>' + 
                 data.sponsors.map(s => `<option value="${s.id}">${s.display_name}</option>`).join('');
