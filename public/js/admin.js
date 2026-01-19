@@ -2539,12 +2539,17 @@ window.suspendAuthorityProfile = async function(profileId) {
         const response = await apiFetch(`/authority/${profileId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'suspended' })
+            body: JSON.stringify({ status: 'suspended' }),
+            cache: 'no-store'
         });
         
         if (!response.ok) throw new Error('Failed to suspend profile');
         
         showNotification('Authority profile suspended successfully', 'success');
+        
+        // Clear cache and reload
+        apiCallCache.clear();
+        pendingCalls.clear();
         await loadAuthorityProfiles();
     } catch (error) {
         showNotification('Failed to suspend authority profile: ' + error.message, 'error');
@@ -2561,12 +2566,17 @@ window.activateAuthorityProfile = async function(profileId) {
         const response = await apiFetch(`/authority/${profileId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 'active' })
+            body: JSON.stringify({ status: 'active' }),
+            cache: 'no-store'
         });
         
         if (!response.ok) throw new Error('Failed to activate profile');
         
         showNotification('Authority profile activated successfully', 'success');
+        
+        // Clear cache and reload
+        apiCallCache.clear();
+        pendingCalls.clear();
         await loadAuthorityProfiles();
     } catch (error) {
         showNotification('Failed to activate authority profile: ' + error.message, 'error');
