@@ -2462,7 +2462,14 @@ window.checkCampaignCompliance = checkCampaignCompliance;
 async function loadAuthorityProfiles() {
     try {
         const cacheBust = `?_=${Date.now()}`;
-        const response = await apiFetch(`/authority${cacheBust}`);
+        const response = await fetch(`${API_BASE}/authority${cacheBust}`, {
+            headers: {
+                'Authorization': `Bearer ${getAuthToken()}`,
+                'Cache-Control': 'no-cache, no-store, must-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
+            }
+        });
         const data = await response.json();
         displayAuthorityProfiles(data.authority_profiles || []);
     } catch (error) {
