@@ -1197,12 +1197,12 @@ async function loadSubscribers() {
     }
 }
 
-// Auto-refresh subscribers every 10 seconds
+// Auto-refresh subscribers every 5 seconds
 setInterval(() => {
     if (document.getElementById('subscribers-list')?.offsetParent !== null) {
         loadSubscribers().catch(console.warn);
     }
-}, 10000);
+}, 5000);
 
 // Load settings
 async function loadSettings() {
@@ -2474,12 +2474,12 @@ async function loadAuthorityProfiles() {
     }
 }
 
-// Auto-refresh authority every 10 seconds
+// Auto-refresh authority every 5 seconds
 setInterval(() => {
     if (document.getElementById('authority-list')?.offsetParent !== null) {
         loadAuthorityProfiles().catch(console.warn);
     }
-}, 10000);
+}, 5000);
 
 function displayAuthorityProfiles(profiles) {
     const list = document.getElementById('authority-list');
