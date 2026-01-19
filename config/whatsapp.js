@@ -52,6 +52,46 @@ export const downloadMedia = async (mediaUrl) => {
   }
 };
 
+export const sendTemplateMessage = async (to, templateName, language, parameters, mediaUrls = []) => {
+  try {
+    const response = await whatsappAPI.post('/messages', {
+      messaging_product: 'whatsapp',
+      to,
+      type: 'template',
+      template: {
+        name: templateName,
+        language: { code: language },
+        components: [
+          {
+            type: 'body',
+            parameters: parameters.map(p => ({ type: 'text', text: p }))
+          }
+        ]
+      }
+    });
+    
+    // Send media if provided
+    for (const mediaUrl of mediaUrls) {
+      try {
+        const mediaType = getMediaType(mediaUrl);
+        await whatsappAPI.post('/messages', {
+          messaging_product: 'whatsapp',
+          to,
+          type: mediaType,
+          [mediaType]: { link: mediaUrl }
+        });
+      } catch (mediaError) {
+        console.error('Media send error:', mediaError.message);
+      }
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Template send error:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
 export const sendWhatsAppMessage = async (to, message, mediaUrls = []) => {
   try {
     // Send text message

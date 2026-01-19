@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase.js';
-import { sendWhatsAppMessage } from '../config/whatsapp.js';
+import { sendWhatsAppMessage, sendTemplateMessage } from '../config/whatsapp.js';
+import { selectTemplate, buildTemplateParams, validateMarketingCompliance } from './whatsapp-templates-marketing.js';
 
 // Authority-based broadcast filtering (Phase 5: Broadcast Integration)
 async function getAuthorityContext(createdBy) {
@@ -121,18 +122,38 @@ export async function broadcastMoment(momentId) {
 
     if (broadcastError) throw broadcastError;
 
-    // Format message based on content source
-    const message = moment.content_source === 'community' 
-      ? formatCommunityMessage(moment)
-      : formatAdminMessage(moment);
+    // Select marketing-compliant template based on authority
+    const template = selectTemplate(moment, authorityContext, moment.sponsors);
+    const templateParams = buildTemplateParams(moment, authorityContext, moment.sponsors);
+    
+    // Validate marketing compliance
+    const compliance = validateMarketingCompliance(moment, template, templateParams);
+    
+    // Log compliance for audit
+    await supabase.from('marketing_compliance').insert({
+      moment_id: momentId,
+      broadcast_id: broadcast.id,
+      template_used: template.name,
+      template_category: template.category,
+      sponsor_disclosed: compliance.sponsor_disclosed,
+      opt_out_included: compliance.opt_out_included,
+      pwa_link_included: compliance.pwa_link_included,
+      compliance_score: compliance.compliance_score
+    }).catch(err => console.warn('Compliance log failed:', err.message));
     
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers with rate limiting
+    // Send to subscribers using marketing templates
     for (const subscriber of subscribers || []) {
       try {
-        await sendWhatsAppMessage(subscriber.phone_number, message, moment.media_urls);
+        await sendTemplateMessage(
+          subscriber.phone_number,
+          template.name,
+          template.language,
+          templateParams,
+          moment.media_urls
+        );
         successCount++;
         await new Promise(resolve => setTimeout(resolve, 15)); // Rate limit
       } catch (error) {
