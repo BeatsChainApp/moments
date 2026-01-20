@@ -965,7 +965,6 @@ ${moment.content}
           *,
           sponsor_assets(*)
         `)
-        .eq('active', true)
         .order('tier DESC, name')
 
       return new Response(JSON.stringify({ sponsors: sponsors || [] }), {
