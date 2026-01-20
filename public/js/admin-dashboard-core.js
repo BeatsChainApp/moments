@@ -105,7 +105,7 @@ function validateField(field) {
             showFieldError(field, `Minimum ${field.minLength} characters required`);
             return false;
         }
-        if (field.maxLength && !validators.maxLength(value, field.maxLength)) {
+        if (field.maxLength && field.maxLength > 0 && !validators.maxLength(value, field.maxLength)) {
             showFieldError(field, `Maximum ${field.maxLength} characters allowed`);
             return false;
         }
