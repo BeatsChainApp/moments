@@ -484,7 +484,20 @@ serve(async (req) => {
                 continue
               }
               
-              // Handle unsubscribe confirmation
+              // Handle resubscribe button
+              if (buttonId === 'btn_resubscribe') {
+                await supabase.from('subscriptions').update({
+                  opted_in: true,
+                  opted_in_at: new Date().toISOString(),
+                  opted_out_at: null,
+                  last_activity: new Date().toISOString()
+                }).eq('phone_number', message.from)
+                
+                await sendWhatsAppMessage(message.from, '🌟 Welcome back!\n\nUnami Foundation Moments App\n\nYou\'re now resubscribed to community updates.')
+                continue
+              }
+              
+              // Handle unsubscribe confirmation (legacy - now immediate)
               if (buttonId === 'btn_confirm_unsub') {
                 await supabase.from('subscriptions').update({
                   opted_in: false,
@@ -881,17 +894,22 @@ serve(async (req) => {
               
               console.log('User subscribed and welcomed:', message.from)
             } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
-              // Show confirmation with pause option
+              // Immediate unsubscribe for compliance
+              await supabase.from('subscriptions').update({
+                opted_in: false,
+                opted_out_at: new Date().toISOString(),
+                last_activity: new Date().toISOString()
+              }).eq('phone_number', message.from)
+              
+              // Offer resubscribe option
               await sendInteractiveButtons(message.from,
-                '⚠️ Unami Foundation Moments App\n\nAre you sure you want to unsubscribe?\n\nYou\'ll stop receiving community updates.',
+                '✅ Unsubscribed successfully.\n\nUnami Foundation Moments App\n\nYou\'ve been removed from our broadcast list.\n\nYou can resubscribe anytime by sending START.\n\n🌐 moments.unamifoundation.org',
                 [
-                  { id: 'btn_pause_instead', title: '⏸️ Pause 7 Days' },
-                  { id: 'btn_confirm_unsub', title: '✅ Yes, Unsubscribe' },
-                  { id: 'btn_cancel', title: '❌ Cancel' }
+                  { id: 'btn_resubscribe', title: '🔄 Resubscribe Now' }
                 ]
               )
               
-              console.log('Unsubscribe confirmation sent to:', message.from)
+              console.log('User unsubscribed:', message.from)
             } else if (['moments', 'share', 'submit'].includes(text)) {
               // New MOMENTS command - explain what qualifies
               const momentsMsg = `📝 Share Your Community Moments\n\n✅ What we welcome:\n🏫 Local education & training opportunities\n🛡️ Safety alerts & community warnings\n🎭 Cultural events & celebrations\n💼 Job opportunities & skills programs\n🏥 Health services & wellness events\n🌱 Environmental & sustainability initiatives\n\n❌ What we don't accept:\n• Political campaigns or endorsements\n• Financial products or investments\n• Medical advice or treatments\n• Gambling or betting content\n• Personal disputes or complaints\n\n📱 How to share: Simply message us your community update and we'll review it for publication.\n\n🌐 View all: moments.unamifoundation.org/moments`
