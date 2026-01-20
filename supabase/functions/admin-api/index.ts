@@ -1658,7 +1658,15 @@ ${moment.content}
         }
 
         const recipientCount = subscribers.length
-        const estimatedCost = recipientCount * 0.12
+        
+        // Fetch dynamic message cost from system_settings
+        const { data: costSetting } = await supabase
+          .from('system_settings')
+          .select('setting_value')
+          .eq('setting_key', 'message_cost')
+          .single();
+        const messageCost = parseFloat(costSetting?.setting_value || '0');
+        const estimatedCost = recipientCount * messageCost
 
         // Budget check
         if (campaign.budget > 0) {
@@ -1749,14 +1757,14 @@ ${moment.content}
             recipients: subscribers.map(s => s.phone_number)
           })
         }).then(async () => {
-          const actualCost = recipientCount * 0.12
+          const actualCost = recipientCount * messageCost
           
           await supabase.from('budget_transactions').insert({
             campaign_id: campaignId,
             transaction_type: 'spend',
             amount: actualCost,
             recipient_count: recipientCount,
-            cost_per_recipient: 0.12
+            cost_per_recipient: messageCost
           })
 
           await supabase.rpc('update_campaign_stats', {
@@ -1991,7 +1999,14 @@ ${moment.content}
 
       const totalBudget = sponsorData.data?.reduce((sum, s) => sum + (s.monthly_budget || 0), 0) || 10000;
       const totalSpent = budgetData.data?.reduce((sum, t) => sum + t.amount, 0) || 0;
-      const messageCost = 0.12;
+      
+      // Fetch dynamic message cost from system_settings
+      const { data: costSetting } = await supabase
+        .from('system_settings')
+        .select('setting_value')
+        .eq('setting_key', 'message_cost')
+        .single();
+      const messageCost = parseFloat(costSetting?.setting_value || '0');
       const messagesSent = messageCount.count || 0;
 
       return new Response(JSON.stringify({
