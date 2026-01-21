@@ -57,7 +57,7 @@ async function handleCategorySelection(phoneNumber: string, categoryString: stri
       .upsert({
         phone_number: phoneNumber,
         categories: selectedCategories,
-        regions: existing?.regions || ['National'], // Preserve existing regions
+        regions: existing?.regions || ['National'],
         language: existing?.language || 'eng',
         opted_in: true,
         last_activity: new Date().toISOString(),
@@ -114,7 +114,7 @@ async function handleRegionSelection(phoneNumber: string, regionString: string, 
       .upsert({
         phone_number: phoneNumber,
         regions: selectedRegions,
-        categories: existing?.categories || ['Education', 'Safety', 'Opportunity'], // Preserve existing categories
+        categories: existing?.categories || ['Education', 'Safety', 'Opportunity'],
         language: existing?.language || 'eng',
         opted_in: true,
         last_activity: new Date().toISOString(),
