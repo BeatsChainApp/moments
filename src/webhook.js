@@ -55,7 +55,13 @@ export async function handleWebhook(req, res) {
 
 async function processMessage(message, value) {
   try {
-    const fromNumber = message.from;
+    let fromNumber = message.from;
+    
+    // Ensure phone number has + prefix for subscription table compatibility
+    if (!fromNumber.startsWith('+')) {
+      fromNumber = '+' + fromNumber;
+    }
+    
     const messageType = message.type;
     let content = '';
     let mediaId = null;
