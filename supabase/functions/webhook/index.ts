@@ -45,13 +45,25 @@ async function handleCategorySelection(phoneNumber: string, categoryString: stri
       return
     }
     
+    // FIXED: Get existing subscription to preserve other fields
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .single()
+    
     await supabase
       .from('subscriptions')
       .upsert({
         phone_number: phoneNumber,
         categories: selectedCategories,
+        regions: existing?.regions || ['National'], // Preserve existing regions
+        language: existing?.language || 'eng',
+        opted_in: true,
         last_activity: new Date().toISOString(),
-        opted_in: true
+        opted_in_at: existing?.opted_in_at || new Date().toISOString(),
+        consent_timestamp: existing?.consent_timestamp || new Date().toISOString(),
+        consent_method: existing?.consent_method || 'whatsapp_optin'
       }, { onConflict: 'phone_number' })
     
     const confirmMessage = `✅ Interests updated!\n\nYou'll now receive updates about:\n${selectedCategories.map(cat => `🎯 ${cat}`).join('\n')}`
@@ -90,13 +102,25 @@ async function handleRegionSelection(phoneNumber: string, regionString: string, 
       return
     }
     
+    // FIXED: Get existing subscription to preserve other fields
+    const { data: existing } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('phone_number', phoneNumber)
+      .single()
+    
     await supabase
       .from('subscriptions')
       .upsert({
         phone_number: phoneNumber,
         regions: selectedRegions,
+        categories: existing?.categories || ['Education', 'Safety', 'Opportunity'], // Preserve existing categories
+        language: existing?.language || 'eng',
+        opted_in: true,
         last_activity: new Date().toISOString(),
-        opted_in: true
+        opted_in_at: existing?.opted_in_at || new Date().toISOString(),
+        consent_timestamp: existing?.consent_timestamp || new Date().toISOString(),
+        consent_method: existing?.consent_method || 'whatsapp_optin'
       }, { onConflict: 'phone_number' })
     
     const confirmMessage = `✅ Regions updated!\n\nYou'll now receive updates from:\n${selectedRegions.map(region => `📍 ${region}`).join('\n')}`
@@ -866,7 +890,12 @@ serve(async (req) => {
                 opted_in: true,
                 opted_in_at: new Date().toISOString(),
                 last_activity: new Date().toISOString(),
-                regions: existingSub?.regions || ['National']
+                regions: existingSub?.regions || ['National'],
+                categories: existingSub?.categories || ['Education', 'Safety', 'Opportunity'],
+                language: existingSub?.language || 'eng',
+                consent_timestamp: existingSub?.consent_timestamp || new Date().toISOString(),
+                consent_method: existingSub?.consent_method || 'whatsapp_optin',
+                double_opt_in_confirmed: true
               }
               
               const { error: subError } = await supabase
