@@ -53,7 +53,7 @@ app.use(express.static(path.join(__dirname, '../public'), { index: false }));
 // Landing page
 app.get('/', (req, res) => {
   try {
-    res.sendFile(path.join(__dirname, '../public/landing.html'));
+    res.sendFile(path.join(__dirname, '../public/index.html'));
   } catch (error) {
     res.status(200).send('<h1>Unami Foundation Moments</h1><p>WhatsApp Community Platform</p>');
   }
