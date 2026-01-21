@@ -911,17 +911,43 @@ serve(async (req) => {
                 console.log('✅ User subscribed:', message.from)
               }
               
-              // Send with buttons
-              await sendInteractiveButtons(message.from,
-                '🌟 Welcome to Unami Foundation Moments App!\n\nYour Digital Notice Board for South Africa.\n\nChoose an option:',
-                [
-                  { id: 'btn_regions', title: '📍 Choose Regions' },
-                  { id: 'btn_interests', title: '🏷️ Choose Interests' },
-                  { id: 'btn_help', title: '❓ Help' }
-                ]
-              )
+              // Check for authority and send role-specific welcome
+              const authority = await lookupAuthority(message.from, supabase)
               
-              console.log('User subscribed and welcomed:', message.from)
+              if (authority) {
+                // Authority-specific welcome with practical tips
+                const roleTips = {
+                  'Community Leader': '💡 Best times: 8-10 AM or 6-8 PM for maximum reach\n⚠️ Keep messages factual - misinformation costs us WhatsApp fees\n✅ Focus: Local events, safety alerts, job opportunities',
+                  'Ward Councillor': '💡 Share municipal updates during business hours\n⚠️ Avoid political campaigning - stick to service delivery\n✅ Focus: Water/power outages, municipal meetings, services',
+                  'School Principal': '💡 Send school updates Sunday evenings or early mornings\n⚠️ Protect student privacy - no names or photos without consent\n✅ Focus: School events, parent meetings, achievements',
+                  'Health Worker': '💡 Health tips work best in mornings (7-9 AM)\n⚠️ No medical advice - only verified health information\n✅ Focus: Clinic hours, vaccination drives, wellness events',
+                  'Safety Officer': '💡 Safety alerts are sent immediately, any time\n⚠️ Verify incidents before posting - false alarms waste resources\n✅ Focus: Crime prevention, emergency contacts, safety tips',
+                  'Business Leader': '💡 Job posts perform best Monday-Wednesday mornings\n⚠️ No pyramid schemes or get-rich-quick offers\n✅ Focus: Legitimate jobs, skills training, business events'
+                }
+                
+                const tips = roleTips[authority.role_label] || '💡 Share valuable, verified community information\n⚠️ False or spam content incurs WhatsApp charges\n✅ Focus: Education, safety, opportunities, events'
+                
+                await sendInteractiveButtons(message.from,
+                  `👑 Welcome, ${authority.role_label}!\n\nUnami Foundation Moments App\nDigital Notice Board for South Africa\n\n${tips}`,
+                  [
+                    { id: 'btn_regions', title: '📍 Choose Regions' },
+                    { id: 'btn_interests', title: '🏷️ Choose Topics' },
+                    { id: 'btn_help', title: '❓ Authority Help' }
+                  ]
+                )
+                console.log(`Authority user welcomed: ${message.from} (${authority.role_label})`)
+              } else {
+                // Standard welcome for regular users
+                await sendInteractiveButtons(message.from,
+                  '🌟 Welcome to Unami Foundation Moments App!\n\nYour Digital Notice Board for South Africa\n\n📰 Get community updates\n📝 Share local moments\n🤝 Connect with your community',
+                  [
+                    { id: 'btn_regions', title: '📍 Choose Regions' },
+                    { id: 'btn_interests', title: '🏷️ Choose Topics' },
+                    { id: 'btn_help', title: '❓ Help' }
+                  ]
+                )
+                console.log('Regular user welcomed:', message.from)
+              }
             } else if (['stop', 'unsubscribe', 'quit', 'cancel'].includes(text)) {
               // Immediate unsubscribe for compliance
               await supabase.from('subscriptions').update({
@@ -1064,16 +1090,19 @@ serve(async (req) => {
             } else if (text === 'myauthority') {
               const authority = await lookupAuthority(message.from, supabase)
               if (authority) {
+                const statusEmoji = authority.status === 'active' ? '👑' : '⏸️'
+                const scopeInfo = authority.scope_identifier ? ` (${authority.scope_identifier})` : ''
+                
                 await sendInteractiveButtons(message.from,
-                  `👑 Unami Foundation Moments App\nDigital Notice Board\n\nYour Authority:\n\nLevel: ${authority.authority_level}\nRole: ${authority.role_label}\nScope: ${authority.scope}\nReach: ${authority.blast_radius} subscribers`,
+                  `${statusEmoji} Unami Foundation Moments App\nDigital Notice Board\n\nYour Authority Profile:\n\n🏷️ Role: ${authority.role_label}\n📈 Level: ${authority.authority_level}\n🌍 Scope: ${authority.scope}${scopeInfo}\n📶 Reach: ${authority.blast_radius} subscribers\n🎯 Risk Threshold: ${(authority.risk_threshold * 100).toFixed(0)}%\n🗓️ Valid Until: ${authority.valid_until ? new Date(authority.valid_until).toLocaleDateString() : 'Indefinite'}`,
                   [
                     { id: 'auth_stats', title: '📊 My Stats' },
-                    { id: 'auth_help', title: '❓ Help' },
+                    { id: 'auth_help', title: '❓ Authority Help' },
                     { id: 'done', title: '✅ Done' }
                   ]
                 )
               } else {
-                await sendWhatsAppMessage(message.from, '❌ No authority profile found.\n\nUnami Foundation Moments App\nDigital Notice Board')
+                await sendWhatsAppMessage(message.from, '❌ No authority profile found.\n\nUnami Foundation Moments App\nDigital Notice Board\n\n📞 Contact admin to request community authority.')
               }
             } else if (text === 'pause') {
               await sendInteractiveList(message.from,
