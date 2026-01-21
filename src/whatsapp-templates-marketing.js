@@ -22,14 +22,14 @@ export const MARKETING_TEMPLATES = {
       },
       {
         type: 'BODY',
-        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{5}}\n\nFrom: {{6}}\n\n🌐 More: {{7}}'
+        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{1}}\n\nFrom: {{5}}\n\n🌐 More: {{6}}'
       },
       {
         type: 'FOOTER',
         text: 'Reply STOP to unsubscribe'
       }
     ],
-    parameters: ['region', 'title', 'content', 'category', 'region', 'institution_name', 'dynamic_link']
+    parameters: ['region', 'title', 'content', 'category', 'institution_name', 'dynamic_link']
   },
 
   // Sponsored moment from verified authority
@@ -45,14 +45,14 @@ export const MARKETING_TEMPLATES = {
       },
       {
         type: 'BODY',
-        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{5}}\n\nVerified by: {{6}}\nIn partnership with: {{7}}\n\n🌐 More: {{8}}'
+        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{1}}\n\nVerified by: {{5}}\nIn partnership with: {{6}}\n\n🌐 More: {{7}}'
       },
       {
         type: 'FOOTER',
         text: 'Reply STOP to unsubscribe'
       }
     ],
-    parameters: ['region', 'title', 'content', 'category', 'region', 'institution_name', 'sponsor_name', 'dynamic_link']
+    parameters: ['region', 'title', 'content', 'category', 'institution_name', 'sponsor_name', 'dynamic_link']
   },
 
   // Community moment (no authority)
@@ -68,14 +68,14 @@ export const MARKETING_TEMPLATES = {
       },
       {
         type: 'BODY',
-        text: '{{2}}\n\nShared by community member for awareness.\n\n🏷️ {{3}} • 📍 {{4}}\n\n🌐 Full details: {{5}}'
+        text: '{{2}}\n\nShared by community member for awareness.\n\n🏷️ {{3}} • 📍 {{1}}\n\n🌐 Full details: {{4}}'
       },
       {
         type: 'FOOTER',
         text: 'Reply STOP to unsubscribe'
       }
     ],
-    parameters: ['region', 'title', 'category', 'region', 'dynamic_link']
+    parameters: ['region', 'title', 'category', 'dynamic_link']
   },
 
   // High authority moment (Level 4-5)
@@ -91,14 +91,14 @@ export const MARKETING_TEMPLATES = {
       },
       {
         type: 'BODY',
-        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{5}}\n\nIssued by: {{6}}\n\n🌐 More: {{7}}'
+        text: '{{2}}\n\n{{3}}\n\n🏷️ {{4}} • 📍 {{1}}\n\nIssued by: {{5}}\n\n🌐 More: {{6}}'
       },
       {
         type: 'FOOTER',
         text: 'Reply STOP to unsubscribe'
       }
     ],
-    parameters: ['region', 'title', 'content', 'category', 'region', 'institution_name', 'dynamic_link']
+    parameters: ['region', 'title', 'content', 'category', 'institution_name', 'dynamic_link']
   },
 
   // Welcome message (MARKETING category)
@@ -184,7 +184,6 @@ export function buildTemplateParams(moment, authorityContext, sponsor = null) {
         moment.title,
         moment.content.substring(0, 200),
         moment.category,
-        moment.region,
         institutionName,
         dynamicLink
       ];
@@ -195,7 +194,6 @@ export function buildTemplateParams(moment, authorityContext, sponsor = null) {
         moment.title,
         moment.content.substring(0, 180),
         moment.category,
-        moment.region,
         institutionName,
         sponsor.display_name,
         dynamicLink
@@ -207,7 +205,6 @@ export function buildTemplateParams(moment, authorityContext, sponsor = null) {
         moment.title,
         moment.content.substring(0, 200),
         moment.category,
-        moment.region,
         institutionName,
         dynamicLink
       ];
@@ -217,7 +214,6 @@ export function buildTemplateParams(moment, authorityContext, sponsor = null) {
         moment.region,
         moment.title,
         moment.category,
-        moment.region,
         dynamicLink
       ];
       
