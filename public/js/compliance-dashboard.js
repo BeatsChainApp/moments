@@ -2,10 +2,9 @@
 async function loadComplianceDashboard() {
     try {
         const token = localStorage.getItem('admin.auth.token');
-        const response = await fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/compliance_dashboard?order=validated_at.desc&limit=50', {
+        const response = await fetch('/admin/compliance', {
             headers: {
-                'Authorization': `Bearer ${token}`,
-                'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4bWR6Y3hlamN4YmluZ2h0eWZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzU3NTU5NzcsImV4cCI6MjA1MTMzMTk3N30.Hs_Ks3Ks5Ks5Ks5Ks5Ks5Ks5Ks5Ks5Ks5Ks5Ks5Ks'
+                'Authorization': `Bearer ${token}`
             }
         });
         

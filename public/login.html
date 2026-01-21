@@ -174,9 +174,9 @@
     </div>
 
     <script>
-        // Admin authentication using Supabase admin-api function
+        // Admin authentication using backend proxy
         async function authenticateAdmin(email, password) {
-            const response = await fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api', {
+            const response = await fetch('/admin/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
