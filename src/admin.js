@@ -1355,6 +1355,33 @@ router.put('/authority/:id', requireRole(['content_admin','superadmin']), async 
   }
 });
 
+// Delete authority profile (superadmin only)
+router.delete('/authority/:id', requireRole(['superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const user = await getUserFromRequest(req);
+
+    // Log the deletion first
+    await supabase.rpc('log_authority_action', {
+      p_authority_profile_id: id,
+      p_action: 'deleted',
+      p_actor_id: user?.id,
+      p_context: { reason: 'Admin deletion' }
+    });
+
+    const { error: deleteError } = await supabase
+      .from('authority_profiles')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) throw deleteError;
+
+    res.json({ success: true, message: 'Authority profile deleted' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Suspend authority profile (superadmin only)
 router.post('/authority/:id/suspend', requireRole(['superadmin']), async (req, res) => {
   try {
