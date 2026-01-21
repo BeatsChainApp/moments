@@ -2002,21 +2002,5 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
 });
 
-// Start server
-const server = app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Unami Foundation Moments API running on port ${PORT}`);
-  console.log(`📊 Health check: http://0.0.0.0:${PORT}/health`);
-  console.log(`🎛️ Admin Dashboard: http://0.0.0.0:${PORT}/admin-dashboard.html`);
-  console.log(`🌍 Environment: ${process.env.RAILWAY_ENVIRONMENT || 'production'}`);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
-  server.close(() => {
-    console.log('Process terminated');
-    process.exit(0);
-  });
-});
-
+// Export app for Vercel serverless deployment
 export default app;

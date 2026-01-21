@@ -2,26 +2,26 @@
   "version": 2,
   "builds": [
     {
-      "src": "src/server.js",
+      "src": "src/server-bulletproof.js",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/webhook",
-      "dest": "/src/server.js"
+      "dest": "/src/server-bulletproof.js"
     },
     {
       "src": "/admin/(.*)",
-      "dest": "/src/server.js"
+      "dest": "/src/server-bulletproof.js"
     },
     {
       "src": "/api/(.*)",
-      "dest": "/src/server.js"
+      "dest": "/src/server-bulletproof.js"
     },
     {
       "src": "/public/(.*)",
-      "dest": "/src/server.js"
+      "dest": "/src/server-bulletproof.js"
     },
     {
       "src": "/(.*\\.(css|js|png|jpg|jpeg|svg|ico|json|html))",
@@ -29,7 +29,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/src/server.js"
+      "dest": "/src/server-bulletproof.js"
     }
   ],
   "env": {
