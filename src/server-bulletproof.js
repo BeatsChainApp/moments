@@ -1316,7 +1316,8 @@ app.post('/admin/campaigns/:id/activate', authenticateAdmin, async (req, res) =>
         success_count: 0,
         failure_count: 0,
         status: 'pending',
-        broadcast_started_at: new Date().toISOString()
+        broadcast_started_at: new Date().toISOString(),
+        created_by: 'admin'
       })
       .select()
       .single();
@@ -1665,7 +1666,8 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
         success_count: 0,
         failure_count: 0,
         status: 'pending',
-        broadcast_started_at: new Date().toISOString()
+        broadcast_started_at: new Date().toISOString(),
+        created_by: 'admin'
       })
       .select()
       .single();
