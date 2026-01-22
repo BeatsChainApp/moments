@@ -54,7 +54,10 @@ serve(async (req) => {
       metadata = {},
       scheduled_for,
       broadcast_id,
-      moment_id
+      moment_id,
+      bypass_preferences = false, // Emergency bypass
+      channel = 'whatsapp', // 'whatsapp', 'sms', 'email'
+      emergency_alert_id
     } = await req.json()
 
     if (!notification_type || !recipient_phone) {
@@ -75,25 +78,32 @@ serve(async (req) => {
       }), { status: 400, headers: corsHeaders })
     }
 
-    const { data: shouldSend } = await supabase
-      .rpc('should_send_notification', {
-        p_phone_number: recipient_phone,
-        p_notification_type_id: notifType.id,
-        p_priority: priority
-      })
+    // Check preferences unless bypassed (emergency alerts)
+    let shouldSend = true
+    if (!bypass_preferences) {
+      const { data: prefCheck } = await supabase
+        .rpc('should_send_notification', {
+          p_phone_number: recipient_phone,
+          p_notification_type_id: notifType.id,
+          p_priority: priority
+        })
+      shouldSend = prefCheck
+    }
 
     if (!shouldSend) {
       await supabase.from('notification_log').insert({
         notification_type_id: notifType.id,
         recipient_phone,
-        channel: 'whatsapp',
+        channel,
         priority,
         status: 'failed',
         failure_reason: 'User preferences blocked notification',
         message_content,
         metadata,
         broadcast_id,
-        moment_id
+        moment_id,
+        bypass_preferences,
+        emergency_alert_id
       })
 
       return new Response(JSON.stringify({ 
@@ -107,7 +117,7 @@ serve(async (req) => {
       .insert({
         notification_type_id: notifType.id,
         recipient_phone,
-        channel: 'whatsapp',
+        channel,
         priority,
         status: 'queued',
         template_used: notifType.template_name,
@@ -115,7 +125,9 @@ serve(async (req) => {
         metadata,
         scheduled_for,
         broadcast_id,
-        moment_id
+        moment_id,
+        bypass_preferences,
+        emergency_alert_id
       })
       .select()
       .single()
@@ -136,7 +148,12 @@ serve(async (req) => {
       }), { status: 200, headers: corsHeaders })
     }
 
-    const sent = await sendWhatsAppMessage(recipient_phone, message_content)
+    // Send via appropriate channel
+    let sent = false
+    if (channel === 'whatsapp') {
+      sent = await sendWhatsAppMessage(recipient_phone, message_content)
+    }
+    // Future: Add SMS and email channels here
 
     await supabase
       .from('notification_log')
@@ -144,14 +161,15 @@ serve(async (req) => {
         status: sent ? 'sent' : 'failed',
         sent_at: sent ? new Date().toISOString() : null,
         failed_at: sent ? null : new Date().toISOString(),
-        failure_reason: sent ? null : 'WhatsApp API error'
+        failure_reason: sent ? null : `${channel} delivery failed`
       })
       .eq('id', logEntry.id)
 
     return new Response(JSON.stringify({
       success: sent,
       notification_id: logEntry.id,
-      status: sent ? 'sent' : 'failed'
+      status: sent ? 'sent' : 'failed',
+      channel
     }), { status: 200, headers: corsHeaders })
 
   } catch (error) {

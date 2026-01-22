@@ -2000,10 +2000,29 @@ import {
   getNotificationAnalytics 
 } from './notification-preferences-api.js';
 
+import {
+  getEmergencyAlerts,
+  createEmergencyAlert,
+  sendEmergencyAlert,
+  cancelEmergencyAlert,
+  getActiveEmergencyAlerts,
+  updateEmergencyAlert,
+  deleteEmergencyAlert
+} from './emergency-alerts-api.js';
+
 app.get('/api/notifications/preferences', authenticateAdmin, getUserPreferences);
 app.post('/api/notifications/preferences', authenticateAdmin, updateUserPreferences);
 app.get('/api/notifications/history', authenticateAdmin, getNotificationHistory);
 app.get('/api/notifications/analytics', authenticateAdmin, getNotificationAnalytics);
+
+// Emergency alerts API
+app.get('/api/emergency-alerts', authenticateAdmin, getEmergencyAlerts);
+app.post('/api/emergency-alerts', authenticateAdmin, createEmergencyAlert);
+app.post('/api/emergency-alerts/:id/send', authenticateAdmin, sendEmergencyAlert);
+app.post('/api/emergency-alerts/:id/cancel', authenticateAdmin, cancelEmergencyAlert);
+app.put('/api/emergency-alerts/:id', authenticateAdmin, updateEmergencyAlert);
+app.delete('/api/emergency-alerts/:id', authenticateAdmin, deleteEmergencyAlert);
+app.get('/public/emergency-alerts', getActiveEmergencyAlerts); // Public endpoint
 
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);

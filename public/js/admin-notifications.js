@@ -5,6 +5,143 @@
   let currentPage = 1;
   const limit = 20;
 
+  // Load emergency alerts
+  async function loadEmergencyAlerts() {
+    const container = document.getElementById('emergency-alerts-list');
+    if (!container) return;
+
+    container.innerHTML = '<div class="loading">Loading emergency alerts...</div>';
+
+    try {
+      const response = await fetch(`${window.API_BASE_URL}/api/emergency-alerts?limit=10`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to load emergency alerts');
+
+      const data = await response.json();
+      renderEmergencyAlerts(data.alerts || []);
+    } catch (error) {
+      console.error('Load emergency alerts error:', error);
+      container.innerHTML = '<div class="error">Failed to load emergency alerts</div>';
+    }
+  }
+
+  // Render emergency alerts
+  function renderEmergencyAlerts(alerts) {
+    const container = document.getElementById('emergency-alerts-list');
+    if (!container) return;
+
+    if (alerts.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>No emergency alerts</p></div>';
+      return;
+    }
+
+    const html = alerts.map(alert => {
+      const statusClass = alert.status === 'sent' ? 'status-active' : alert.status === 'draft' ? 'status-draft' : 'status-cancelled';
+      const severityBadge = getSeverityBadge(alert.severity);
+      const timestamp = new Date(alert.created_at).toLocaleString();
+
+      return `
+        <div class="moment-item" style="border-left: 4px solid ${getSeverityColor(alert.severity)};">
+          <div class="moment-header">
+            <div class="moment-info">
+              <div class="moment-title">${alert.title}</div>
+              <div class="moment-meta">
+                <span class="status-badge ${statusClass}">${alert.status}</span>
+                ${severityBadge}
+                <span>📅 ${timestamp}</span>
+                ${alert.recipient_count ? `<span>👥 ${alert.recipient_count} recipients</span>` : ''}
+              </div>
+            </div>
+            <div class="moment-actions">
+              ${alert.status === 'draft' ? `
+                <button class="btn btn-sm" style="background: #dc2626;" onclick="window.adminNotifications.sendEmergencyAlert('${alert.id}')">📤 Send Now</button>
+                <button class="btn btn-sm btn-secondary" onclick="window.adminNotifications.cancelEmergencyAlert('${alert.id}')">❌ Cancel</button>
+              ` : ''}
+            </div>
+          </div>
+          <div class="moment-content">${alert.message}</div>
+          ${alert.target_regions ? `<div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">📍 Regions: ${alert.target_regions.join(', ')}</div>` : '<div style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">📍 All regions</div>'}
+        </div>
+      `;
+    }).join('');
+
+    container.innerHTML = html;
+  }
+
+  // Get severity badge
+  function getSeverityBadge(severity) {
+    const badges = {
+      critical: '<span class="status-badge" style="background: #fecaca; color: #991b1b;">🚨 CRITICAL</span>',
+      high: '<span class="status-badge" style="background: #fed7aa; color: #c2410c;">⚠️ HIGH</span>',
+      medium: '<span class="status-badge" style="background: #fef3c7; color: #92400e;">⚡ MEDIUM</span>',
+      low: '<span class="status-badge" style="background: #dbeafe; color: #1e40af;">ℹ️ LOW</span>'
+    };
+    return badges[severity] || badges.low;
+  }
+
+  // Get severity color
+  function getSeverityColor(severity) {
+    const colors = {
+      critical: '#dc2626',
+      high: '#ea580c',
+      medium: '#f59e0b',
+      low: '#3b82f6'
+    };
+    return colors[severity] || colors.low;
+  }
+
+  // Send emergency alert
+  async function sendEmergencyAlert(alertId) {
+    if (!confirm('⚠️ Send this emergency alert now? This will notify all eligible subscribers immediately.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${window.API_BASE_URL}/api/emergency-alerts/${alertId}/send`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to send alert');
+
+      const data = await response.json();
+      window.dashboardCore.showNotification(`Emergency alert sent to ${data.recipients} subscribers`);
+      loadEmergencyAlerts();
+      loadNotifications();
+    } catch (error) {
+      window.dashboardCore.handleError(error, 'sendEmergencyAlert');
+    }
+  }
+
+  // Cancel emergency alert
+  async function cancelEmergencyAlert(alertId) {
+    if (!confirm('Cancel this emergency alert?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${window.API_BASE_URL}/api/emergency-alerts/${alertId}/cancel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to cancel alert');
+
+      window.dashboardCore.showNotification('Emergency alert cancelled');
+      loadEmergencyAlerts();
+    } catch (error) {
+      window.dashboardCore.handleError(error, 'cancelEmergencyAlert');
+    }
+  }
+
   // Load notifications
   async function loadNotifications() {
     const container = document.getElementById('notifications-list');
@@ -171,9 +308,84 @@
         setTimeout(() => {
           loadNotifications();
           loadNotificationAnalytics();
+          loadEmergencyAlerts();
         }, 100);
       }
+
+      // Create emergency alert button
+      if (e.target.matches('[data-action="create-emergency-alert"]')) {
+        showSection('emergency-alert-form-section');
+      }
+
+      // Close emergency alert form
+      if (e.target.matches('[data-action="close-emergency-alert-form"]')) {
+        showSection('notifications');
+      }
+
+      // Reset emergency alert form
+      if (e.target.matches('[data-action="reset-emergency-alert-form"]')) {
+        document.getElementById('emergency-alert-form')?.reset();
+      }
     });
+
+    // Emergency alert form submission
+    const emergencyAlertForm = document.getElementById('emergency-alert-form');
+    if (emergencyAlertForm) {
+      emergencyAlertForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('emergency-alert-submit-btn');
+        window.dashboardCore.setButtonLoading(btn, true);
+
+        try {
+          const formData = new FormData(e.target);
+          const targetRegions = Array.from(formData.getAll('target_regions'));
+
+          const payload = {
+            alert_type: formData.get('alert_type'),
+            severity: formData.get('severity'),
+            title: formData.get('title'),
+            message: formData.get('message'),
+            target_regions: targetRegions.length > 0 ? targetRegions : null,
+            bypass_preferences: formData.get('bypass_preferences') === 'on',
+            expires_at: formData.get('expires_at') || null
+          };
+
+          const response = await fetch(`${window.API_BASE_URL}/api/emergency-alerts`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) throw new Error('Failed to create alert');
+
+          const data = await response.json();
+
+          // Immediately send the alert
+          const sendResponse = await fetch(`${window.API_BASE_URL}/api/emergency-alerts/${data.alert_id}/send`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`
+            }
+          });
+
+          if (!sendResponse.ok) throw new Error('Failed to send alert');
+
+          const sendData = await sendResponse.json();
+          window.dashboardCore.showNotification(`Emergency alert sent to ${sendData.recipients} subscribers`);
+          e.target.reset();
+          showSection('notifications');
+          loadEmergencyAlerts();
+          loadNotifications();
+        } catch (error) {
+          window.dashboardCore.handleError(error, 'createEmergencyAlert');
+        } finally {
+          window.dashboardCore.setButtonLoading(btn, false);
+        }
+      });
+    }
 
     // Filter change handlers
     const typeFilter = document.getElementById('notification-type-filter');
@@ -194,6 +406,12 @@
     }
   }
 
+  // Helper to show section
+  function showSection(sectionId) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(sectionId)?.classList.add('active');
+  }
+
   // Auto-initialize
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -204,6 +422,9 @@
   // Export for global access
   window.adminNotifications = {
     load: loadNotifications,
-    loadAnalytics: loadNotificationAnalytics
+    loadAnalytics: loadNotificationAnalytics,
+    loadEmergencyAlerts: loadEmergencyAlerts,
+    sendEmergencyAlert: sendEmergencyAlert,
+    cancelEmergencyAlert: cancelEmergencyAlert
   };
 })();

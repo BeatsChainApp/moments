@@ -890,6 +890,17 @@
             <div class="card">
                 <h2>🔔 Notification System</h2>
                 
+                <!-- Emergency Alerts Management -->
+                <div class="card" style="margin-top: 1rem; background: #fef2f2; border-left: 4px solid #dc2626;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3>🚨 Emergency Alerts</h3>
+                        <button class="btn" style="background: #dc2626;" data-action="create-emergency-alert">+ New Emergency Alert</button>
+                    </div>
+                    <div id="emergency-alerts-list">
+                        <div class="loading">Loading emergency alerts...</div>
+                    </div>
+                </div>
+                
                 <div class="card" style="margin-top: 1rem;">
                     <h3>Recent Notifications</h3>
                     <div class="filters">
@@ -901,6 +912,8 @@
                             <option value="broadcast_scheduled">Broadcast Scheduled</option>
                             <option value="quota_warning">Quota Warning</option>
                             <option value="quota_exceeded">Quota Exceeded</option>
+                            <option value="emergency_alert">Emergency Alert</option>
+                            <option value="safety_alert">Safety Alert</option>
                         </select>
                         <select class="filter-select" id="notification-status-filter">
                             <option value="">All Status</option>
@@ -921,6 +934,77 @@
                         <div class="loading">Loading analytics...</div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Emergency Alert Form Section -->
+        <div id="emergency-alert-form-section" class="form-section section">
+            <div class="card" style="background: #fef2f2; border-left: 4px solid #dc2626;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2>🚨 Create Emergency Alert</h2>
+                    <button class="btn btn-secondary" data-action="close-emergency-alert-form">← Back</button>
+                </div>
+                <div class="alert alert-warning">
+                    <strong>⚠️ Warning:</strong> Emergency alerts bypass user preferences and are sent immediately to all eligible subscribers.
+                </div>
+                <div id="emergency-alert-message"></div>
+                <form id="emergency-alert-form">
+                    <div class="form-group">
+                        <label>Alert Type *</label>
+                        <select name="alert_type" required>
+                            <option value="emergency_alert">🚨 Emergency Alert (Critical)</option>
+                            <option value="safety_alert">🛡️ Safety Alert (Important)</option>
+                            <option value="system_maintenance">🔧 System Maintenance</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Severity *</label>
+                        <select name="severity" required>
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Title *</label>
+                        <input type="text" name="title" required maxlength="200" placeholder="Emergency alert title">
+                    </div>
+                    <div class="form-group">
+                        <label>Message *</label>
+                        <textarea name="message" required rows="6" placeholder="Emergency alert message..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Regions (optional)</label>
+                        <select name="target_regions" multiple size="5">
+                            <option value="KZN">KwaZulu-Natal</option>
+                            <option value="WC">Western Cape</option>
+                            <option value="GP">Gauteng</option>
+                            <option value="EC">Eastern Cape</option>
+                            <option value="FS">Free State</option>
+                            <option value="LP">Limpopo</option>
+                            <option value="MP">Mpumalanga</option>
+                            <option value="NC">Northern Cape</option>
+                            <option value="NW">North West</option>
+                        </select>
+                        <small>Leave empty to send to all regions</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Expires At (optional)</label>
+                        <input type="datetime-local" name="expires_at">
+                        <small>Alert will be hidden after this time</small>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="bypass_preferences" checked>
+                            Bypass user preferences (recommended for emergencies)
+                        </label>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button type="submit" class="btn" style="background: #dc2626;" id="emergency-alert-submit-btn">Create & Send Alert</button>
+                        <button type="button" class="btn btn-secondary" data-action="reset-emergency-alert-form">Reset</button>
+                    </div>
+                </form>
             </div>
         </div>
 
