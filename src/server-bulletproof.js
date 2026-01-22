@@ -1609,11 +1609,15 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
     }
     
     // Get active subscribers
-    const { data: subscribers } = await supabase
+    const { data: subscribers, error: subscribersError } = await supabase
       .from('subscriptions')
       .select('phone_number')
       .eq('opted_in', true);
     
+    if (subscribersError) {
+      console.error('Subscribers query error:', subscribersError);
+      return res.status(500).json({ error: 'Failed to fetch subscribers', details: subscribersError.message });
+    }
     const recipientCount = subscribers?.length || 0;
     
     if (recipientCount === 0) {
