@@ -1771,9 +1771,10 @@ ${moment.content}
             p_spend_amount: estimatedCost
           })
 
-          if (budgetCheck && !budgetCheck.allowed) {
+          const budgetResult = budgetCheck?.[0]
+          if (budgetResult && !budgetResult.allowed) {
             return new Response(JSON.stringify({ 
-              error: `Budget exceeded: ${budgetCheck.reason}`
+              error: `Budget exceeded: ${budgetResult.reason}`
             }), {
               status: 403,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
