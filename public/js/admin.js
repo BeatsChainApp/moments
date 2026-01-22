@@ -680,7 +680,7 @@ async function broadcastMoment(momentId) {
 async function loadSponsors() {
     try {
         const cacheBust = `?_=${Date.now()}`;
-        const response = await apiFetch(`/admin/sponsors${cacheBust}`);
+        const response = await apiFetch(`/sponsors${cacheBust}`);
         const data = await response.json();
         
         const sponsorSelect = document.getElementById('sponsor-select');
@@ -799,7 +799,7 @@ async function loadCampaigns() {
         const data = await response.json();
         
         // Load sponsors for filter
-        const sponsorsResponse = await apiFetch('/admin/sponsors');
+        const sponsorsResponse = await apiFetch('/sponsors');
         const sponsorsData = await sponsorsResponse.json();
         const campaignSponsorFilter = document.getElementById('campaign-sponsor-filter');
         if (campaignSponsorFilter && sponsorsData.sponsors) {
@@ -968,7 +968,7 @@ async function loadModeration(page = 1) {
     try {
         moderationPage = page;
         const filter = document.getElementById('moderation-filter')?.value || 'all';
-        const response = await apiFetch(`/admin/moderation?filter=${filter}`);
+        const response = await apiFetch(`/moderation?filter=${filter}`);
         const data = await response.json();
         
         const moderationList = document.getElementById('moderation-list');
@@ -1227,7 +1227,7 @@ async function loadBudgetControls() {
         const settingsData = await settingsResponse.json();
         
         // Convert array to object keyed by setting_key
-        const settingsArray = settingsData.settings || [];
+        const settingsArray = Array.isArray(settingsData.settings) ? settingsData.settings : [];
         const settings = {};
         settingsArray.forEach(s => {
             settings[s.setting_key] = s.setting_value;
