@@ -1,4 +1,17 @@
 // AI-Powered Insights Engine
+
+// Helper function for API calls
+const apiFetch = async (path, opts = {}) => {
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    const token = localStorage.getItem('admin.auth.token');
+    
+    opts.headers = opts.headers || {};
+    if (token) opts.headers['Authorization'] = `Bearer ${token}`;
+    
+    const url = path.startsWith('http') ? path : `${API_BASE}/admin${path}`;
+    return fetch(url, opts);
+};
+
 class AIInsights {
     constructor() {
         this.models = {

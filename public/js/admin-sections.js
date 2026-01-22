@@ -1,11 +1,12 @@
 // Authority, Budget, and Analytics Section Loaders
-
-const API_BASE = window.API_BASE_URL || window.location.origin;
+// Use existing API_BASE_URL from window scope
 
 // Authority Section
 async function loadAuthoritySection() {
     const container = document.getElementById('authority-profiles-list');
     if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     
     try {
         window.dashboardCore.showSkeleton('authority-profiles-list', 'list', 5);
@@ -52,6 +53,7 @@ async function loadAuthoritySection() {
 }
 
 async function saveAuthority(formData) {
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     const id = document.getElementById('authority-edit-id').value;
     const method = id ? 'PUT' : 'POST';
     const url = id ? `${API_BASE}/admin/authority/${id}` : `${API_BASE}/admin/authority`;
@@ -79,6 +81,8 @@ async function saveAuthority(formData) {
 async function deleteAuthority(id) {
     if (!confirm('Delete this authority profile?')) return;
     
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
     try {
         const response = await fetch(`${API_BASE}/admin/authority/${id}`, {
             method: 'DELETE',
@@ -96,6 +100,7 @@ async function deleteAuthority(id) {
 
 // Budget Section
 async function loadBudgetSection() {
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     try {
         await Promise.all([
             loadBudgetOverview(),
@@ -109,6 +114,8 @@ async function loadBudgetSection() {
 async function loadBudgetOverview() {
     const container = document.getElementById('budget-overview');
     if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     
     try {
         const response = await fetch(`${API_BASE}/admin/budget/overview`, {
@@ -164,6 +171,8 @@ async function loadBudgetTransactions() {
     const container = document.getElementById('budget-transactions-list');
     if (!container) return;
     
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
     try {
         const response = await fetch(`${API_BASE}/admin/budget/transactions?limit=20`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
@@ -209,6 +218,7 @@ async function loadBudgetTransactions() {
 
 // Analytics Section
 async function loadAnalyticsSection() {
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     try {
         await loadHistoricalAnalytics(30);
     } catch (error) {
@@ -219,6 +229,8 @@ async function loadAnalyticsSection() {
 async function loadHistoricalAnalytics(days = 30) {
     const container = document.getElementById('analytics-chart-container');
     if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
     
     try {
         window.dashboardCore.showSkeleton('analytics-chart-container', 'card', 1);
