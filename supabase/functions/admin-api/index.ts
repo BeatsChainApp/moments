@@ -797,6 +797,17 @@ ${moment.content}
 
         if (subsError) {
           console.error('Subscribers fetch error:', subsError)
+          // Check if table doesn't exist
+          if (subsError.message.includes('does not exist') || subsError.message.includes('column')) {
+            return new Response(JSON.stringify({ 
+              error: 'Subscriptions table not properly configured', 
+              details: subsError.message,
+              hint: 'Run supabase/CLEAN_SCHEMA.sql to create the subscriptions table'
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            })
+          }
           return new Response(JSON.stringify({ error: 'Failed to fetch subscribers', details: subsError.message }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
