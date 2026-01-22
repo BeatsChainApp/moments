@@ -102,6 +102,26 @@ export async function broadcastMoment(momentId) {
     // Apply authority-based filtering (Phase 5: Authority Controls)
     const subscribers = applyAuthorityFiltering(allSubscribers || [], authorityContext, moment);
 
+    // Get notification type for broadcast
+    let notificationTypeCode = 'moment_broadcast_community';
+    if (authorityContext) {
+      if (authorityContext.authority_level >= 4) {
+        notificationTypeCode = 'moment_broadcast_official';
+      } else if (moment.sponsors) {
+        notificationTypeCode = 'moment_broadcast_sponsored';
+      } else {
+        notificationTypeCode = 'moment_broadcast_verified';
+      }
+    } else if (moment.sponsors) {
+      notificationTypeCode = 'moment_broadcast_sponsored';
+    }
+
+    const { data: notificationType } = await supabase
+      .from('notification_types')
+      .select('id')
+      .eq('type_code', notificationTypeCode)
+      .single();
+
     // Create broadcast record with authority context
     const { data: broadcast, error: broadcastError } = await supabase
       .from('broadcasts')
@@ -109,6 +129,8 @@ export async function broadcastMoment(momentId) {
         moment_id: momentId,
         recipient_count: subscribers?.length || 0,
         status: 'in_progress',
+        notification_type_id: notificationType?.id,
+        priority_level: authorityContext?.authority_level >= 4 ? 3 : 2,
         authority_context: authorityContext ? {
           authority_id: authorityContext.id,
           authority_level: authorityContext.authority_level,
@@ -154,10 +176,42 @@ export async function broadcastMoment(momentId) {
           templateParams,
           moment.media_urls
         );
+        
+        // Log to notification_log
+        await supabase.from('notification_log').insert({
+          notification_type_id: notificationType?.id,
+          recipient_phone: subscriber.phone_number,
+          channel: 'whatsapp',
+          priority: authorityContext?.authority_level >= 4 ? 3 : 2,
+          status: 'sent',
+          template_used: template.name,
+          message_content: templateParams.join(' | '),
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id },
+          broadcast_id: broadcast.id,
+          moment_id: momentId,
+          sent_at: new Date().toISOString()
+        }).catch(err => console.warn('Notification log failed:', err.message));
+        
         successCount++;
         await new Promise(resolve => setTimeout(resolve, 15)); // Rate limit
       } catch (error) {
         console.error(`Failed to send to ${subscriber.phone_number}:`, error.message);
+        
+        // Log failure
+        await supabase.from('notification_log').insert({
+          notification_type_id: notificationType?.id,
+          recipient_phone: subscriber.phone_number,
+          channel: 'whatsapp',
+          priority: authorityContext?.authority_level >= 4 ? 3 : 2,
+          status: 'failed',
+          template_used: template.name,
+          failure_reason: error.message,
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id },
+          broadcast_id: broadcast.id,
+          moment_id: momentId,
+          failed_at: new Date().toISOString()
+        }).catch(err => console.warn('Notification log failed:', err.message));
+        
         failureCount++;
       }
     }

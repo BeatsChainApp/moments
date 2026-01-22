@@ -1992,6 +1992,19 @@ app.get('/public/stats', async (req, res) => {
     res.json({ totalMoments: 0, activeSubscribers: 0, totalBroadcasts: 0 });
   }
 });
+// Notification preferences API
+import { 
+  getUserPreferences, 
+  updateUserPreferences, 
+  getNotificationHistory,
+  getNotificationAnalytics 
+} from './notification-preferences-api.js';
+
+app.get('/api/notifications/preferences', getUserPreferences);
+app.post('/api/notifications/preferences', updateUserPreferences);
+app.get('/api/notifications/history', getNotificationHistory);
+app.get('/api/notifications/analytics', getNotificationAnalytics);
+
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);
   res.status(500).json({ error: 'Internal server error' });
