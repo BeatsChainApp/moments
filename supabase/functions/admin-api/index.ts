@@ -48,7 +48,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now()
-  const FUNCTION_VERSION = 'v2.1-direct-query' // Version identifier
+  const FUNCTION_VERSION = 'v2.2-cache-bust' // Version identifier
   
   try {
     const supabase = createClient(
