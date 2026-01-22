@@ -800,47 +800,18 @@ ${moment.content}
         }
 
         // Get active subscribers - use RPC function to bypass RLS
-        let subscribers = []
-        let subsError = null
-        
-        try {
-          // Try RPC function first (bypasses RLS)
-          const { data: rpcData, error: rpcError } = await supabase
-            .rpc('get_active_subscribers')
-          
-          if (!rpcError && rpcData) {
-            subscribers = rpcData
-          } else {
-            // Fallback to direct query
-            const { data, error } = await supabase
-              .from('subscriptions')
-              .select('phone_number')
-              .eq('opted_in', true)
-            
-            subscribers = data
-            subsError = error || rpcError
-          }
-        } catch (e) {
-          subsError = e
-        }
+        const { data: subscribers, error: subsError } = await supabase
+          .rpc('get_active_subscribers')
 
-        console.log('Subscribers query result:', { count: subscribers?.length, error: subsError?.message })
+        console.log('Subscribers RPC result:', { count: subscribers?.length, error: subsError?.message })
 
         if (subsError) {
-          console.error('Subscribers fetch error:', subsError)
-          // Check if table doesn't exist
-          if (subsError.message.includes('does not exist') || subsError.message.includes('column')) {
-            return new Response(JSON.stringify({ 
-              error: 'Subscriptions table not properly configured', 
-              details: subsError.message,
-              hint: 'Run supabase/CLEAN_SCHEMA.sql to create the subscriptions table',
-              debug: { code: subsError.code, hint: subsError.hint }
-            }), {
-              status: 500,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            })
-          }
-          return new Response(JSON.stringify({ error: 'Failed to fetch subscribers', details: subsError.message }), {
+          console.error('Subscribers RPC error:', subsError)
+          return new Response(JSON.stringify({ 
+            error: 'Failed to get subscribers via RPC', 
+            details: subsError.message,
+            hint: 'Ensure get_active_subscribers() function exists in database'
+          }), {
             status: 500,
             headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
