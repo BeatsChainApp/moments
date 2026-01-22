@@ -2178,16 +2178,48 @@ ${moment.content}
       const limit = parseInt(url.searchParams.get('limit') || '20')
       const offset = (page - 1) * limit
 
-      const { data, error } = await supabase
-        .from('authority_profiles')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1)
+      try {
+        const { data, error, count } = await supabase
+          .from('authority_profiles')
+          .select('*', { count: 'exact' })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1)
 
-      if (error) throw error
-      return new Response(JSON.stringify({ authority_profiles: data || [], page, limit }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+        if (error) {
+          console.error('Authority profiles query error:', error)
+          return new Response(JSON.stringify({ 
+            error: error.message,
+            authority_profiles: [],
+            page,
+            limit,
+            total: 0
+          }), {
+            status: 200, // Return 200 with empty array instead of 500
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        return new Response(JSON.stringify({ 
+          authority_profiles: data || [],
+          page,
+          limit,
+          total: count || 0
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (queryError) {
+        console.error('Authority profiles fetch error:', queryError)
+        return new Response(JSON.stringify({ 
+          error: 'Failed to fetch authority profiles',
+          authority_profiles: [],
+          page,
+          limit,
+          total: 0
+        }), {
+          status: 200, // Graceful degradation
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
     if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'GET') {

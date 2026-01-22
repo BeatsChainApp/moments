@@ -2656,3 +2656,31 @@ window.activateAuthorityProfile = async function(profileId) {
         if (btn) setButtonLoading(btn, false);
     }
 };
+
+// Test authority lookup function (for debugging)
+window.testAuthorityLookup = async function() {
+    const phoneNumber = prompt('Enter phone number to test authority lookup (e.g., +27123456789):');
+    if (!phoneNumber) return;
+    
+    try {
+        showNotification('Testing authority lookup...', 'info');
+        
+        // Call the authority lookup endpoint
+        const response = await apiFetch(`/authority?phone=${encodeURIComponent(phoneNumber)}`);
+        const data = await response.json();
+        
+        if (response.ok && data.authority_profiles) {
+            const profiles = data.authority_profiles.filter(p => p.user_identifier === phoneNumber);
+            if (profiles.length > 0) {
+                const profile = profiles[0];
+                alert(`Authority Found:\n\nRole: ${profile.role_label}\nLevel: ${profile.authority_level}\nScope: ${profile.scope}\nStatus: ${profile.status}\nBlast Radius: ${profile.blast_radius}`);
+            } else {
+                alert('No authority profile found for this phone number.');
+            }
+        } else {
+            alert('Authority lookup failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (error) {
+        showNotification('Authority lookup test failed: ' + error.message, 'error');
+    }
+};

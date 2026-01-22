@@ -160,3 +160,52 @@ export async function getNotificationAnalytics(req, res) {
 
   res.json(analytics);
 }
+
+
+// Enhanced notification-sender to use orchestrator
+export async function enhanceNotificationSender() {
+  const { data: notifications } = await supabase
+    .from('notification_queue')
+    .select('*')
+    .eq('status', 'pending')
+    .lt('attempts', 3)
+    .limit(10);
+
+  for (const notif of notifications || []) {
+    try {
+      const response = await fetch(`${process.env.SUPABASE_URL}/functions/v1/notification-orchestrator`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          notification_type: notif.template_name,
+          recipient_phone: notif.phone_number,
+          message_content: notif.message_content,
+          priority: 2,
+          metadata: notif.metadata
+        })
+      });
+
+      if (response.ok) {
+        await supabase.from('notification_queue')
+          .update({ status: 'sent', last_attempt_at: new Date().toISOString() })
+          .eq('id', notif.id);
+      } else {
+        throw new Error(await response.text());
+      }
+    } catch (error) {
+      await supabase.from('notification_queue')
+        .update({ 
+          status: 'failed', 
+          attempts: notif.attempts + 1,
+          error_message: error.message,
+          last_attempt_at: new Date().toISOString()
+        })
+        .eq('id', notif.id);
+    }
+  }
+
+  return { processed: notifications?.length || 0 };
+}

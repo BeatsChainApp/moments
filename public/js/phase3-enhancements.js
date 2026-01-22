@@ -8,8 +8,9 @@ class RealtimeManager {
     }
     
     async init() {
-        if (!window.supabase) {
-            console.warn('Supabase client not available for realtime');
+        // Check if Supabase client is available
+        if (typeof window.supabase === 'undefined' || !window.supabase) {
+            console.warn('Supabase client not available for realtime - skipping realtime features');
             return;
         }
         
@@ -294,12 +295,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Record page load time
     window.addEventListener('load', () => {
         perfMetrics.recordPageLoad();
-        console.log('📊 Page load time:', perfMetrics.metrics.pageLoad + 'ms');
+        const loadTime = perfMetrics.metrics.pageLoad;
+        if (loadTime > 0) {
+            console.log('📊 Page load time:', loadTime + 'ms');
+        }
     });
     
-    // Initialize realtime updates
+    // Initialize realtime updates (gracefully handle missing Supabase)
     realtime.init().then(() => {
-        setupRealtimeUpdates();
+        if (realtime.enabled) {
+            setupRealtimeUpdates();
+        }
+    }).catch(err => {
+        console.warn('Realtime initialization skipped:', err.message);
     });
     
     // Add performance monitoring to API calls
