@@ -361,6 +361,10 @@
                         <span class="icon icon-reports">📊</span>
                         <span>Reports</span>
                     </button>
+                    <button class="admin-nav-item" data-section="notifications" aria-label="Notifications section">
+                        <span class="icon icon-notifications">🔔</span>
+                        <span>Notifications</span>
+                    </button>
                     <button class="admin-nav-item" data-section="help" aria-label="Help section">
                         <span class="icon icon-help"></span>
                         <span>Help</span>
@@ -877,6 +881,45 @@
                 <h2>Broadcast History</h2>
                 <div id="broadcasts-list">
                     <div class="loading">Loading broadcasts...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Notifications Section -->
+        <div id="notifications" class="section">
+            <div class="card">
+                <h2>🔔 Notification System</h2>
+                
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>Recent Notifications</h3>
+                    <div class="filters">
+                        <select class="filter-select" id="notification-type-filter">
+                            <option value="">All Types</option>
+                            <option value="authority_verified">Authority Verified</option>
+                            <option value="authority_suspended">Authority Suspended</option>
+                            <option value="broadcast_completed">Broadcast Completed</option>
+                            <option value="broadcast_scheduled">Broadcast Scheduled</option>
+                            <option value="quota_warning">Quota Warning</option>
+                            <option value="quota_exceeded">Quota Exceeded</option>
+                        </select>
+                        <select class="filter-select" id="notification-status-filter">
+                            <option value="">All Status</option>
+                            <option value="sent">Sent</option>
+                            <option value="failed">Failed</option>
+                            <option value="pending">Pending</option>
+                        </select>
+                    </div>
+                    <div id="notifications-list">
+                        <div class="loading">Loading notifications...</div>
+                    </div>
+                    <div id="notifications-pagination" class="pagination"></div>
+                </div>
+                
+                <div class="card" style="margin-top: 1rem;">
+                    <h3>Notification Analytics</h3>
+                    <div id="notification-analytics" class="analytics-grid">
+                        <div class="loading">Loading analytics...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1625,6 +1668,7 @@
         }
     </script>
     <script src="/js/admin-dashboard-core.js?v=2.0.4"></script>
+    <script src="/js/admin-notifications.js"></script>
     <script src="/js/dark-mode.js?v=2.0.4"></script>
     <script src="/js/keyboard-shortcuts.js?v=2.0.4"></script>
     <script src="/js/export-data.js?v=2.0.4"></script>

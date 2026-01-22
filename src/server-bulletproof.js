@@ -2000,10 +2000,10 @@ import {
   getNotificationAnalytics 
 } from './notification-preferences-api.js';
 
-app.get('/api/notifications/preferences', getUserPreferences);
-app.post('/api/notifications/preferences', updateUserPreferences);
-app.get('/api/notifications/history', getNotificationHistory);
-app.get('/api/notifications/analytics', getNotificationAnalytics);
+app.get('/api/notifications/preferences', authenticateAdmin, getUserPreferences);
+app.post('/api/notifications/preferences', authenticateAdmin, updateUserPreferences);
+app.get('/api/notifications/history', authenticateAdmin, getNotificationHistory);
+app.get('/api/notifications/analytics', authenticateAdmin, getNotificationAnalytics);
 
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);

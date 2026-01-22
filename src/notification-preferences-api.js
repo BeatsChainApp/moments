@@ -91,29 +91,70 @@ export async function updateUserPreferences(req, res) {
   res.json({ success: true, updated: updates.length });
 }
 
-// Get notification history for user
+// Get notification history for user or admin view
 export async function getNotificationHistory(req, res) {
-  const { phone_number, limit = 50, offset = 0 } = req.query;
+  const { phone_number, page = 1, limit = 20, type, status } = req.query;
 
-  if (!phone_number) {
-    return res.status(400).json({ error: 'phone_number required' });
-  }
-
-  const { data: history, error } = await supabase
+  let query = supabase
     .from('notification_log')
     .select(`
       *,
-      notification_types(type_code, display_name, category)
-    `)
-    .eq('recipient_phone', phone_number)
-    .order('created_at', { ascending: false })
-    .range(offset, offset + limit - 1);
+      notification_types(type_code, display_name, category, priority_level)
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false });
+
+  // Filter by phone if provided
+  if (phone_number) {
+    query = query.eq('recipient_phone', phone_number);
+  }
+
+  // Filter by type if provided
+  if (type) {
+    const { data: typeData } = await supabase
+      .from('notification_types')
+      .select('id')
+      .eq('type_code', type)
+      .single();
+    
+    if (typeData) {
+      query = query.eq('notification_type_id', typeData.id);
+    }
+  }
+
+  // Filter by status if provided
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const offset = (page - 1) * limit;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data: history, error, count } = await query;
 
   if (error) {
     return res.status(500).json({ error: error.message });
   }
 
-  res.json({ history, total: history.length });
+  // Format response
+  const notifications = (history || []).map(log => ({
+    id: log.id,
+    notification_type: log.notification_types?.type_code,
+    type_display_name: log.notification_types?.display_name,
+    priority_level: log.notification_types?.priority_level,
+    recipient_phone: log.recipient_phone,
+    status: log.status,
+    message_preview: log.message_content?.substring(0, 150),
+    error_message: log.error_message,
+    created_at: log.created_at,
+    sent_at: log.sent_at
+  }));
+
+  res.json({ 
+    notifications, 
+    total: count || 0,
+    page: parseInt(page),
+    limit: parseInt(limit)
+  });
 }
 
 // Get notification analytics
@@ -137,12 +178,19 @@ export async function getNotificationAnalytics(req, res) {
     return res.status(500).json({ error: error.message });
   }
 
+  const total = logs.length;
+  const sent = logs.filter(l => l.status === 'sent' || l.status === 'delivered').length;
+  const failed = logs.filter(l => l.status === 'failed').length;
+  const pending = logs.filter(l => l.status === 'pending').length;
+
   const analytics = {
-    total: logs.length,
+    total_sent: sent,
+    total_failed: failed,
+    total_pending: pending,
+    success_rate: total > 0 ? ((sent / total) * 100).toFixed(1) : 0,
     by_status: {},
     by_category: {},
-    by_priority: {},
-    success_rate: 0
+    by_priority: {}
   };
 
   logs.forEach(log => {
@@ -153,10 +201,6 @@ export async function getNotificationAnalytics(req, res) {
       analytics.by_category[cat] = (analytics.by_category[cat] || 0) + 1;
     }
   });
-
-  const sent = analytics.by_status.sent || 0;
-  const delivered = analytics.by_status.delivered || 0;
-  analytics.success_rate = logs.length > 0 ? ((sent + delivered) / logs.length * 100).toFixed(1) : 0;
 
   res.json(analytics);
 }
