@@ -12,7 +12,7 @@ async function loadAuthoritySection() {
         window.dashboardCore.showSkeleton('authority-profiles-list', 'list', 5);
         
         const response = await fetch(`${API_BASE}/admin/authority`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
         if (!response.ok) throw new Error('Failed to load authority profiles');
@@ -62,7 +62,7 @@ async function saveAuthority(formData) {
         const response = await fetch(url, {
             method,
             headers: {
-                'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
+                'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(formData)
@@ -86,7 +86,7 @@ async function deleteAuthority(id) {
     try {
         const response = await fetch(`${API_BASE}/admin/authority/${id}`, {
             method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
         if (!response.ok) throw new Error('Failed to delete authority profile');
@@ -119,7 +119,7 @@ async function loadBudgetOverview() {
     
     try {
         const response = await fetch(`${API_BASE}/admin/budget/overview`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
         if (!response.ok) throw new Error('Failed to load budget overview');
@@ -175,7 +175,7 @@ async function loadBudgetTransactions() {
     
     try {
         const response = await fetch(`${API_BASE}/admin/budget/transactions?limit=20`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
         if (!response.ok) throw new Error('Failed to load transactions');
@@ -236,7 +236,7 @@ async function loadHistoricalAnalytics(days = 30) {
         window.dashboardCore.showSkeleton('analytics-chart-container', 'card', 1);
         
         const response = await fetch(`${API_BASE}/admin/analytics/historical?days=${days}`, {
-            headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
         if (!response.ok) throw new Error('Failed to load analytics');
@@ -358,7 +358,7 @@ window.loadAnalyticsSection = loadAnalyticsSection;
 window.editAuthority = async (id) => {
     // Load authority data and populate form
     const response = await fetch(`${API_BASE}/admin/authority?id=${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
     });
     const { profiles } = await response.json();
     const profile = profiles[0];

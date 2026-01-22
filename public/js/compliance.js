@@ -1,24 +1,11 @@
 // Meta WhatsApp Business API Compliance Integration
-
-// Configuration
-const SUPABASE_URL = window.SUPABASE_URL || 'https://bxmdzcxejcxbinghtyfw.supabase.co';
-const API_BASE = window.API_BASE_URL || window.location.origin;
-
-// Helper function for API calls
-const apiFetch = async (path, opts = {}) => {
-    const token = localStorage.getItem('admin.auth.token');
-    
-    opts.headers = opts.headers || {};
-    if (token) opts.headers['Authorization'] = `Bearer ${token}`;
-    
-    const url = path.startsWith('http') ? path : `${API_BASE}/admin${path}`;
-    return fetch(url, opts);
-};
+// Uses SUPABASE_URL from window and apiFetch from admin.js
 
 let complianceCategories = [];
 
 // Load compliance categories on page load
 async function loadComplianceCategories() {
+    const SUPABASE_URL = window.SUPABASE_URL || 'https://bxmdzcxejcxbinghtyfw.supabase.co';
     try {
         const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-api/compliance/categories`, {
             headers: {
