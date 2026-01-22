@@ -812,11 +812,21 @@ ${moment.content}
         }
 
         // Get active subscribers
-        const { data: subscribers } = await supabase
+        console.log('🔍 Querying subscribers: from(subscriptions).select(phone_number).eq(opted_in, true)')
+        const { data: subscribers, error: subsError } = await supabase
           .from('subscriptions')
           .select('phone_number')
           .eq('opted_in', true)
 
+        if (subsError) {
+          console.error('❌ Subscribers query error:', subsError)
+          return new Response(JSON.stringify({ error: subsError.message, details: subsError }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+
+        console.log(`✅ Found ${subscribers?.length || 0} subscribers`)
         const recipientCount = subscribers?.length || 0
 
         if (recipientCount === 0) {
