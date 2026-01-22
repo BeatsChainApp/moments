@@ -1230,6 +1230,36 @@ app.post('/admin/campaigns/:id/activate', authenticateAdmin, async (req, res) =>
       return res.status(400).json({ error: 'No active subscribers to broadcast to' });
     }
     
+    // BUDGET CHECK - Prevent overspend
+    const costPerMessage = 0.50;
+    const estimatedCost = recipientCount * costPerMessage;
+    
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const { data: transactions } = await supabase
+      .from('budget_transactions')
+      .select('amount')
+      .gte('created_at', startOfMonth.toISOString())
+      .eq('transaction_type', 'spend');
+    
+    const totalSpent = transactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
+    const monthlyLimit = 10000;
+    const remaining = monthlyLimit - totalSpent;
+    
+    if (estimatedCost > remaining) {
+      return res.status(400).json({ 
+        error: 'Insufficient budget',
+        details: {
+          estimated_cost: estimatedCost,
+          budget_remaining: remaining,
+          monthly_limit: monthlyLimit,
+          spent_this_month: totalSpent
+        }
+      });
+    }
+    
     // Create broadcast record
     const { data: broadcast, error: broadcastError } = await supabase
       .from('broadcasts')
@@ -1339,11 +1369,48 @@ app.post('/admin/campaigns/:id/activate', authenticateAdmin, async (req, res) =>
       failure_count: totalFailure
     }).eq('id', broadcast.id);
     
+    // LOG BUDGET TRANSACTION
+    const actualCost = totalSuccess * costPerMessage;
+    await supabase.from('budget_transactions').insert({
+      transaction_type: 'spend',
+      amount: actualCost,
+      description: `Campaign: ${campaign.title}`,
+      reference_type: 'campaign',
+      reference_id: id,
+      recipient_count: totalSuccess,
+      cost_per_recipient: costPerMessage
+    });
+    
+    const newTotalSpent = totalSpent + actualCost;
+    const percentageUsed = (newTotalSpent / monthlyLimit) * 100;
+    
+    if (percentageUsed >= 80 && percentageUsed < 100) {
+      await supabase.from('budget_alerts').insert({
+        alert_type: 'threshold_warning',
+        severity: 'medium',
+        message: `Budget ${percentageUsed.toFixed(1)}% used`,
+        threshold_percentage: 80,
+        current_spend: newTotalSpent,
+        budget_limit: monthlyLimit
+      });
+    } else if (percentageUsed >= 100) {
+      await supabase.from('budget_alerts').insert({
+        alert_type: 'budget_exceeded',
+        severity: 'high',
+        message: `Budget exceeded! R${newTotalSpent.toFixed(2)} of R${monthlyLimit}`,
+        threshold_percentage: 100,
+        current_spend: newTotalSpent,
+        budget_limit: monthlyLimit
+      });
+    }
+    
     res.json({ 
       success: true, 
       broadcast_id: broadcast.id,
       message: `Campaign "${campaign.title}" broadcasted to ${recipientCount} subscribers`,
-      recipient_count: recipientCount
+      recipient_count: recipientCount,
+      cost: actualCost,
+      budget_remaining: monthlyLimit - newTotalSpent
     });
     
   } catch (error) {
@@ -1506,6 +1573,36 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
       return res.status(400).json({ error: 'No active subscribers to broadcast to' });
     }
     
+    // BUDGET CHECK - Prevent overspend
+    const costPerMessage = 0.50; // R0.50 per message
+    const estimatedCost = recipientCount * costPerMessage;
+    
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const { data: transactions } = await supabase
+      .from('budget_transactions')
+      .select('amount')
+      .gte('created_at', startOfMonth.toISOString())
+      .eq('transaction_type', 'spend');
+    
+    const totalSpent = transactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
+    const monthlyLimit = 10000; // TODO: Get from budget_settings
+    const remaining = monthlyLimit - totalSpent;
+    
+    if (estimatedCost > remaining) {
+      return res.status(400).json({ 
+        error: 'Insufficient budget',
+        details: {
+          estimated_cost: estimatedCost,
+          budget_remaining: remaining,
+          monthly_limit: monthlyLimit,
+          spent_this_month: totalSpent
+        }
+      });
+    }
+    
     // Create broadcast record
     const { data: broadcast, error: broadcastError } = await supabase
       .from('broadcasts')
@@ -1619,11 +1716,49 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
       failure_count: totalFailure
     }).eq('id', broadcast.id);
     
+    // LOG BUDGET TRANSACTION - Track actual spend
+    const actualCost = totalSuccess * costPerMessage;
+    await supabase.from('budget_transactions').insert({
+      transaction_type: 'spend',
+      amount: actualCost,
+      description: `Broadcast: ${moment.title}`,
+      reference_type: 'broadcast',
+      reference_id: broadcast.id,
+      recipient_count: totalSuccess,
+      cost_per_recipient: costPerMessage
+    });
+    
+    // Check if budget threshold exceeded - create alert
+    const newTotalSpent = totalSpent + actualCost;
+    const percentageUsed = (newTotalSpent / monthlyLimit) * 100;
+    
+    if (percentageUsed >= 80 && percentageUsed < 100) {
+      await supabase.from('budget_alerts').insert({
+        alert_type: 'threshold_warning',
+        severity: 'medium',
+        message: `Budget ${percentageUsed.toFixed(1)}% used (R${newTotalSpent.toFixed(2)} of R${monthlyLimit})`,
+        threshold_percentage: 80,
+        current_spend: newTotalSpent,
+        budget_limit: monthlyLimit
+      });
+    } else if (percentageUsed >= 100) {
+      await supabase.from('budget_alerts').insert({
+        alert_type: 'budget_exceeded',
+        severity: 'high',
+        message: `Monthly budget exceeded! R${newTotalSpent.toFixed(2)} of R${monthlyLimit}`,
+        threshold_percentage: 100,
+        current_spend: newTotalSpent,
+        budget_limit: monthlyLimit
+      });
+    }
+    
     res.json({ 
       success: true, 
       broadcast_id: broadcast.id,
       message: `Broadcasting "${moment.title}" to ${recipientCount} subscribers`,
-      recipient_count: recipientCount
+      recipient_count: recipientCount,
+      cost: actualCost,
+      budget_remaining: monthlyLimit - newTotalSpent
     });
     
   } catch (error) {
