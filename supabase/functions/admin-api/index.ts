@@ -48,7 +48,7 @@ serve(async (req) => {
   }
 
   const startTime = Date.now()
-  const FUNCTION_VERSION = 'v2.0-rpc-fix' // Version identifier
+  const FUNCTION_VERSION = 'v2.1-direct-query' // Version identifier
   
   try {
     const supabase = createClient(
@@ -210,8 +210,9 @@ serve(async (req) => {
     if (path.includes('/debug-broadcast') && method === 'GET') {
       return new Response(JSON.stringify({
         version: FUNCTION_VERSION,
-        uses_rpc: true,
-        code_snippet: 'await supabase.rpc(get_active_subscribers)'
+        uses_rpc: false,
+        code_snippet: 'await supabase.from(subscriptions).select(phone_number).eq(opted_in, true)',
+        deployed_at: new Date().toISOString()
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
