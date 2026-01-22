@@ -95,7 +95,7 @@ serve(async (req) => {
 
       // Verify password - use fallback for initial setup
       let validPassword = false
-      if (email === 'info@unamifoundation.org' && (password === 'Proof321#' || password === 'Proof321#moments')) {
+      if (email === 'info@unamifoundation.org' && (password === 'Proof321#Moments' || password === 'Proof321#')) {
         validPassword = true
       } else {
         try {
@@ -808,23 +808,11 @@ ${moment.content}
           })
         }
 
-        // Get active subscribers - use RPC function to bypass RLS
-        const { data: subscribers, error: subsError } = await supabase
-          .rpc('get_active_subscribers')
-
-        console.log('Subscribers RPC result:', { count: subscribers?.length, error: subsError?.message })
-
-        if (subsError) {
-          console.error('Subscribers RPC error:', subsError)
-          return new Response(JSON.stringify({ 
-            error: 'Failed to get subscribers via RPC', 
-            details: subsError.message,
-            hint: 'Ensure get_active_subscribers() function exists in database'
-          }), {
-            status: 500,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          })
-        }
+        // Get active subscribers
+        const { data: subscribers } = await supabase
+          .from('subscriptions')
+          .select('phone_number')
+          .eq('opted_in', true)
 
         const recipientCount = subscribers?.length || 0
 

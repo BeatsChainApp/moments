@@ -128,7 +128,7 @@ export async function broadcastMoment(momentId) {
       .insert({
         moment_id: momentId,
         recipient_count: subscribers?.length || 0,
-        status: 'in_progress',
+        status: 'processing',
         notification_type_id: notificationType?.id,
         priority_level: authorityContext?.authority_level >= 4 ? 3 : 2,
         authority_context: authorityContext ? {
