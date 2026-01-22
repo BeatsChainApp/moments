@@ -25,8 +25,8 @@ async function apiFetch(path, opts = {}) {
     
     const url = path.startsWith('http') ? path : `${API_BASE}${path}`;
     
-    // Skip pendingCalls cache for authority and subscribers to ensure real-time updates
-    const skipCache = url.includes('/authority') || url.includes('/subscribers');
+    // Skip pendingCalls cache for authority, subscribers, and notifications to ensure real-time updates
+    const skipCache = url.includes('/authority') || url.includes('/subscribers') || url.includes('/notifications') || url.includes('/emergency-alerts');
     const cacheKey = `${opts.method || 'GET'}_${url}`;
     
     // Return pending call if one exists (unless skipping cache)
