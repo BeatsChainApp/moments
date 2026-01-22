@@ -226,6 +226,18 @@ async function processMessage(message, value) {
 
     console.log(`Processing message from ${fromNumber}, type: ${messageType}`);
 
+    // DEDUPLICATION: Check if message already processed
+    const { data: existingMessage } = await supabase
+      .from('messages')
+      .select('id, processed')
+      .eq('whatsapp_id', message.id)
+      .single();
+
+    if (existingMessage) {
+      console.log(`⏭️ Skipping duplicate message: ${message.id} (already processed: ${existingMessage.processed})`);
+      return;
+    }
+
     // Extract content based on message type and decode HTML entities
     switch (messageType) {
       case 'text':
@@ -364,15 +376,50 @@ async function processMessage(message, value) {
 
     // Call Supabase MCP function for message analysis
     try {
-      await supabase.rpc('mcp_advisory', {
+      const { data: mcpResult, error: mcpError } = await supabase.rpc('mcp_advisory', {
         message_content: content,
         message_language: 'eng',
         message_type: messageType,
         from_number: fromNumber,
         message_timestamp: new Date().toISOString()
       });
+
+      if (mcpError) {
+        console.error('MCP analysis error:', mcpError);
+      } else if (mcpResult) {
+        console.log(`MCP result:`, mcpResult);
+        
+        // Send auto-response confirmation
+        const status = mcpResult.moment_status || 'pending';
+        const momentId = mcpResult.moment_id;
+        
+        let responseMessage = `✅ Thank you! Your moment has been received.\n\n`;
+        
+        if (status === 'approved' || status === 'broadcasted') {
+          responseMessage += `🎉 Status: Auto-approved\n⏱️ Your moment will be shared with the community shortly.`;
+        } else if (status === 'pending' || status === 'draft') {
+          responseMessage += `📋 Status: Under review\n⏱️ Our team will review and approve your moment soon.`;
+        } else if (status === 'flagged') {
+          responseMessage += `⚠️ Status: Needs review\n👁️ Our moderation team will review your content.`;
+        }
+        
+        responseMessage += `\n\n🌐 View all moments: moments.unamifoundation.org/moments`;
+        
+        await sendMessage(fromNumber, responseMessage);
+        console.log(`✅ Auto-response sent to ${fromNumber}`);
+      }
     } catch (mcpError) {
       console.error('MCP analysis error:', mcpError);
+      
+      // Send generic confirmation even if MCP fails
+      try {
+        await sendMessage(fromNumber, 
+          `✅ Thank you! Your moment has been received and will be reviewed by our team.\n\n` +
+          `🌐 View community moments: moments.unamifoundation.org/moments`
+        );
+      } catch (sendError) {
+        console.error('Failed to send confirmation:', sendError);
+      }
     }
 
     // Mark as processed
