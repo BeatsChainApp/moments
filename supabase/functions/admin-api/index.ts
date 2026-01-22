@@ -773,34 +773,44 @@ ${moment.content}
     if (path.includes('/moments/') && path.includes('/broadcast') && method === 'POST') {
       const momentId = path.split('/moments/')[1].split('/broadcast')[0]
 
-      // Get moment details
-      const { data: moment, error: momentError } = await supabase
-        .from('moments')
-        .select('*')
-        .eq('id', momentId)
-        .single()
+      try {
+        // Get moment details
+        const { data: moment, error: momentError } = await supabase
+          .from('moments')
+          .select('*')
+          .eq('id', momentId)
+          .single()
 
-      if (momentError || !moment) {
-        return new Response(JSON.stringify({ error: 'Moment not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
+        if (momentError || !moment) {
+          console.error('Moment fetch error:', momentError)
+          return new Response(JSON.stringify({ error: 'Moment not found', details: momentError?.message }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
 
-      // Get active subscribers
-      const { data: subscribers } = await supabase
-        .from('subscriptions')
-        .select('phone_number')
-        .eq('opted_in', true)
+        // Get active subscribers
+        const { data: subscribers, error: subsError } = await supabase
+          .from('subscriptions')
+          .select('phone_number')
+          .eq('opted_in', true)
 
-      const recipientCount = subscribers?.length || 0
+        if (subsError) {
+          console.error('Subscribers fetch error:', subsError)
+          return new Response(JSON.stringify({ error: 'Failed to fetch subscribers', details: subsError.message }), {
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
 
-      if (recipientCount === 0) {
-        return new Response(JSON.stringify({ error: 'No active subscribers' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
+        const recipientCount = subscribers?.length || 0
+
+        if (recipientCount === 0) {
+          return new Response(JSON.stringify({ error: 'No active subscribers' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
 
       // Create broadcast record
       const { data: broadcast, error: broadcastError } = await supabase
@@ -875,16 +885,23 @@ ${moment.content}
         await logError(supabase, 'moment_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, moment_id: momentId, webhook_url: webhookUrl, error_name: webhookError.name }, 'high')
       })
       
-      console.log('📡 Broadcast webhook triggered asynchronously')
+        console.log('📡 Broadcast webhook triggered asynchronously')
 
-      return new Response(JSON.stringify({
-        success: true,
-        broadcast_id: broadcast.id,
-        message: `Broadcasting "${moment.title}" to ${recipientCount} subscribers`,
-        recipient_count: recipientCount
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
+        return new Response(JSON.stringify({
+          success: true,
+          broadcast_id: broadcast.id,
+          message: `Broadcasting "${moment.title}" to ${recipientCount} subscribers`,
+          recipient_count: recipientCount
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } catch (broadcastErr) {
+        console.error('Broadcast endpoint error:', broadcastErr)
+        return new Response(JSON.stringify({ error: 'Broadcast failed', details: broadcastErr.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
     }
 
     // Delete moment
