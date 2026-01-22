@@ -26,7 +26,7 @@ LOGIN_RESPONSE=$(curl -s -X POST "${SUPABASE_URL}/functions/v1/admin-api" \
   -H "Content-Type: application/json" \
   -d '{
     "email": "info@unamifoundation.org",
-    "password": "Proof321#"
+    "password": "Proof321#moments"
   }')
 
 TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.token')
