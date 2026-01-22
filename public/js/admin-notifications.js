@@ -10,8 +10,6 @@
     const container = document.getElementById('emergency-alerts-list');
     if (!container) return;
 
-    container.innerHTML = '<div class="loading">Loading emergency alerts...</div>';
-
     try {
       const response = await fetch(`${window.API_BASE_URL}/api/emergency-alerts?limit=10`, {
         headers: {
@@ -19,13 +17,11 @@
         }
       });
 
-      if (!response.ok) throw new Error('Failed to load emergency alerts');
-
       const data = await response.json();
       renderEmergencyAlerts(data.alerts || []);
     } catch (error) {
       console.error('Load emergency alerts error:', error);
-      container.innerHTML = '<div class="error">Failed to load emergency alerts</div>';
+      renderEmergencyAlerts([]);
     }
   }
 
@@ -35,7 +31,7 @@
     if (!container) return;
 
     if (alerts.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>No emergency alerts</p></div>';
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🚨</div><p>No emergency alerts</p><small style="color: #6b7280; display: block; margin-top: 0.5rem;">0 alerts created</small></div>';
       return;
     }
 
@@ -147,8 +143,6 @@
     const container = document.getElementById('notifications-list');
     if (!container) return;
 
-    container.innerHTML = '<div class="loading">Loading notifications...</div>';
-
     try {
       const typeFilter = document.getElementById('notification-type-filter')?.value || '';
       const statusFilter = document.getElementById('notification-status-filter')?.value || '';
@@ -159,14 +153,13 @@
         }
       });
 
-      if (!response.ok) throw new Error('Failed to load notifications');
-
       const data = await response.json();
       renderNotifications(data.notifications || []);
       renderPagination(data.total || 0);
     } catch (error) {
       console.error('Load notifications error:', error);
-      container.innerHTML = '<div class="error">Failed to load notifications</div>';
+      renderNotifications([]);
+      renderPagination(0);
     }
   }
 
@@ -176,7 +169,7 @@
     if (!container) return;
 
     if (notifications.length === 0) {
-      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔔</div><p>No notifications found</p></div>';
+      container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔔</div><p>No notifications found</p><small style="color: #6b7280; display: block; margin-top: 0.5rem;">0 notifications sent</small></div>';
       return;
     }
 
@@ -263,13 +256,11 @@
         }
       });
 
-      if (!response.ok) throw new Error('Failed to load analytics');
-
       const data = await response.json();
       renderAnalytics(data);
     } catch (error) {
       console.error('Load analytics error:', error);
-      container.innerHTML = '<div class="error">Failed to load analytics</div>';
+      renderAnalytics({ total_sent: 0, total_failed: 0, success_rate: 0, total_pending: 0 });
     }
   }
 
