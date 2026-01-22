@@ -2035,38 +2035,260 @@ app.get('/public/emergency-alerts', getActiveEmergencyAlerts); // Public endpoin
 // Authority management endpoints
 app.get('/admin/authority', authenticateAdmin, async (req, res) => {
   try {
-    const { data, error } = await supabase
-      .from('authority_profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
+    const { status, scope, level, search, page = 1, limit = 20 } = req.query;
     
-    res.json({ profiles: data || [], error: error?.message });
+    let query = supabase
+      .from('authority_profiles')
+      .select('*', { count: 'exact' });
+    
+    // Apply filters
+    if (status) query = query.eq('status', status);
+    if (scope) query = query.eq('scope', scope);
+    if (level) query = query.eq('authority_level', level);
+    if (search) query = query.or(`user_identifier.ilike.%${search}%,role_label.ilike.%${search}%`);
+    
+    // Pagination
+    const offset = (page - 1) * limit;
+    query = query.range(offset, offset + limit - 1).order('created_at', { ascending: false });
+    
+    const { data, error, count } = await query;
+    
+    if (error) return res.status(500).json({ error: error.message });
+    
+    res.json({ 
+      profiles: data || [], 
+      total: count || 0,
+      page: parseInt(page),
+      limit: parseInt(limit)
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load authority profiles' });
   }
 });
 
+app.post('/admin/authority', authenticateAdmin, async (req, res) => {
+  try {
+    const { user_identifier, role_label, authority_level, scope, scope_identifier, 
+            approval_mode, blast_radius, risk_threshold, valid_until } = req.body;
+    
+    if (!user_identifier || !role_label || !authority_level || !scope) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const { data, error } = await supabase
+      .from('authority_profiles')
+      .insert({
+        user_identifier,
+        role_label,
+        authority_level: parseInt(authority_level),
+        scope,
+        scope_identifier,
+        approval_mode: approval_mode || 'ai_review',
+        blast_radius: parseInt(blast_radius) || 100,
+        risk_threshold: parseFloat(risk_threshold) || 0.7,
+        valid_until,
+        status: 'active'
+      })
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, profile: data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to create authority profile' });
+  }
+});
+
+app.put('/admin/authority/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+    
+    const { data, error } = await supabase
+      .from('authority_profiles')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, profile: data });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update authority profile' });
+  }
+});
+
+app.delete('/admin/authority/:id', authenticateAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('authority_profiles')
+      .delete()
+      .eq('id', id);
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ success: true, message: 'Authority profile deleted' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete authority profile' });
+  }
+});
+
 // Budget endpoints
 app.get('/admin/budget/overview', authenticateAdmin, async (req, res) => {
-  res.json({ total_budget: 0, spent: 0, remaining: 0, alerts: [] });
+  try {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    
+    const { data: transactions } = await supabase
+      .from('budget_transactions')
+      .select('amount')
+      .gte('created_at', startOfMonth.toISOString())
+      .eq('transaction_type', 'spend');
+    
+    const totalSpent = transactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
+    const monthlyLimit = 10000; // TODO: Get from budget_settings
+    
+    const { data: alerts } = await supabase
+      .from('budget_alerts')
+      .select('*')
+      .eq('acknowledged', false)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    res.json({ 
+      total_budget: monthlyLimit,
+      spent: totalSpent,
+      remaining: monthlyLimit - totalSpent,
+      percentage_used: (totalSpent / monthlyLimit) * 100,
+      alerts: alerts || [],
+      period: 'monthly',
+      period_start: startOfMonth.toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load budget overview' });
+  }
 });
 
 app.get('/admin/budget/settings', authenticateAdmin, async (req, res) => {
-  res.json({ settings: { monthly_limit: 10000, alert_threshold: 0.8 } });
+  try {
+    const { data } = await supabase
+      .from('budget_settings')
+      .select('*')
+      .eq('setting_key', 'monthly_limit')
+      .single();
+    
+    res.json({ 
+      settings: data?.setting_value || { monthly_limit: 10000, alert_threshold: 0.8 }
+    });
+  } catch (error) {
+    res.json({ settings: { monthly_limit: 10000, alert_threshold: 0.8 } });
+  }
 });
 
 app.get('/admin/budget/sponsors', authenticateAdmin, async (req, res) => {
-  res.json({ sponsor_budgets: [] });
+  try {
+    const { data, error } = await supabase
+      .from('sponsor_budgets')
+      .select(`
+        *,
+        sponsors(display_name)
+      `)
+      .order('created_at', { ascending: false });
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ sponsor_budgets: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load sponsor budgets' });
+  }
 });
 
 app.get('/admin/budget/transactions', authenticateAdmin, async (req, res) => {
-  res.json({ transactions: [] });
+  try {
+    const limit = parseInt(req.query.limit) || 20;
+    
+    const { data, error } = await supabase
+      .from('budget_transactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) return res.status(500).json({ error: error.message });
+    res.json({ transactions: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load transactions' });
+  }
 });
 
 // Analytics historical endpoint
 app.get('/admin/analytics/historical', authenticateAdmin, async (req, res) => {
-  const days = parseInt(req.query.days) || 30;
-  res.json({ data: [], days });
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - days);
+    
+    const { data: moments } = await supabase
+      .from('moments')
+      .select('created_at, status')
+      .gte('created_at', startDate.toISOString());
+    
+    const { data: broadcasts } = await supabase
+      .from('broadcasts')
+      .select('broadcast_started_at, success_count, failure_count')
+      .gte('broadcast_started_at', startDate.toISOString());
+    
+    const { data: subscribers } = await supabase
+      .from('subscriptions')
+      .select('opted_in_at, opted_out_at')
+      .gte('created_at', startDate.toISOString());
+    
+    // Aggregate by day
+    const dailyData = {};
+    for (let i = 0; i < days; i++) {
+      const date = new Date(startDate);
+      date.setDate(date.getDate() + i);
+      const dateKey = date.toISOString().split('T')[0];
+      dailyData[dateKey] = { 
+        date: dateKey, 
+        moments_created: 0, 
+        broadcasts_sent: 0, 
+        messages_delivered: 0,
+        new_subscribers: 0
+      };
+    }
+    
+    moments?.forEach(m => {
+      const dateKey = m.created_at.split('T')[0];
+      if (dailyData[dateKey]) dailyData[dateKey].moments_created++;
+    });
+    
+    broadcasts?.forEach(b => {
+      const dateKey = b.broadcast_started_at.split('T')[0];
+      if (dailyData[dateKey]) {
+        dailyData[dateKey].broadcasts_sent++;
+        dailyData[dateKey].messages_delivered += b.success_count || 0;
+      }
+    });
+    
+    subscribers?.forEach(s => {
+      if (s.opted_in_at) {
+        const dateKey = s.opted_in_at.split('T')[0];
+        if (dailyData[dateKey]) dailyData[dateKey].new_subscribers++;
+      }
+    });
+    
+    res.json({ 
+      data: Object.values(dailyData), 
+      days,
+      summary: {
+        total_moments: moments?.length || 0,
+        total_broadcasts: broadcasts?.length || 0,
+        total_delivered: broadcasts?.reduce((sum, b) => sum + (b.success_count || 0), 0) || 0
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load historical analytics' });
+  }
 });
 
 app.use((error, req, res, next) => {
