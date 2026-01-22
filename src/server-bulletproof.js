@@ -60,6 +60,14 @@ app.get('/', (req, res) => {
 });
 
 // Admin dashboard
+app.get('/admin', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
+  } catch (error) {
+    res.status(404).json({ error: 'Admin dashboard not found' });
+  }
+});
+
 app.get('/admin-dashboard.html', (req, res) => {
   try {
     res.sendFile(path.join(__dirname, '../public/admin-dashboard.html'));
