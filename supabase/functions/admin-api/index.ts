@@ -262,12 +262,15 @@ serve(async (req) => {
 
     // Handle both session tokens and service role tokens
     if (token.startsWith('session_')) {
-      const { data: session, error: sessionError } = await supabase
+      const { data: sessions, error: sessionError } = await supabase
         .from('admin_sessions')
         .select('*, admin_users(*)')
         .eq('token', token)
         .gt('expires_at', new Date().toISOString())
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      const session = sessions?.[0]
 
       if (sessionError || !session) {
         console.log('Session validation failed:', sessionError?.message)
