@@ -20,8 +20,8 @@
 - Indexes: 5 performance indexes
 - RLS policies: Admin-only access
 
-**Status:** ⚠️ UNKNOWN IF DEPLOYED
-**Action Required:** Verify if migration was run in production Supabase
+**Status:** ✅ DEPLOYED IN PRODUCTION
+**Verified:** 2026-01-22 - authority_profiles table exists
 
 ### 1.2 Budget System
 
@@ -37,8 +37,8 @@
 - Functions: `check_campaign_budget()` - Auto-pause logic
 - Views: `campaign_roi_analysis` - ROI calculations
 
-**Status:** ⚠️ UNKNOWN IF DEPLOYED
-**Action Required:** Check if enterprise_budget_controls.sql was run
+**Status:** ✅ DEPLOYED IN PRODUCTION
+**Verified:** 2026-01-22 - campaign_budgets table exists
 
 ### 1.3 Notification System
 
@@ -310,15 +310,22 @@ curl -H "Authorization: Bearer TOKEN" \
 
 ## 8. ESTIMATED EFFORT (REVISED)
 
-### If Schemas Already Deployed:
+### ✅ CONFIRMED: Schemas Already Deployed!
+**Production Verification:** authority_profiles and campaign_budgets tables exist
+
+**Actual Work Needed:**
 - Authority API: 4 hours (just API layer)
-- Budget API: 6 hours (just API layer)
+- Budget API: 6 hours (just API layer)  
 - Analytics: 4 hours (just API layer)
 - Frontend wiring: 6 hours
-**Total: 20 hours (not 50+ hours)**
+- Testing: 2 hours
+**Total: 22 hours**
 
-### If Schemas Need Deployment:
-- Deploy schemas: 2 hours
+**NOT NEEDED:**
+- ❌ Database schema design (already done)
+- ❌ Migration writing (already done)
+- ❌ Schema deployment (already done)
+- ❌ Function creation (already done) 2 hours
 - Authority API: 4 hours
 - Budget API: 6 hours
 - Analytics: 4 hours
