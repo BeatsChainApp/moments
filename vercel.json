@@ -12,20 +12,8 @@
       "dest": "/src/server-bulletproof.js"
     },
     {
-      "src": "/admin/(.*)",
-      "dest": "/src/server-bulletproof.js"
-    },
-    {
       "src": "/api/(.*)",
       "dest": "/src/server-bulletproof.js"
-    },
-    {
-      "src": "/public/(.*)",
-      "dest": "/src/server-bulletproof.js"
-    },
-    {
-      "src": "/(.*\\.(css|js|png|jpg|jpeg|svg|ico|json|html))",
-      "dest": "/public/$1"
     },
     {
       "src": "/(.*)",
