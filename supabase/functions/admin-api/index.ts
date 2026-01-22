@@ -676,9 +676,7 @@ serve(async (req) => {
 
         try {
           const { data: subscribers } = await supabase
-            .from('subscriptions')
-            .select('phone_number')
-            .eq('opted_in', true)
+            .rpc('get_active_subscribers')
 
           if (subscribers && subscribers.length > 0) {
             // Create broadcast record
