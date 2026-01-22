@@ -1814,7 +1814,13 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
     
   } catch (error) {
     console.error('Broadcast moment error:', error);
-    res.status(500).json({ error: 'Failed to broadcast moment' });
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
+    res.status(500).json({ 
+      error: 'Failed to broadcast moment',
+      message: error.message,
+      details: error.toString()
+    });
   }
 });
 
