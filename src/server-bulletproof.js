@@ -1600,7 +1600,7 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
     // Get moment details first
     const { data: moment, error: momentError } = await supabase
       .from('moments')
-      .select('*')
+      .select('id, title, content, region, category, status, is_sponsored, sponsor_id, broadcasted_at, created_at')
       .eq('id', id)
       .single();
     
@@ -1686,12 +1686,8 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
       console.error('Moment update error:', updateError);
     }
     
-    // Format broadcast message
-    const sponsorText = moment.is_sponsored && moment.sponsors?.display_name 
-      ? `\n\nBrought to you by ${moment.sponsors.display_name}` 
-      : '';
-    
-    const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\n\n${moment.title}\n\n${moment.content}${sponsorText}\n\n🌐 More: moments.unamifoundation.org`;
+    // Format broadcast message (no sponsor info for now)
+    const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}\n\n${moment.title}\n\n${moment.content}\n\n🌐 More: moments.unamifoundation.org`;
     
     // Create batches for parallel processing
     const batchSize = 50; // 50 recipients per batch
