@@ -311,8 +311,8 @@
             </div>
             
             <!-- Section 3: Navigation with horizontal scroll -->
-            <div class="admin-nav-container">
-                <nav class="admin-nav" id="admin-nav" role="navigation" aria-label="Admin sections">
+            <div class="admin-nav-container" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                <nav class="admin-nav" id="admin-nav" role="navigation" aria-label="Admin sections" style="display: flex; flex-wrap: nowrap; min-width: min-content; gap: 0.5rem; padding: 0.5rem 0;">
                     <button class="admin-nav-item active" data-section="dashboard" aria-label="Dashboard section" aria-current="page">
                         <span class="icon icon-dashboard"></span>
                         <span>Dashboard</span>
@@ -353,6 +353,10 @@
                         <span class="icon icon-authority">🔐</span>
                         <span>Authority</span>
                     </button>
+                    <button class="admin-nav-item" data-section="notifications" aria-label="Notifications section">
+                        <span class="icon icon-notifications">🔔</span>
+                        <span>Notifications</span>
+                    </button>
                     <button class="admin-nav-item" data-section="budget-controls" aria-label="Budget controls section">
                         <span class="icon icon-budget">💰</span>
                         <span>Budget</span>
@@ -360,14 +364,6 @@
                     <button class="admin-nav-item" data-section="reports" aria-label="Reports section">
                         <span class="icon icon-reports">📊</span>
                         <span>Reports</span>
-                    </button>
-                    <button class="admin-nav-item" data-section="notifications" aria-label="Notifications section">
-                        <span class="icon icon-notifications">🔔</span>
-                        <span>Notifications</span>
-                    </button>
-                    <button class="admin-nav-item" data-section="help" aria-label="Help section">
-                        <span class="icon icon-help"></span>
-                        <span>Help</span>
                     </button>
                 </nav>
             </div>
