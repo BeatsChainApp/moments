@@ -797,11 +797,32 @@ ${moment.content}
           })
         }
 
-        // Get active subscribers
-        const { data: subscribers, error: subsError } = await supabase
-          .from('subscriptions')
-          .select('phone_number')
-          .eq('opted_in', true)
+        // Get active subscribers - use RPC function to bypass RLS
+        let subscribers = []
+        let subsError = null
+        
+        try {
+          // Try RPC function first (bypasses RLS)
+          const { data: rpcData, error: rpcError } = await supabase
+            .rpc('get_active_subscribers')
+          
+          if (!rpcError && rpcData) {
+            subscribers = rpcData
+          } else {
+            // Fallback to direct query
+            const { data, error } = await supabase
+              .from('subscriptions')
+              .select('phone_number')
+              .eq('opted_in', true)
+            
+            subscribers = data
+            subsError = error || rpcError
+          }
+        } catch (e) {
+          subsError = e
+        }
+
+        console.log('Subscribers query result:', { count: subscribers?.length, error: subsError?.message })
 
         if (subsError) {
           console.error('Subscribers fetch error:', subsError)
@@ -810,7 +831,8 @@ ${moment.content}
             return new Response(JSON.stringify({ 
               error: 'Subscriptions table not properly configured', 
               details: subsError.message,
-              hint: 'Run supabase/CLEAN_SCHEMA.sql to create the subscriptions table'
+              hint: 'Run supabase/CLEAN_SCHEMA.sql to create the subscriptions table',
+              debug: { code: subsError.code, hint: subsError.hint }
             }), {
               status: 500,
               headers: { ...corsHeaders, 'Content-Type': 'application/json' }
