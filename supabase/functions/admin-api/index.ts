@@ -48,6 +48,8 @@ serve(async (req) => {
   }
 
   const startTime = Date.now()
+  const FUNCTION_VERSION = 'v2.0-rpc-fix' // Version identifier
+  
   try {
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -213,7 +215,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-      return new Response(JSON.stringify({ role: 'superadmin' }), {
+      return new Response(JSON.stringify({ role: 'superadmin', version: FUNCTION_VERSION }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
