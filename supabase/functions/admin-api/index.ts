@@ -677,7 +677,7 @@ serve(async (req) => {
 
           if (subscribers && subscribers.length > 0) {
             // Create broadcast record
-            const { data: broadcast } = await supabase
+            const { data: broadcast, error: broadcastError } = await supabase
               .from('broadcasts')
               .insert({
                 moment_id: moment.id,
@@ -687,6 +687,11 @@ serve(async (req) => {
               })
               .select()
               .single()
+
+            if (broadcastError || !broadcast) {
+              console.error('❌ Failed to create broadcast record:', broadcastError?.message)
+              throw new Error(`Broadcast creation failed: ${broadcastError?.message}`)
+            }
 
             // Update moment to broadcasted
             await supabase
