@@ -1609,8 +1609,8 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
     }
     
     // Get active subscribers
-    const { data: subscribers, error: subscribersError } = await supabase
     console.log('Fetching subscribers...');
+    const { data: subscribers, error: subscribersError } = await supabase
       .from('subscriptions')
       .select('phone_number')
       .eq('opted_in', true);
