@@ -2032,6 +2032,43 @@ app.put('/api/emergency-alerts/:id', authenticateAdmin, updateEmergencyAlert);
 app.delete('/api/emergency-alerts/:id', authenticateAdmin, deleteEmergencyAlert);
 app.get('/public/emergency-alerts', getActiveEmergencyAlerts); // Public endpoint
 
+// Authority management endpoints
+app.get('/admin/authority', authenticateAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('authority_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    res.json({ profiles: data || [], error: error?.message });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to load authority profiles' });
+  }
+});
+
+// Budget endpoints
+app.get('/admin/budget/overview', authenticateAdmin, async (req, res) => {
+  res.json({ total_budget: 0, spent: 0, remaining: 0, alerts: [] });
+});
+
+app.get('/admin/budget/settings', authenticateAdmin, async (req, res) => {
+  res.json({ settings: { monthly_limit: 10000, alert_threshold: 0.8 } });
+});
+
+app.get('/admin/budget/sponsors', authenticateAdmin, async (req, res) => {
+  res.json({ sponsor_budgets: [] });
+});
+
+app.get('/admin/budget/transactions', authenticateAdmin, async (req, res) => {
+  res.json({ transactions: [] });
+});
+
+// Analytics historical endpoint
+app.get('/admin/analytics/historical', authenticateAdmin, async (req, res) => {
+  const days = parseInt(req.query.days) || 30;
+  res.json({ data: [], days });
+});
+
 app.use((error, req, res, next) => {
   console.error('Server error:', error.message);
   res.status(500).json({ error: 'Internal server error' });
