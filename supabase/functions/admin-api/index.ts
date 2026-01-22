@@ -206,6 +206,17 @@ serve(async (req) => {
       })
     }
 
+    // Debug endpoint to check code version
+    if (path.includes('/debug-broadcast') && method === 'GET') {
+      return new Response(JSON.stringify({
+        version: FUNCTION_VERSION,
+        uses_rpc: true,
+        code_snippet: 'await supabase.rpc(get_active_subscribers)'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Get user role endpoint (requires auth header)
     if ((path.includes('/user-role') || path.includes('/admin/user-role')) && method === 'GET') {
       const authHeader = req.headers.get('Authorization')
