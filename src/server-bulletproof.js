@@ -1390,8 +1390,8 @@ app.post('/admin/campaigns/:id/activate', authenticateAdmin, async (req, res) =>
       
       await supabase.from('broadcast_batches').update({ status: 'processing' }).eq('id', batchRecord.id);
       
-      for (const recipient of batchRecord.recipients) {
-        let phone = recipient.replace(/\D/g, '');
+      for (const phoneNumber of batchRecord.recipients) {
+        let phone = phoneNumber.replace(/\D/g, '');
         if (!phone.startsWith('27')) phone = phone.startsWith('0') ? '27' + phone.substring(1) : '27' + phone;
         
         const success = await sendMessage(phone, broadcastMessage);
@@ -1737,8 +1737,8 @@ app.post('/admin/moments/:id/broadcast', authenticateAdmin, async (req, res) => 
       
       await supabase.from('broadcast_batches').update({ status: 'processing' }).eq('id', batchRecord.id);
       
-      for (const recipient of batchRecord.recipients) {
-        let phone = recipient.replace(/\D/g, '');
+      for (const phoneNumber of batchRecord.recipients) {
+        let phone = phoneNumber.replace(/\D/g, '');
         if (!phone.startsWith('27')) phone = phone.startsWith('0') ? '27' + phone.substring(1) : '27' + phone;
         
         const success = await sendMessage(phone, broadcastMessage);
