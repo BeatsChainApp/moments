@@ -719,14 +719,15 @@ serve(async (req) => {
               })
               .eq('id', moment.id)
 
-            // Trigger broadcast webhook
+            // Trigger broadcast webhook with dynamic URL
+            const dynamicUrl = moment.pwa_link || `https://moments.unamifoundation.org/m/${moment.id}`
             const broadcastMsg = `📢 Unami Foundation Moments — ${moment.region}
 
 ${moment.title}
 
 ${moment.content}
 
-🌐 More: moments.unamifoundation.org/m/${moment.id}`
+🌐 More: ${dynamicUrl}`
 
             const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
             const webhookPayload = JSON.stringify({
@@ -866,14 +867,15 @@ ${moment.content}
         })
         .eq('id', momentId)
 
-      // Format broadcast message
+      // Format broadcast message with dynamic URL
+      const dynamicUrl = moment.pwa_link || `https://moments.unamifoundation.org/m/${momentId}`
       const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}
 
 ${moment.title}
 
 ${moment.content}
 
-🌐 More: moments.unamifoundation.org/m/${momentId}`
+🌐 More: ${dynamicUrl}`
 
       // Trigger broadcast webhook
       const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
@@ -1199,12 +1201,12 @@ ${moment.content}
       })
     }
 
-    // Get single campaign
-    if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'GET') {
+    // Get single campaign - must come before broadcast endpoint
+    if (path.match(/\/campaigns\/[a-f0-9-]{36}$/) && method === 'GET' && !path.includes('/broadcast') && !path.includes('/activate')) {
       const campaignId = path.split('/campaigns/')[1]
       const { data: campaign, error } = await supabase
         .from('campaigns')
-        .select('*')
+        .select('*, sponsors(*)')
         .eq('id', campaignId)
         .single()
 
@@ -1843,9 +1845,10 @@ ${moment.content}
           console.error('Compliance log failed:', complianceError)
         }
 
-        // Trigger webhook
+        // Trigger webhook with dynamic URL
         const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
-        const broadcastMessage = `📢 ${campaign.title}\n\n${campaign.content}\n\n🌐 More: moments.unamifoundation.org/m/${moment.id}`
+        const dynamicUrl = moment.pwa_link || `https://moments.unamifoundation.org/m/${moment.id}`
+        const broadcastMessage = `📢 ${campaign.title}\n\n${campaign.content}\n\n🌐 More: ${dynamicUrl}`
         
         fetch(webhookUrl, {
           method: 'POST',
@@ -2218,6 +2221,89 @@ ${moment.content}
       }
 
       return new Response(JSON.stringify({ success: true }), { headers: corsHeaders });
+    }
+
+    // Emergency alerts endpoints
+    if (path.includes('/emergency-alerts') && method === 'GET' && !path.match(/\/emergency-alerts\/[a-f0-9-]{36}/)) {
+      const { data: alerts, error } = await supabase
+        .from('emergency_alerts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        console.error('Emergency alerts query error:', error)
+      }
+
+      return new Response(JSON.stringify({ alerts: alerts || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.includes('/emergency-alerts') && method === 'POST' && body) {
+      const { data: alert, error } = await supabase
+        .from('emergency_alerts')
+        .insert({
+          title: body.title,
+          message: body.message,
+          severity: body.severity || 'medium',
+          regions: body.regions || [],
+          active: true,
+          created_by: 'admin'
+        })
+        .select()
+        .single()
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ alert }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/emergency-alerts\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
+      const alertId = path.split('/emergency-alerts/')[1]
+      const { data: alert, error } = await supabase
+        .from('emergency_alerts')
+        .update(body)
+        .eq('id', alertId)
+        .select()
+        .single()
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ alert }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/emergency-alerts\/[a-f0-9-]{36}$/) && method === 'DELETE') {
+      const alertId = path.split('/emergency-alerts/')[1]
+      const { error } = await supabase
+        .from('emergency_alerts')
+        .delete()
+        .eq('id', alertId)
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
     }
 
     // Authority endpoints
