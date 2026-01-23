@@ -1166,7 +1166,14 @@ ${moment.content}
     }
 
     // Create campaign with auto-approval for admin
-    if (path.includes('/campaigns') && method === 'POST' && body) {
+    if (path.includes('/campaigns') && !path.includes('/broadcast') && method === 'POST' && body) {
+      if (!body.title || !body.content) {
+        return new Response(JSON.stringify({ error: 'Title and content are required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
