@@ -1470,9 +1470,12 @@
             container.innerHTML = '<div class="loading">Loading requests...</div>';
             
             try {
-                const response = await fetch(`${window.API_BASE_URL}/admin/authority/requests`, {
+                const url = `${window.API_BASE_URL}/admin/authority/requests`;
+                console.log('Fetching authority requests from:', url);
+                const response = await fetch(url, {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
                 });
+                console.log('Response status:', response.status);
                 const data = await response.json();
                 
                 if (!data.success || !data.requests || data.requests.length === 0) {
