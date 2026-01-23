@@ -712,6 +712,74 @@ serve(async (req) => {
                 await sendWhatsAppMessage(message.from, '📊 Authority stats coming soon.\n\nUnami Foundation Moments App\nDigital Notice Board')
                 continue
               }
+              
+              // Handle authority role selection from list
+              if (buttonId.startsWith('auth_school_') || buttonId.startsWith('auth_community_') || buttonId.startsWith('auth_government_') || buttonId.startsWith('auth_ngo_') || buttonId.startsWith('auth_event_')) {
+                const roleMap = {
+                  'auth_school_principal': { key: 'school_principal', name: 'School Principal' },
+                  'auth_community_leader': { key: 'community_leader', name: 'Community Leader' },
+                  'auth_government_official': { key: 'government_official', name: 'Government Official' },
+                  'auth_ngo_coordinator': { key: 'ngo_coordinator', name: 'NGO Coordinator' },
+                  'auth_event_organizer': { key: 'event_organizer', name: 'Event Organizer' }
+                }
+                
+                const role = roleMap[buttonId]
+                if (role) {
+                  const { data: requestState } = await supabase
+                    .from('authority_request_state')
+                    .select('*')
+                    .eq('phone_number', message.from)
+                    .single()
+                  
+                  if (requestState) {
+                    await supabase
+                      .from('authority_requests')
+                      .update({ role_requested: role.key })
+                      .eq('id', requestState.request_id)
+                    
+                    await supabase
+                      .from('authority_request_state')
+                      .update({ current_step: 'awaiting_institution', updated_at: new Date().toISOString() })
+                      .eq('phone_number', message.from)
+                    
+                    await sendWhatsAppMessage(message.from, `✅ Role: ${role.name}\n\nWhat is your institution/organization name?`)
+                  }
+                }
+                continue
+              }
+              
+              // Handle authority region selection from list
+              if (buttonId.startsWith('auth_region_')) {
+                const regionMap = {
+                  'auth_region_kzn': 'KZN', 'auth_region_wc': 'WC', 'auth_region_gp': 'GP',
+                  'auth_region_ec': 'EC', 'auth_region_fs': 'FS', 'auth_region_lp': 'LP',
+                  'auth_region_mp': 'MP', 'auth_region_nc': 'NC', 'auth_region_nw': 'NW'
+                }
+                
+                const region = regionMap[buttonId]
+                if (region) {
+                  const { data: requestState } = await supabase
+                    .from('authority_request_state')
+                    .select('*')
+                    .eq('phone_number', message.from)
+                    .single()
+                  
+                  if (requestState) {
+                    await supabase
+                      .from('authority_requests')
+                      .update({ region, status: 'pending' })
+                      .eq('id', requestState.request_id)
+                    
+                    await supabase
+                      .from('authority_request_state')
+                      .delete()
+                      .eq('phone_number', message.from)
+                    
+                    await sendWhatsAppMessage(message.from, `✅ Request Submitted!\n\nYour authority request has been sent to our admin team for review.\n\nYou'll receive a notification once it's been reviewed.\n\nThank you!`)
+                  }
+                }
+                continue
+              }
             }
             
             // Check if message is a command first
@@ -1020,7 +1088,20 @@ serve(async (req) => {
                     updated_at: new Date().toISOString()
                   })
                 
-                await sendWhatsAppMessage(message.from, '📝 Authority Request\n\nWhat role are you requesting?\n\nOptions:\n🏫 School Principal\n👥 Community Leader\n🏛️ Government Official\n🏥 NGO Coordinator\n📅 Event Organizer\n\nReply with the role name.')
+                await sendInteractiveList(message.from,
+                  '📝 Authority Request\n\nWhat role are you requesting?',
+                  'Select Role',
+                  [{
+                    title: 'Available Roles',
+                    rows: [
+                      { id: 'auth_school_principal', title: '🏫 School Principal', description: 'Education leader' },
+                      { id: 'auth_community_leader', title: '👥 Community Leader', description: 'Ward councillor' },
+                      { id: 'auth_government_official', title: '🏛️ Government Official', description: 'Dept agency' },
+                      { id: 'auth_ngo_coordinator', title: '🤝 NGO Coordinator', description: 'NGO staff' },
+                      { id: 'auth_event_organizer', title: '📅 Event Organizer', description: 'Event promoter' }
+                    ]
+                  }]
+                )
               }
               
               console.log('Authority request initiated for:', message.from)
@@ -1061,26 +1142,26 @@ serve(async (req) => {
               await sendWhatsAppMessage(message.from, `✅ Institution: ${text}\n\nWhat region? (KZN, WC, GP, EC, FS, LP, MP, NC, NW)`)
               console.log('Institution set:', text)
             } else if (requestState && requestState.current_step === 'awaiting_region') {
-              // Handle region
-              const regionMap = { 'kzn': 'KZN', 'wc': 'WC', 'gp': 'GP', 'ec': 'EC', 'fs': 'FS', 'lp': 'LP', 'mp': 'MP', 'nc': 'NC', 'nw': 'NW' }
-              const region = regionMap[text]
-              
-              if (!region) {
-                await sendWhatsAppMessage(message.from, '❌ Invalid region. Please choose: KZN, WC, GP, EC, FS, LP, MP, NC, NW')
-              } else {
-                await supabase
-                  .from('authority_requests')
-                  .update({ region, status: 'pending' })
-                  .eq('id', requestState.request_id)
-                
-                await supabase
-                  .from('authority_request_state')
-                  .delete()
-                  .eq('phone_number', message.from)
-                
-                await sendWhatsAppMessage(message.from, `✅ Request Submitted!\n\nYour authority request has been sent to our admin team for review.\n\nYou'll receive a notification once it's been reviewed.\n\nThank you!`)
-                console.log('Authority request completed for:', message.from)
-              }
+              // Handle region with interactive list
+              await sendInteractiveList(message.from,
+                '✅ Institution set\n\nWhat region?',
+                'Select Region',
+                [{
+                  title: 'Provinces',
+                  rows: [
+                    { id: 'auth_region_kzn', title: '🏖️ KZN', description: 'KwaZulu-Natal' },
+                    { id: 'auth_region_wc', title: '🍷 WC', description: 'Western Cape' },
+                    { id: 'auth_region_gp', title: '🏙️ GP', description: 'Gauteng' },
+                    { id: 'auth_region_ec', title: '🌊 EC', description: 'Eastern Cape' },
+                    { id: 'auth_region_fs', title: '🌾 FS', description: 'Free State' },
+                    { id: 'auth_region_lp', title: '🌳 LP', description: 'Limpopo' },
+                    { id: 'auth_region_mp', title: '⛰️ MP', description: 'Mpumalanga' },
+                    { id: 'auth_region_nc', title: '🏜️ NC', description: 'Northern Cape' },
+                    { id: 'auth_region_nw', title: '💎 NW', description: 'North West' }
+                  ]
+                }]
+              )
+              console.log('Region selector sent')
             } else if (['interests', 'categories', 'topics'].includes(text)) {
               // Interests/Categories command
               const interestsMsg = `🏷️ Choose your interests (reply with category codes):\n\n🎓 EDU - Education & Learning\n🛡️ SAF - Safety & Security\n🎭 CUL - Culture & Arts\n💼 OPP - Opportunities & Jobs\n🎉 EVE - Events & Gatherings\n⚕️ HEA - Health & Wellness\n📱 TEC - Technology & Digital\n🏠 COM - Community News\n\nReply with codes like: EDU SAF OPP\nOr reply ALL for everything`
