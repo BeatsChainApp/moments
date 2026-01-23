@@ -70,45 +70,57 @@ async function loadAuthoritySection() {
         const { authority_profiles } = await response.json();
         
         if (!authority_profiles || authority_profiles.length === 0) {
-            container.innerHTML = '<p class="empty-message">No authorities assigned yet</p>';
+            container.innerHTML = '<div class="card"><p style="text-align: center; padding: 2rem; color: #666;">No authorities assigned yet. Click "Assign Authority" to get started.</p></div>';
             return;
         }
         
         container.innerHTML = `
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th><input type="checkbox" onchange="selectAllAuthorities(this)"></th>
-                        <th>Phone</th>
-                        <th>Role</th>
-                        <th>Institution</th>
-                        <th>Region</th>
-                        <th>Status</th>
-                        <th>Expires</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${authority_profiles.map(a => {
-                        const expiry = new Date(a.valid_until);
-                        const daysLeft = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
-                        const statusBadge = daysLeft < 0 ? '🔴 Expired' : daysLeft < 7 ? '🟡 Expiring' : '🟢 Active';
-                        
-                        return `
+            <div class="card" style="overflow-x: auto;">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <td><input type="checkbox" class="authority-checkbox" data-id="${a.id}" onchange="toggleAuthority('${a.id}', this)"></td>
-                            <td>${a.user_identifier}</td>
-                            <td>${a.role_label || 'N/A'}</td>
-                            <td>${a.scope_identifier || 'N/A'}</td>
-                            <td>${a.region || 'N/A'}</td>
-                            <td>${statusBadge}</td>
-                            <td>${expiry.toLocaleDateString()} (${daysLeft}d)</td>
+                            <th style="width: 40px;"><input type="checkbox" onchange="selectAllAuthorities(this)" aria-label="Select all"></th>
+                            <th>Phone</th>
+                            <th>Role</th>
+                            <th>Institution</th>
+                            <th>Region</th>
+                            <th>Status</th>
+                            <th>Expires</th>
                         </tr>
-                    `}).join('')}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${authority_profiles.map(a => {
+                            const expiry = new Date(a.valid_until);
+                            const daysLeft = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+                            let statusBadge, statusClass;
+                            if (daysLeft < 0) {
+                                statusBadge = 'Expired';
+                                statusClass = 'badge-danger';
+                            } else if (daysLeft < 7) {
+                                statusBadge = 'Expiring';
+                                statusClass = 'badge-warning';
+                            } else {
+                                statusBadge = 'Active';
+                                statusClass = 'badge-success';
+                            }
+                            
+                            return `
+                            <tr>
+                                <td data-label=""><input type="checkbox" class="authority-checkbox" data-id="${a.id}" onchange="toggleAuthority('${a.id}', this)"></td>
+                                <td data-label="Phone">${a.user_identifier}</td>
+                                <td data-label="Role">${a.role_label || 'N/A'}</td>
+                                <td data-label="Institution">${a.scope_identifier || 'N/A'}</td>
+                                <td data-label="Region">${a.region || 'N/A'}</td>
+                                <td data-label="Status"><span class="badge ${statusClass}">${statusBadge}</span></td>
+                                <td data-label="Expires">${expiry.toLocaleDateString()} <small>(${daysLeft}d)</small></td>
+                            </tr>
+                        `}).join('')}
+                    </tbody>
+                </table>
+            </div>
         `;
     } catch (error) {
-        container.innerHTML = '<p class="error">Failed to load authorities</p>';
+        container.innerHTML = '<div class="card"><p class="error">Failed to load authorities</p></div>';
         console.error(error);
     }
 }
