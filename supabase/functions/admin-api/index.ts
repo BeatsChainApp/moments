@@ -2425,6 +2425,69 @@ ${moment.content}
       })
     }
 
+    // Authority requests endpoints - MUST BE BEFORE general /authority route
+    if (path.includes('/authority/requests') && method === 'GET' && !path.match(/\/requests\/[a-f0-9-]{36}/)) {
+      const { data: requests, error } = await supabase
+        .from('authority_requests')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return new Response(JSON.stringify({ success: true, requests: requests || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/approve$/) && method === 'POST') {
+      const id = path.split('/requests/')[1].split('/approve')[0]
+      const { data: request } = await supabase.from('authority_requests').select('*').eq('id', id).single()
+      
+      if (!request) throw new Error('Request not found')
+      
+      const presets = {
+        school_principal: { name: "School Principal", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365 },
+        community_leader: { name: "Community Leader", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180 },
+        government_official: { name: "Government Official", authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730 },
+        ngo_coordinator: { name: "NGO Coordinator", authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365 },
+        event_organizer: { name: "Event Organizer", authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90 }
+      }
+      const preset = presets[request.role_requested]
+      
+      const validFrom = new Date()
+      const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
+      
+      await supabase.from('authority_profiles').insert({
+        user_identifier: request.phone_number,
+        role_label: preset.name,
+        authority_level: preset.authority_level,
+        scope: preset.scope,
+        scope_identifier: request.institution,
+        approval_mode: preset.approval_mode,
+        blast_radius: preset.blast_radius,
+        risk_threshold: preset.risk_threshold,
+        valid_from: validFrom.toISOString(),
+        valid_until: validUntil.toISOString(),
+        status: 'active',
+        region: request.region
+      })
+      
+      await supabase.from('authority_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id)
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/reject$/) && method === 'POST') {
+      const id = path.split('/requests/')[1].split('/reject')[0]
+      await supabase.from('authority_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id)
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Authority endpoints
     if (path.includes('/authority') && method === 'GET' && !path.match(/\/authority\/[a-f0-9-]{36}/)) {
       const page = parseInt(url.searchParams.get('page') || '1')
@@ -2593,68 +2656,6 @@ ${moment.content}
       
       if (error) throw error
       return new Response(JSON.stringify(analytics || {}), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Authority requests endpoints
-    if (path.includes('/authority/requests') && method === 'GET' && !path.match(/\/requests\/[a-f0-9-]{36}/)) {
-      const { data: requests, error } = await supabase
-        .from('authority_requests')
-        .select('*')
-        .order('created_at', { ascending: false })
-      
-      if (error) throw error
-      return new Response(JSON.stringify({ requests: requests || [] }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/approve$/) && method === 'POST') {
-      const id = path.split('/requests/')[1].split('/approve')[0]
-      const { data: request } = await supabase.from('authority_requests').select('*').eq('id', id).single()
-      
-      if (!request) throw new Error('Request not found')
-      
-      const presets = {
-        school_principal: { name: "School Principal", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365 },
-        community_leader: { name: "Community Leader", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180 },
-        government_official: { name: "Government Official", authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730 },
-        ngo_coordinator: { name: "NGO Coordinator", authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365 },
-        event_organizer: { name: "Event Organizer", authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90 }
-      }
-      const preset = presets[request.role_requested]
-      
-      const validFrom = new Date()
-      const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
-      
-      await supabase.from('authority_profiles').insert({
-        user_identifier: request.phone_number,
-        role_label: preset.name,
-        authority_level: preset.authority_level,
-        scope: preset.scope,
-        scope_identifier: request.institution,
-        approval_mode: preset.approval_mode,
-        blast_radius: preset.blast_radius,
-        risk_threshold: preset.risk_threshold,
-        valid_from: validFrom.toISOString(),
-        valid_until: validUntil.toISOString(),
-        status: 'active',
-        region: request.region
-      })
-      
-      await supabase.from('authority_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id)
-      
-      return new Response(JSON.stringify({ success: true }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/reject$/) && method === 'POST') {
-      const id = path.split('/requests/')[1].split('/reject')[0]
-      await supabase.from('authority_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id)
-      
-      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
