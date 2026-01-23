@@ -2545,10 +2545,6 @@ async function loadAuthorityProfiles() {
         }
     }
 }
-    }
-}
-
-
 
 function displayAuthorityProfiles(profiles) {
     const list = document.getElementById('authority-list');
