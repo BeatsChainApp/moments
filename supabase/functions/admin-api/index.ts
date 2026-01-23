@@ -2306,6 +2306,42 @@ ${moment.content}
       })
     }
 
+    // Authority role presets endpoint
+    if (path.includes('/authority/presets') && method === 'GET') {
+      const presets = {
+        school_principal: { name: "School Principal", icon: "🏫", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365, description: "For school principals and education leaders" },
+        community_leader: { name: "Community Leader", icon: "👥", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180, description: "For ward councillors and community organizers" },
+        government_official: { name: "Government Official", icon: "🏛️", authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730, description: "For government departments and agencies" },
+        ngo_coordinator: { name: "NGO Coordinator", icon: "🤝", authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365, description: "For NGO staff and regional coordinators" },
+        event_organizer: { name: "Event Organizer", icon: "📅", authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90, description: "For local event organizers and promoters" }
+      }
+      return new Response(JSON.stringify({ presets }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Search authority profiles
+    if (path.includes('/authority/search') && method === 'GET') {
+      const query = url.searchParams.get('q') || ''
+      const statusFilter = url.searchParams.get('status') || ''
+      
+      let dbQuery = supabase.from('authority_profiles').select('*').order('created_at', { ascending: false }).limit(50)
+      
+      if (query) {
+        dbQuery = dbQuery.or(`user_identifier.ilike.%${query}%,role_label.ilike.%${query}%,scope_identifier.ilike.%${query}%`)
+      }
+      
+      if (statusFilter) {
+        dbQuery = dbQuery.eq('status', statusFilter)
+      }
+      
+      const { data, error } = await dbQuery
+      
+      return new Response(JSON.stringify({ authority_profiles: data || [], query, status: statusFilter }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Authority endpoints
     if (path.includes('/authority') && method === 'GET' && !path.match(/\/authority\/[a-f0-9-]{36}/)) {
       const page = parseInt(url.searchParams.get('page') || '1')
@@ -2385,6 +2421,30 @@ ${moment.content}
     }
 
     if (path.includes('/authority') && method === 'POST' && body) {
+      // Apply preset defaults if preset_key provided
+      if (body.preset_key) {
+        const presets = {
+          school_principal: { authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365 },
+          community_leader: { authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180 },
+          government_official: { authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730 },
+          ngo_coordinator: { authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365 },
+          event_organizer: { authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90 }
+        }
+        const preset = presets[body.preset_key]
+        if (preset) {
+          body.authority_level = body.authority_level || preset.authority_level
+          body.scope = body.scope || preset.scope
+          body.approval_mode = body.approval_mode || preset.approval_mode
+          body.blast_radius = body.blast_radius || preset.blast_radius
+          body.risk_threshold = body.risk_threshold || preset.risk_threshold
+          const validFrom = new Date()
+          const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
+          body.valid_from = body.valid_from || validFrom.toISOString()
+          body.valid_until = body.valid_until || validUntil.toISOString()
+        }
+      }
+      body.status = body.status || 'active'
+      
       const { data, error } = await supabase
         .from('authority_profiles')
         .insert(body)

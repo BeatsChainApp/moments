@@ -47,6 +47,14 @@
         .section.active { display: block; }
         .card { background: white; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .form-group { margin-bottom: 1rem; }
+        .role-presets { display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0; }
+        .role-preset { border: 2px solid #ddd; padding: 15px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .role-preset:hover { border-color: #007bff; background: #f8f9fa; }
+        .role-preset.selected { border-color: #007bff; background: #e7f3ff; }
+        .role-preset h4 { margin: 0 0 5px 0; font-size: 18px; }
+        .role-preset p { margin: 0; color: #666; font-size: 14px; }
+        .preset-info { background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #007bff; }
+        .preset-info ul { margin: 10px 0 0 20px; }
         .form-group label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.875rem; }
         .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.375rem; font-size: 1rem; }
         .form-group textarea { min-height: 100px; resize: vertical; }
@@ -1408,77 +1416,47 @@
                     
                     <div class="form-group">
                         <label>Phone Number *</label>
-                        <input type="tel" name="user_identifier" required placeholder="+27123456789" pattern="\+[1-9]\d{1,14}">
+                        <input type="tel" id="authority-phone" name="user_identifier" required placeholder="+27123456789" pattern="\+[1-9]\d{1,14}">
                         <small style="color: #6b7280;">WhatsApp phone number in international format</small>
                     </div>
                     
                     <div class="form-group">
-                        <label>Role Label *</label>
-                        <input type="text" name="role_label" required placeholder="e.g., School Principal, Community Leader" maxlength="100">
-                        <small style="color: #6b7280;">Descriptive role title</small>
+                        <label>Select Role *</label>
+                        <div id="role-presets" class="role-presets">
+                            <div class="loading">Loading roles...</div>
+                        </div>
                     </div>
                     
                     <div class="form-group">
-                        <label>Authority Level *</label>
-                        <select name="authority_level" required id="authority-level-select">
-                            <option value="">Select Level</option>
-                            <option value="1">Level 1 - Basic (Manual review required)</option>
-                            <option value="2">Level 2 - Trusted (AI review, limited reach)</option>
-                            <option value="3">Level 3 - Leader (Auto-approve safe content)</option>
-                            <option value="4">Level 4 - Coordinator (Regional authority)</option>
-                            <option value="5">Level 5 - Administrator (Full authority)</option>
+                        <label>Institution/Organization *</label>
+                        <input type="text" id="authority-scope-id" name="scope_identifier" required placeholder="e.g., Duck Ponds High School" maxlength="100">
+                        <small style="color: #6b7280;">Name of school, organization, or department</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Region (Optional)</label>
+                        <select name="region" id="authority-region">
+                            <option value="">All Regions</option>
+                            <option value="KZN">KZN</option>
+                            <option value="WC">WC</option>
+                            <option value="GP">GP</option>
+                            <option value="EC">EC</option>
+                            <option value="FS">FS</option>
+                            <option value="LP">LP</option>
+                            <option value="MP">MP</option>
+                            <option value="NC">NC</option>
+                            <option value="NW">NW</option>
                         </select>
                     </div>
                     
-                    <div class="form-group">
-                        <label>Scope *</label>
-                        <select name="scope" required id="authority-scope-select">
-                            <option value="">Select Scope</option>
-                            <option value="school">School (Specific institution)</option>
-                            <option value="community">Community (Local area)</option>
-                            <option value="region">Region (District/Municipality)</option>
-                            <option value="province">Province (Provincial level)</option>
-                            <option value="national">National (Country-wide)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Scope Identifier</label>
-                        <input type="text" name="scope_identifier" placeholder="e.g., school_001, soweto_central, kzn_durban" maxlength="100">
-                        <small style="color: #6b7280;">Specific identifier for the scope (optional)</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Approval Mode *</label>
-                        <select name="approval_mode" required>
-                            <option value="admin_review">Admin Review (Manual approval)</option>
-                            <option value="ai_review">AI Review (Automated with oversight)</option>
-                            <option value="auto">Auto Approve (Trusted sources only)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Blast Radius</label>
-                        <input type="number" name="blast_radius" min="1" max="10000" value="100" placeholder="100">
-                        <small style="color: #6b7280;">Maximum number of subscribers this authority can reach</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Risk Threshold</label>
-                        <input type="number" name="risk_threshold" min="0" max="1" step="0.1" value="0.7" placeholder="0.7">
-                        <small style="color: #6b7280;">MCP confidence threshold for auto-approval (0.0-1.0)</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>Valid Until</label>
-                        <input type="datetime-local" name="valid_until">
-                        <small style="color: #6b7280;">Leave empty for permanent authority</small>
+                    <div id="preset-info" class="preset-info" style="display:none;">
+                        <p><strong>This role will allow:</strong></p>
+                        <ul id="preset-details"></ul>
                     </div>
                     
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <button type="submit" class="btn" id="authority-submit-btn">Assign Authority</button>
-                        <button type="button" class="btn btn-secondary" data-action="reset-authority-form">Reset</button>
-
+                        <button type="button" class="btn btn-secondary" data-action="close-authority-form">Cancel</button>
                     </div>
                 </form>
             </div>

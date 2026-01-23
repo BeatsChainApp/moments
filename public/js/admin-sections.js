@@ -2,6 +2,56 @@
 // Use existing API_BASE_URL from window scope
 
 // Authority Section
+let selectedPreset = null;
+
+async function loadAuthorityPresets() {
+    const container = document.getElementById('role-presets');
+    if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/authority/presets`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load presets');
+        
+        const { presets } = await response.json();
+        
+        container.innerHTML = Object.entries(presets).map(([key, preset]) => `
+            <div class="role-preset" data-preset-key="${key}" onclick="selectPreset('${key}', ${JSON.stringify(preset).replace(/"/g, '&quot;')})">
+                <h4>${preset.icon} ${preset.name}</h4>
+                <p>${preset.description}</p>
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = '<p class="error">Failed to load role presets</p>';
+        console.error('Preset load error:', error);
+    }
+}
+
+function selectPreset(key, preset) {
+    selectedPreset = { key, ...preset };
+    
+    // Update UI
+    document.querySelectorAll('.role-preset').forEach(el => el.classList.remove('selected'));
+    document.querySelector(`[data-preset-key="${key}"]`).classList.add('selected');
+    
+    // Show preset info
+    const infoDiv = document.getElementById('preset-info');
+    const detailsList = document.getElementById('preset-details');
+    
+    infoDiv.style.display = 'block';
+    detailsList.innerHTML = `
+        <li>Broadcasting to up to ${preset.blast_radius.toLocaleString()} people</li>
+        <li>${preset.approval_mode === 'auto' ? 'Auto-approved messages (no review needed)' : 'AI-reviewed messages'}</li>
+        <li>${preset.icon} ${preset.name} badge</li>
+        <li>${(preset.risk_threshold * 100).toFixed(0)}% content safety threshold</li>
+        <li>Valid for ${preset.validity_days} days</li>
+    `;
+}
+
 async function loadAuthoritySection() {
     const container = document.getElementById('authority-profiles-list');
     if (!container) return;
@@ -335,24 +385,40 @@ document.addEventListener('DOMContentLoaded', () => {
     if (authorityForm) {
         authorityForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            if (!selectedPreset) {
+                alert('Please select a role');
+                return;
+            }
+            
+            const phone = document.getElementById('authority-phone').value;
+            const scopeId = document.getElementById('authority-scope-id').value;
+            const region = document.getElementById('authority-region').value;
+            
             const formData = {
-                user_identifier: document.getElementById('authority-user-identifier').value,
-                role_label: document.getElementById('authority-role-label').value,
-                authority_level: document.getElementById('authority-level').value,
-                scope: document.getElementById('authority-scope').value,
-                scope_identifier: document.getElementById('authority-scope-identifier').value,
-                approval_mode: document.getElementById('authority-approval-mode').value,
-                blast_radius: document.getElementById('authority-blast-radius').value,
-                risk_threshold: document.getElementById('authority-risk-threshold').value,
-                valid_until: document.getElementById('authority-valid-until').value
+                preset_key: selectedPreset.key,
+                user_identifier: phone,
+                role_label: selectedPreset.name,
+                scope_identifier: scopeId,
+                region: region || null
             };
+            
             await saveAuthority(formData);
         });
     }
+    
+    // Load presets when create-authority is clicked
+    document.addEventListener('click', (e) => {
+        if (e.target.closest('[data-action="create-authority"]')) {
+            loadAuthorityPresets();
+        }
+    });
 });
 
 // Export functions
 window.loadAuthoritySection = loadAuthoritySection;
+window.loadAuthorityPresets = loadAuthorityPresets;
+window.selectPreset = selectPreset;
 window.loadBudgetSection = loadBudgetSection;
 window.loadAnalyticsSection = loadAnalyticsSection;
 window.editAuthority = async (id) => {
