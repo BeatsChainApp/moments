@@ -1378,6 +1378,15 @@
                     <strong>Authority System:</strong> Manage user authority levels for content moderation and broadcast controls. Higher authority users get auto-approval and wider reach.
                 </div>
                 
+                <!-- Authority Tabs -->
+                <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 2px solid #e5e7eb;">
+                    <button class="btn btn-secondary" id="authority-profiles-tab" onclick="switchAuthorityTab('profiles')" style="border-radius: 0.375rem 0.375rem 0 0; background: #2563eb; color: white;">Active Authorities</button>
+                    <button class="btn btn-secondary" id="authority-requests-tab" onclick="switchAuthorityTab('requests')" style="border-radius: 0.375rem 0.375rem 0 0;">Pending Requests <span id="requests-badge" class="badge" style="background: #dc2626; color: white; padding: 0.125rem 0.375rem; border-radius: 9999px; font-size: 0.75rem; margin-left: 0.25rem;">0</span></button>
+                </div>
+                
+                <!-- Active Authorities Tab -->
+                <div id="authority-profiles-content">
+                
                 <div class="filters">
                     <select class="filter-select" id="authority-status-filter" data-filter="authority-status">
                         <option value="">All Status</option>
@@ -1410,6 +1419,14 @@
                 </div>
                 
                 <div id="authority-pagination" class="pagination"></div>
+                </div>
+                
+                <!-- Pending Requests Tab -->
+                <div id="authority-requests-content" style="display: none;">
+                    <div id="authority-requests-list">
+                        <div class="loading">Loading authority requests...</div>
+                    </div>
+                </div>
             </div>
             
             <!-- Authority Audit Log -->
@@ -1420,6 +1437,168 @@
                 </div>
             </div>
         </div>
+        
+        <script>
+        // Authority tab switching
+        function switchAuthorityTab(tab) {
+            const profilesTab = document.getElementById('authority-profiles-tab');
+            const requestsTab = document.getElementById('authority-requests-tab');
+            const profilesContent = document.getElementById('authority-profiles-content');
+            const requestsContent = document.getElementById('authority-requests-content');
+            
+            if (tab === 'profiles') {
+                profilesTab.style.background = '#2563eb';
+                profilesTab.style.color = 'white';
+                requestsTab.style.background = '#f3f4f6';
+                requestsTab.style.color = '#374151';
+                profilesContent.style.display = 'block';
+                requestsContent.style.display = 'none';
+            } else {
+                requestsTab.style.background = '#2563eb';
+                requestsTab.style.color = 'white';
+                profilesTab.style.background = '#f3f4f6';
+                profilesTab.style.color = '#374151';
+                profilesContent.style.display = 'none';
+                requestsContent.style.display = 'block';
+                loadAuthorityRequests();
+            }
+        }
+        
+        // Load authority requests
+        async function loadAuthorityRequests() {
+            const container = document.getElementById('authority-requests-list');
+            container.innerHTML = '<div class="loading">Loading requests...</div>';
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/admin/authority/requests`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+                });
+                const data = await response.json();
+                
+                if (!data.success || !data.requests || data.requests.length === 0) {
+                    container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No pending authority requests</p></div>';
+                    document.getElementById('requests-badge').textContent = '0';
+                    return;
+                }
+                
+                document.getElementById('requests-badge').textContent = data.requests.length;
+                
+                let html = '<div style="display: grid; gap: 1rem;">';
+                data.requests.forEach(req => {
+                    const roleLabels = {
+                        school_principal: '🏫 School Principal',
+                        community_leader: '👥 Community Leader',
+                        government_official: '🏛️ Government Official',
+                        ngo_coordinator: '🤝 NGO Coordinator',
+                        event_organizer: '📅 Event Organizer'
+                    };
+                    
+                    html += `
+                        <div class="card" style="border-left: 4px solid #f59e0b;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 200px;">
+                                    <div style="font-weight: 600; font-size: 1.125rem; margin-bottom: 0.5rem;">
+                                        ${roleLabels[req.role_requested] || req.role_requested}
+                                    </div>
+                                    <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
+                                        📱 ${req.phone_number}
+                                    </div>
+                                    <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
+                                        🏢 ${req.institution || 'N/A'}
+                                    </div>
+                                    <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
+                                        📍 ${req.region || 'N/A'}
+                                    </div>
+                                    <div style="color: #9ca3af; font-size: 0.75rem; margin-top: 0.5rem;">
+                                        Requested: ${new Date(req.created_at).toLocaleString()}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                    <button class="btn btn-success btn-sm" onclick="approveAuthorityRequest('${req.id}', '${req.phone_number}', '${req.role_requested}', '${req.institution}', '${req.region}')">✅ Approve</button>
+                                    <button class="btn btn-danger btn-sm" onclick="rejectAuthorityRequest('${req.id}')">❌ Reject</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                container.innerHTML = '<div class="error">Failed to load requests</div>';
+                console.error('Load requests error:', error);
+            }
+        }
+        
+        // Approve authority request
+        async function approveAuthorityRequest(requestId, phone, role, institution, region) {
+            if (!confirm('Approve this authority request?')) return;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/admin/authority/requests/${requestId}/approve`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ phone, role, institution, region })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    window.dashboardCore.showNotification('Authority request approved!');
+                    loadAuthorityRequests();
+                } else {
+                    throw new Error(data.error || 'Approval failed');
+                }
+            } catch (error) {
+                window.dashboardCore.showNotification('Failed to approve request', 'error');
+                console.error('Approve error:', error);
+            }
+        }
+        
+        // Reject authority request
+        async function rejectAuthorityRequest(requestId) {
+            const reason = prompt('Reason for rejection (optional):');
+            if (reason === null) return;
+            
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/admin/authority/requests/${requestId}/reject`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    window.dashboardCore.showNotification('Authority request rejected');
+                    loadAuthorityRequests();
+                } else {
+                    throw new Error(data.error || 'Rejection failed');
+                }
+            } catch (error) {
+                window.dashboardCore.showNotification('Failed to reject request', 'error');
+                console.error('Reject error:', error);
+            }
+        }
+        
+        // Load request count on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch(`${window.API_BASE_URL}/admin/authority/requests`, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+                });
+                const data = await response.json();
+                if (data.success && data.requests) {
+                    document.getElementById('requests-badge').textContent = data.requests.length;
+                }
+            } catch (error) {
+                console.error('Failed to load request count:', error);
+            }
+        });
+        </script>
 
         <!-- Authority Form Section -->
         <div id="authority-form-section" class="form-section section">
