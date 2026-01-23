@@ -880,20 +880,34 @@ serve(async (req) => {
                       mcp_confidence: mcpAnalysis.confidence,
                       auto_approved: true,
                       threshold_used: threshold
-                    }
+                    },
+                    processed: true
                   }).eq('id', messageRecord.id)
                   
+                  const words = content.trim().split(' ')
+                  const title = words.length <= 8 ? content : words.slice(0, 8).join(' ') + '...'
+                  
                   const { data: autoMoment } = await supabase.from('moments').insert({
-                    title: content.substring(0, 50),
+                    title,
                     content: content,
-                    region: 'National',
+                    region: authorityContext?.scope_identifier || 'National',
                     category: 'Community',
                     status: 'draft',
-                    created_by: 'auto_moderation',
-                    content_source: 'whatsapp'
+                    created_by: authorityContext?.role || 'authority',
+                    content_source: 'whatsapp',
+                    is_verified: !!authorityContext
                   }).select().single()
                   
-                  console.log(`✅ Auto-approved (threshold=${threshold}): message ${messageRecord.id}, moment ${autoMoment?.id}`)
+                  if (autoMoment) {
+                    await supabase.from('whatsapp_comments').insert({
+                      whatsapp_message_id: message.id,
+                      from_number: message.from,
+                      moment_id: autoMoment.id,
+                      media_type: 'text'
+                    })
+                  }
+                  
+                  console.log(`✅ Auto-approved (threshold=${threshold}): message ${messageRecord.id}, moment ${autoMoment?.id}, authority=${authorityContext?.role}`)
                 }
               } catch (mcpError) {
                 console.error('MCP analysis failed:', mcpError)
@@ -1350,8 +1364,25 @@ serve(async (req) => {
                 }
               }
             } else {
+              // Check if message was already processed (e.g., auto-approved)
+              const { data: processedCheck } = await supabase
+                .from('messages')
+                .select('processed, moderation_status')
+                .eq('whatsapp_id', message.id)
+                .single()
+              
+              if (processedCheck?.processed || processedCheck?.moderation_status === 'approved') {
+                console.log(`⏭️ Skipping already processed message: ${message.id}`)
+                continue
+              }
+              
               // Process as community content
-              const content = message.text?.body || ''
+              const content = message.text?.body || message.caption || ''
+              if (!content.trim()) {
+                console.log('Skipping empty message')
+                continue
+              }
+              
               const words = content.trim().split(' ')
               const title = words.length <= 8 ? content : words.slice(0, 8).join(' ') + '...'
               

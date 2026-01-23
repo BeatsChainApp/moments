@@ -800,7 +800,7 @@ ${moment.content}
         // Get moment details
         const { data: moment, error: momentError } = await supabase
           .from('moments')
-          .select('*')
+          .select('id, title, content, region, category, status, pwa_link, is_sponsored, sponsor_id, broadcasted_at, created_at')
           .eq('id', momentId)
           .single()
 
