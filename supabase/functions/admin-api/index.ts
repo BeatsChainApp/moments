@@ -2441,8 +2441,12 @@ ${moment.content}
 
     if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/approve$/) && method === 'POST') {
       const id = path.split('/requests/')[1].split('/approve')[0]
-      const { data: request } = await supabase.from('authority_requests').select('*').eq('id', id).single()
+      const { data: request, error: fetchError } = await supabase.from('authority_requests').select('*').eq('id', id).single()
       
+      if (fetchError) {
+        console.error('Failed to fetch request:', fetchError)
+        throw new Error(`Request fetch failed: ${fetchError.message}`)
+      }
       if (!request) throw new Error('Request not found')
       
       const presets = {
@@ -2454,10 +2458,16 @@ ${moment.content}
       }
       const preset = presets[request.role_requested]
       
+      if (!preset) {
+        throw new Error(`Unknown role: ${request.role_requested}`)
+      }
+      
       const validFrom = new Date()
       const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
       
-      await supabase.from('authority_profiles').insert({
+      console.log('Creating authority profile:', { user_identifier: request.phone_number, role: preset.name })
+      
+      const { data: profile, error: insertError } = await supabase.from('authority_profiles').insert({
         user_identifier: request.phone_number,
         role_label: preset.name,
         authority_level: preset.authority_level,
@@ -2470,11 +2480,22 @@ ${moment.content}
         valid_until: validUntil.toISOString(),
         status: 'active',
         region: request.region
-      })
+      }).select().single()
       
-      await supabase.from('authority_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id)
+      if (insertError) {
+        console.error('Authority profile insert failed:', insertError)
+        throw new Error(`Profile creation failed: ${insertError.message}`)
+      }
       
-      return new Response(JSON.stringify({ success: true }), {
+      console.log('Authority profile created:', profile.id)
+      
+      const { error: updateError } = await supabase.from('authority_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id)
+      
+      if (updateError) {
+        console.error('Request update failed:', updateError)
+      }
+      
+      return new Response(JSON.stringify({ success: true, profile_id: profile.id }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
@@ -2678,3 +2699,4 @@ ${moment.content}
     }
   }
 })
+
