@@ -65,11 +65,18 @@ async function loadAuthoritySection() {
     if (!container) return;
     
     const API_BASE = window.API_BASE_URL || window.location.origin;
+    const statusFilter = document.getElementById('authority-status-filter')?.value || '';
+    const searchQuery = document.getElementById('authority-search-box')?.value || '';
     
     try {
         container.innerHTML = '<div class="loading">Loading...</div>';
         
-        const response = await fetch(`${API_BASE}/admin/authority`, {
+        let url = `${API_BASE}/admin/authority`;
+        if (statusFilter || searchQuery) {
+            url = `${API_BASE}/admin/authority/search?status=${statusFilter}&q=${searchQuery}`;
+        }
+        
+        const response = await fetch(url, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
@@ -78,7 +85,7 @@ async function loadAuthoritySection() {
         const { authority_profiles } = await response.json();
         
         if (!authority_profiles || authority_profiles.length === 0) {
-            container.innerHTML = '<div class="card"><p style="text-align: center; padding: 2rem; color: #666;">No authorities assigned yet. Click "Assign Authority" to get started.</p></div>';
+            container.innerHTML = '<div class="card"><p style="text-align: center; padding: 2rem; color: #666;">No authorities found. Click "Assign Authority" to get started.</p></div>';
             return;
         }
         
@@ -113,8 +120,8 @@ async function loadAuthoritySection() {
                             }
                             
                             return `
-                            <tr>
-                                <td data-label=""><input type="checkbox" class="authority-checkbox" data-id="${a.id}" onchange="toggleAuthority('${a.id}', this)"></td>
+                            <tr style="cursor: pointer;" onclick="if(!event.target.type) viewAuthorityDetails('${a.id}')">
+                                <td data-label="" onclick="event.stopPropagation()"><input type="checkbox" class="authority-checkbox" data-id="${a.id}" onchange="toggleAuthority('${a.id}', this)"></td>
                                 <td data-label="Phone">${a.user_identifier}</td>
                                 <td data-label="Role">${a.role_label || 'N/A'}</td>
                                 <td data-label="Institution">${a.scope_identifier || 'N/A'}</td>
@@ -131,6 +138,11 @@ async function loadAuthoritySection() {
         container.innerHTML = '<div class="card"><p class="error">Failed to load authorities</p></div>';
         console.error(error);
     }
+}
+
+function viewAuthorityDetails(id) {
+    console.log('View details for:', id);
+    alert('Authority details coming soon!');
 }
 
 async function saveAuthority(formData) {
@@ -459,10 +471,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Wire up filters
+document.addEventListener('change', (e) => {
+    if (e.target.id === 'authority-status-filter') {
+        if (window.loadAuthoritySection) window.loadAuthoritySection();
+    }
+});
+
+document.addEventListener('input', (e) => {
+    if (e.target.id === 'authority-search-box') {
+        clearTimeout(window.authoritySearchTimeout);
+        window.authoritySearchTimeout = setTimeout(() => {
+            if (window.loadAuthoritySection) window.loadAuthoritySection();
+        }, 500);
+    }
+});
+
 // Export functions
 window.loadAuthoritySection = loadAuthoritySection;
 window.loadAuthorityPresets = loadAuthorityPresets;
 window.selectPreset = selectPreset;
+window.viewAuthorityDetails = viewAuthorityDetails;
 window.loadBudgetSection = loadBudgetSection;
 window.loadAnalyticsSection = loadAnalyticsSection;
 window.editAuthority = async (id) => {
