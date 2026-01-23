@@ -719,7 +719,8 @@ serve(async (req) => {
             const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
                                'help', 'info', 'menu', '?', 'moments', 'share', 'submit', 'status', 'settings', 'language',
                                'recent', 'report', 'feedback', 'search', 'myauthority', 'pause', 'schedule',
-                               'regions', 'region', 'areas', 'interests', 'categories', 'topics'].includes(text) ||
+                               'regions', 'region', 'areas', 'interests', 'categories', 'topics',
+                               'request authority', 'request auth'].includes(text) ||
                               isRegionSelection(text) || isCategorySelection(text)
             
             // DON'T store commands in messages table
