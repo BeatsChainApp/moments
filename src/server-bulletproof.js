@@ -675,7 +675,19 @@ function authenticateAdmin(req, res, next) {
 }
 
 // Proxy ALL /admin/* requests to Supabase admin-api edge function
-app.use('/admin', authenticateAdmin, async (req, res) => {
+// Proxy ALL /admin/* requests to Supabase admin-api edge function (EXCEPT login)
+app.use('/admin', async (req, res, next) => {
+  // Skip authentication for login endpoint
+  if (req.path === '/login' && req.method === 'POST') {
+    return next();
+  }
+
+  // Authenticate all other admin requests
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
   try {
     const supabaseUrl = process.env.SUPABASE_URL || 'https://bxmdzcxejcxbinghtyfw.supabase.co';
     const proxyUrl = `${supabaseUrl}/functions/v1/admin-api${req.path}`;
@@ -683,7 +695,7 @@ app.use('/admin', authenticateAdmin, async (req, res) => {
     const headers = {
       'Content-Type': 'application/json',
       'apikey': process.env.SUPABASE_ANON_KEY || '',
-      'Authorization': req.headers.authorization
+      'Authorization': authHeader
     };
 
     const options = {
