@@ -114,6 +114,18 @@ async function processMessage(message, value) {
       return;
     }
     
+    if (command === 'request authority' || command === 'request auth') {
+      await handleAuthorityRequest(fromNumber);
+      return;
+    }
+    
+    // Check if user is in authority request flow
+    const requestState = await checkAuthorityRequestState(fromNumber);
+    if (requestState) {
+      await handleAuthorityRequestStep(fromNumber, content, requestState);
+      return;
+    }
+    
     // Handle region selection (e.g., "KZN WC GP")
     if (isRegionSelection(command)) {
       await handleRegionSelection(fromNumber, command);
@@ -353,6 +365,7 @@ async function handleHelp(phoneNumber) {
 🛑 STOP - Unsubscribe from signals
 ❓ HELP - Show this help menu
 📍 REGIONS - Choose your areas
+📝 REQUEST AUTHORITY - Apply for broadcast authority
 
 🌍 Available Regions:
 KZN, WC, GP, EC, FS, LP, MP, NC, NW
@@ -363,6 +376,138 @@ KZN, WC, GP, EC, FS, LP, MP, NC, NW
 This is YOUR community sharing platform.`;
   
   await sendMessage(phoneNumber, helpMessage);
+}
+
+async function handleAuthorityRequest(phoneNumber) {
+  const { data: existing } = await supabase
+    .from('authority_profiles')
+    .select('*')
+    .eq('user_identifier', phoneNumber)
+    .eq('status', 'active')
+    .single();
+  
+  if (existing) {
+    await sendMessage(phoneNumber, `You already have authority as ${existing.role_label}.`);
+    return;
+  }
+  
+  const { data: request } = await supabase
+    .from('authority_requests')
+    .insert({ phone_number: phoneNumber })
+    .select()
+    .single();
+  
+  await supabase
+    .from('authority_request_state')
+    .upsert({
+      phone_number: phoneNumber,
+      request_id: request.id,
+      current_step: 'awaiting_role',
+      updated_at: new Date().toISOString()
+    });
+  
+  await sendMessage(phoneNumber, `📝 Authority Request
+
+What role are you requesting?
+
+Options:
+🏫 School Principal
+👥 Community Leader
+🏛️ Government Official
+🏥 NGO Coordinator
+📅 Event Organizer
+
+Reply with the role name.`);
+}
+
+async function checkAuthorityRequestState(phoneNumber) {
+  const { data } = await supabase
+    .from('authority_request_state')
+    .select('*')
+    .eq('phone_number', phoneNumber)
+    .single();
+  
+  return data;
+}
+
+async function handleAuthorityRequestStep(phoneNumber, content, state) {
+  const roleMap = {
+    'school principal': 'school_principal',
+    'community leader': 'community_leader',
+    'government official': 'government_official',
+    'ngo coordinator': 'ngo_coordinator',
+    'event organizer': 'event_organizer'
+  };
+  
+  const regionMap = {
+    'kzn': 'KZN', 'wc': 'WC', 'gp': 'GP', 'ec': 'EC', 'fs': 'FS',
+    'lp': 'LP', 'mp': 'MP', 'nc': 'NC', 'nw': 'NW'
+  };
+  
+  if (state.current_step === 'awaiting_role') {
+    const role = content.toLowerCase().trim();
+    const presetKey = roleMap[role];
+    
+    if (!presetKey) {
+      await sendMessage(phoneNumber, '❌ Invalid role. Please choose from: School Principal, Community Leader, Government Official, NGO Coordinator, Event Organizer');
+      return;
+    }
+    
+    await supabase
+      .from('authority_requests')
+      .update({ role_requested: presetKey })
+      .eq('id', state.request_id);
+    
+    await supabase
+      .from('authority_request_state')
+      .update({ current_step: 'awaiting_institution', updated_at: new Date().toISOString() })
+      .eq('phone_number', phoneNumber);
+    
+    await sendMessage(phoneNumber, `✅ Role: ${content}
+
+What is your institution/organization name?`);
+  }
+  else if (state.current_step === 'awaiting_institution') {
+    await supabase
+      .from('authority_requests')
+      .update({ institution: content })
+      .eq('id', state.request_id);
+    
+    await supabase
+      .from('authority_request_state')
+      .update({ current_step: 'awaiting_region', updated_at: new Date().toISOString() })
+      .eq('phone_number', phoneNumber);
+    
+    await sendMessage(phoneNumber, `✅ Institution: ${content}
+
+What region? (KZN, WC, GP, EC, FS, LP, MP, NC, NW)`);
+  }
+  else if (state.current_step === 'awaiting_region') {
+    const region = regionMap[content.toLowerCase().trim()];
+    
+    if (!region) {
+      await sendMessage(phoneNumber, '❌ Invalid region. Please choose: KZN, WC, GP, EC, FS, LP, MP, NC, NW');
+      return;
+    }
+    
+    await supabase
+      .from('authority_requests')
+      .update({ region, status: 'pending' })
+      .eq('id', state.request_id);
+    
+    await supabase
+      .from('authority_request_state')
+      .delete()
+      .eq('phone_number', phoneNumber);
+    
+    await sendMessage(phoneNumber, `✅ Request Submitted!
+
+Your authority request has been sent to our admin team for review.
+
+You'll receive a notification once it's been reviewed.
+
+Thank you!`);
+  }
 }
 
 async function handleRegions(phoneNumber) {

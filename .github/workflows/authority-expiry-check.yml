@@ -1,0 +1,16 @@
+name: Authority Expiry Check
+
+on:
+  schedule:
+    - cron: '0 7 * * *' # Daily at 9 AM SAST (7 AM UTC)
+  workflow_dispatch: # Manual trigger
+
+jobs:
+  check-expiry:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Expiry Check
+        run: |
+          curl -X POST "${{ secrets.SUPABASE_URL }}/functions/v1/authority-expiry-check" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}" \
+            -H "Content-Type: application/json"

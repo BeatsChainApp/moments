@@ -2535,6 +2535,21 @@ ${moment.content}
         .single()
 
       if (error) throw error
+      
+      // Send WhatsApp notification
+      try {
+        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/authority-notification`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ authority_id: data.id, notification_type: 'granted' })
+        })
+      } catch (notifError) {
+        console.error('Notification failed:', notifError)
+      }
+      
       return new Response(JSON.stringify({ authority_profile: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
@@ -2563,6 +2578,82 @@ ${moment.content}
         .eq('id', id)
 
       if (error) throw error
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Authority analytics endpoint
+    if (path.match(/\/authority\/[a-f0-9-]{36}\/analytics$/) && method === 'GET') {
+      const id = path.split('/authority/')[1].split('/analytics')[0]
+      const { data: analytics, error } = await supabase.rpc('get_authority_analytics', {
+        authority_id: id,
+        days: 30
+      })
+      
+      if (error) throw error
+      return new Response(JSON.stringify(analytics || {}), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Authority requests endpoints
+    if (path.includes('/authority/requests') && method === 'GET' && !path.match(/\/requests\/[a-f0-9-]{36}/)) {
+      const { data: requests, error } = await supabase
+        .from('authority_requests')
+        .select('*')
+        .order('created_at', { ascending: false })
+      
+      if (error) throw error
+      return new Response(JSON.stringify({ requests: requests || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/approve$/) && method === 'POST') {
+      const id = path.split('/requests/')[1].split('/approve')[0]
+      const { data: request } = await supabase.from('authority_requests').select('*').eq('id', id).single()
+      
+      if (!request) throw new Error('Request not found')
+      
+      const presets = {
+        school_principal: { name: "School Principal", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365 },
+        community_leader: { name: "Community Leader", authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180 },
+        government_official: { name: "Government Official", authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730 },
+        ngo_coordinator: { name: "NGO Coordinator", authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365 },
+        event_organizer: { name: "Event Organizer", authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90 }
+      }
+      const preset = presets[request.role_requested]
+      
+      const validFrom = new Date()
+      const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
+      
+      await supabase.from('authority_profiles').insert({
+        user_identifier: request.phone_number,
+        role_label: preset.name,
+        authority_level: preset.authority_level,
+        scope: preset.scope,
+        scope_identifier: request.institution,
+        approval_mode: preset.approval_mode,
+        blast_radius: preset.blast_radius,
+        risk_threshold: preset.risk_threshold,
+        valid_from: validFrom.toISOString(),
+        valid_until: validUntil.toISOString(),
+        status: 'active',
+        region: request.region
+      })
+      
+      await supabase.from('authority_requests').update({ status: 'approved', reviewed_at: new Date().toISOString() }).eq('id', id)
+      
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/authority\/requests\/[a-f0-9-]{36}\/reject$/) && method === 'POST') {
+      const id = path.split('/requests/')[1].split('/reject')[0]
+      await supabase.from('authority_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString() }).eq('id', id)
+      
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
