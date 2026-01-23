@@ -614,8 +614,8 @@ serve(async (req) => {
         })
       }
 
-      // Auto-broadcast admin moments if not scheduled
-      if (!body.scheduled_at) {
+      // Auto-broadcast admin moments if not scheduled and publish_to_whatsapp is true
+      if (!body.scheduled_at && moment.publish_to_whatsapp) {
         // Create intents directly in admin API
         try {
           const createdIntents = []
