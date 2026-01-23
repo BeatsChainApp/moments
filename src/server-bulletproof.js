@@ -711,12 +711,21 @@ app.use('/admin', async (req, res, next) => {
     const fullUrl = proxyUrl + queryString;
 
     const response = await fetch(fullUrl, options);
-    const data = await response.json();
-
-    res.status(response.status).json(data);
+    const contentType = response.headers.get('content-type');
+    
+    // Handle JSON responses
+    if (contentType && contentType.includes('application/json')) {
+      const data = await response.json();
+      return res.status(response.status).json(data);
+    }
+    
+    // Handle text responses
+    const text = await response.text();
+    return res.status(response.status).send(text);
+    
   } catch (error) {
-    console.error('Admin proxy error:', error);
-    res.status(500).json({ error: 'Admin API unavailable' });
+    console.error('Admin proxy error:', error.message);
+    return res.status(500).json({ error: 'Admin API unavailable', details: error.message });
   }
 });
 
