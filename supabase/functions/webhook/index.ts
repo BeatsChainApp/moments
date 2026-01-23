@@ -716,12 +716,21 @@ serve(async (req) => {
             
             // Check if message is a command first
             const text = (message.text?.body || '').toLowerCase().trim()
+            
+            // Check if user is in authority request flow
+            const { data: requestState } = await supabase
+              .from('authority_request_state')
+              .select('*')
+              .eq('phone_number', message.from)
+              .single()
+            
             const isCommand = ['start', 'join', 'subscribe', 'stop', 'unsubscribe', 'quit', 'cancel',
                                'help', 'info', 'menu', '?', 'moments', 'share', 'submit', 'status', 'settings', 'language',
                                'recent', 'report', 'feedback', 'search', 'myauthority', 'pause', 'schedule',
                                'regions', 'region', 'areas', 'interests', 'categories', 'topics',
-                               'request authority', 'request auth'].includes(text) ||
-                              isRegionSelection(text) || isCategorySelection(text)
+                               'request authority', 'request auth',
+                               'school principal', 'community leader', 'government official', 'ngo coordinator', 'event organizer'].includes(text) ||
+                              isRegionSelection(text) || isCategorySelection(text) || requestState !== null
             
             // DON'T store commands in messages table
             if (!isCommand) {
@@ -985,10 +994,93 @@ serve(async (req) => {
               
               console.log('Regions sent to:', message.from)
             } else if (['request authority', 'request auth'].includes(text)) {
-              // Authority request - send to main webhook handler
-              await sendWhatsAppMessage(message.from, '📝 Authority Request\n\nWhat role are you requesting?\n\nOptions:\n🏫 School Principal\n👥 Community Leader\n🏛️ Government Official\n🏥 NGO Coordinator\n📅 Event Organizer\n\nReply with the role name.')
+              // Authority request - start flow
+              const { data: existing } = await supabase
+                .from('authority_profiles')
+                .select('*')
+                .eq('user_identifier', message.from)
+                .eq('status', 'active')
+                .single()
+              
+              if (existing) {
+                await sendWhatsAppMessage(message.from, `You already have authority as ${existing.role_label}.`)
+              } else {
+                const { data: request } = await supabase
+                  .from('authority_requests')
+                  .insert({ phone_number: message.from })
+                  .select()
+                  .single()
+                
+                await supabase
+                  .from('authority_request_state')
+                  .upsert({
+                    phone_number: message.from,
+                    request_id: request.id,
+                    current_step: 'awaiting_role',
+                    updated_at: new Date().toISOString()
+                  })
+                
+                await sendWhatsAppMessage(message.from, '📝 Authority Request\n\nWhat role are you requesting?\n\nOptions:\n🏫 School Principal\n👥 Community Leader\n🏛️ Government Official\n🏥 NGO Coordinator\n📅 Event Organizer\n\nReply with the role name.')
+              }
               
               console.log('Authority request initiated for:', message.from)
+            } else if (requestState && ['school principal', 'community leader', 'government official', 'ngo coordinator', 'event organizer'].includes(text)) {
+              // Handle role selection
+              const roleMap = {
+                'school principal': 'school_principal',
+                'community leader': 'community_leader',
+                'government official': 'government_official',
+                'ngo coordinator': 'ngo_coordinator',
+                'event organizer': 'event_organizer'
+              }
+              
+              await supabase
+                .from('authority_requests')
+                .update({ role_requested: roleMap[text] })
+                .eq('id', requestState.request_id)
+              
+              await supabase
+                .from('authority_request_state')
+                .update({ current_step: 'awaiting_institution', updated_at: new Date().toISOString() })
+                .eq('phone_number', message.from)
+              
+              await sendWhatsAppMessage(message.from, `✅ Role: ${text}\n\nWhat is your institution/organization name?`)
+              console.log('Role selected:', text)
+            } else if (requestState && requestState.current_step === 'awaiting_institution') {
+              // Handle institution
+              await supabase
+                .from('authority_requests')
+                .update({ institution: text })
+                .eq('id', requestState.request_id)
+              
+              await supabase
+                .from('authority_request_state')
+                .update({ current_step: 'awaiting_region', updated_at: new Date().toISOString() })
+                .eq('phone_number', message.from)
+              
+              await sendWhatsAppMessage(message.from, `✅ Institution: ${text}\n\nWhat region? (KZN, WC, GP, EC, FS, LP, MP, NC, NW)`)
+              console.log('Institution set:', text)
+            } else if (requestState && requestState.current_step === 'awaiting_region') {
+              // Handle region
+              const regionMap = { 'kzn': 'KZN', 'wc': 'WC', 'gp': 'GP', 'ec': 'EC', 'fs': 'FS', 'lp': 'LP', 'mp': 'MP', 'nc': 'NC', 'nw': 'NW' }
+              const region = regionMap[text]
+              
+              if (!region) {
+                await sendWhatsAppMessage(message.from, '❌ Invalid region. Please choose: KZN, WC, GP, EC, FS, LP, MP, NC, NW')
+              } else {
+                await supabase
+                  .from('authority_requests')
+                  .update({ region, status: 'pending' })
+                  .eq('id', requestState.request_id)
+                
+                await supabase
+                  .from('authority_request_state')
+                  .delete()
+                  .eq('phone_number', message.from)
+                
+                await sendWhatsAppMessage(message.from, `✅ Request Submitted!\n\nYour authority request has been sent to our admin team for review.\n\nYou'll receive a notification once it's been reviewed.\n\nThank you!`)
+                console.log('Authority request completed for:', message.from)
+              }
             } else if (['interests', 'categories', 'topics'].includes(text)) {
               // Interests/Categories command
               const interestsMsg = `🏷️ Choose your interests (reply with category codes):\n\n🎓 EDU - Education & Learning\n🛡️ SAF - Safety & Security\n🎭 CUL - Culture & Arts\n💼 OPP - Opportunities & Jobs\n🎉 EVE - Events & Gatherings\n⚕️ HEA - Health & Wellness\n📱 TEC - Technology & Digital\n🏠 COM - Community News\n\nReply with codes like: EDU SAF OPP\nOr reply ALL for everything`
