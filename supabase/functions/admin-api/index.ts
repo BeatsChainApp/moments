@@ -1845,6 +1845,8 @@ ${moment.content}
 
         // Trigger webhook
         const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
+        const broadcastMessage = `📢 ${campaign.title}\n\n${campaign.content}\n\n🌐 More: moments.unamifoundation.org/m/${moment.id}`
+        
         fetch(webhookUrl, {
           method: 'POST',
           headers: {
@@ -1853,9 +1855,9 @@ ${moment.content}
           },
           body: JSON.stringify({
             broadcast_id: broadcast.id,
-            moment_id: moment.id,
-            template_name: templateName,
-            recipients: subscribers.map(s => s.phone_number)
+            message: broadcastMessage,
+            recipients: subscribers.map(s => s.phone_number),
+            moment_id: moment.id
           })
         }).then(async () => {
           const actualCost = recipientCount * messageCost
