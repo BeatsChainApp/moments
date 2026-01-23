@@ -2515,14 +2515,20 @@ window.checkCampaignCompliance = checkCampaignCompliance;
 
 // Authority Management Functions
 async function loadAuthorityProfiles() {
-    try {
-        const cacheBust = `?_=${Date.now()}`;
-        const response = await apiFetch(`/authority${cacheBust}`);
-        const data = await response.json();
-        displayAuthorityProfiles(data.authority_profiles || []);
-    } catch (error) {
-        const list = document.getElementById('authority-list');
-        if (list) list.innerHTML = '<div class="error">Failed to load authority profiles</div>';
+    if (window.loadAuthoritySection) {
+        window.loadAuthoritySection();
+    } else {
+        try {
+            const cacheBust = `?_=${Date.now()}`;
+            const response = await apiFetch(`/authority${cacheBust}`);
+            const data = await response.json();
+            displayAuthorityProfiles(data.authority_profiles || []);
+        } catch (error) {
+            const list = document.getElementById('authority-list');
+            if (list) list.innerHTML = '<div class="error">Failed to load authority profiles</div>';
+        }
+    }
+}
     }
 }
 
