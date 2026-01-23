@@ -1476,7 +1476,12 @@
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
                 });
                 console.log('Response status:', response.status);
+                console.log('Response status:', response.status);
                 const data = await response.json();
+                console.log('Response data:', data);
+                console.log('Has success?', data.success);
+                console.log('Requests array:', data.requests);
+                console.log('Requests length:', data.requests?.length);
                 
                 if (!data.success || !data.requests || data.requests.length === 0) {
                     container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No pending authority requests</p></div>';
