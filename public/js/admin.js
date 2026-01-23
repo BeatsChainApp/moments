@@ -93,11 +93,27 @@ function showSection(sectionId) {
                     loadPipelineStatus().catch(console.warn)
                 ]);
                 break;
-            case 'moments': loadMoments().catch(console.warn); break;
-            case 'campaigns': 
-                loadCampaigns().catch(console.warn);
+            case 'moments': 
+                loadMoments().catch(err => {
+                    console.error('Moments load failed:', err);
+                    const list = document.getElementById('moments-list');
+                    if (list) list.innerHTML = '<div class="error">Failed to load moments. Please refresh.</div>';
+                });
                 break;
-            case 'sponsors': loadSponsors().catch(console.warn); break;
+            case 'campaigns': 
+                loadCampaigns().catch(err => {
+                    console.error('Campaigns load failed:', err);
+                    const list = document.getElementById('campaigns-list');
+                    if (list) list.innerHTML = '<div class="error">Failed to load campaigns. Please refresh.</div>';
+                });
+                break;
+            case 'sponsors': 
+                loadSponsors().catch(err => {
+                    console.error('Sponsors load failed:', err);
+                    const list = document.getElementById('sponsors-list');
+                    if (list) list.innerHTML = '<div class="error">Failed to load sponsors. Please refresh.</div>';
+                });
+                break;
             case 'subscribers': loadSubscribers().catch(console.warn); break;
             case 'users': loadAdminUsers().catch(console.warn); break;
             case 'broadcasts': loadBroadcasts().catch(console.warn); break;
