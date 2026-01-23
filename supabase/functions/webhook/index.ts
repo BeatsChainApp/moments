@@ -984,6 +984,11 @@ serve(async (req) => {
               await sendWhatsAppMessage(message.from, regionsMsg)
               
               console.log('Regions sent to:', message.from)
+            } else if (['request authority', 'request auth'].includes(text)) {
+              // Authority request - send to main webhook handler
+              await sendWhatsAppMessage(message.from, '📝 Authority Request\n\nWhat role are you requesting?\n\nOptions:\n🏫 School Principal\n👥 Community Leader\n🏛️ Government Official\n🏥 NGO Coordinator\n📅 Event Organizer\n\nReply with the role name.')
+              
+              console.log('Authority request initiated for:', message.from)
             } else if (['interests', 'categories', 'topics'].includes(text)) {
               // Interests/Categories command
               const interestsMsg = `🏷️ Choose your interests (reply with category codes):\n\n🎓 EDU - Education & Learning\n🛡️ SAF - Safety & Security\n🎭 CUL - Culture & Arts\n💼 OPP - Opportunities & Jobs\n🎉 EVE - Events & Gatherings\n⚕️ HEA - Health & Wellness\n📱 TEC - Technology & Digital\n🏠 COM - Community News\n\nReply with codes like: EDU SAF OPP\nOr reply ALL for everything`
