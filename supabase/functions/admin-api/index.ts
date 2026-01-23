@@ -2510,7 +2510,7 @@ ${moment.content}
               to: request.phone_number,
               type: 'text',
               text: {
-                body: `✅ Authority Verified!\n\nYou've been verified as ${preset.name}\n\n📊 Authority Level: ${preset.authority_level}\n👥 Max Recipients: ${preset.blast_radius.toLocaleString()}\n📍 Scope: ${request.institution}\n🌍 Region: ${request.region}\n⏰ Valid Until: ${validUntil.toLocaleDateString()}\n\nYou can now broadcast messages to your community.\n\n📱 Send messages here to broadcast\n❓ Reply HELP for commands`
+                body: `🎉 You're now a ${preset.name}!\n\n💡 Share what matters:\n• Local opportunities\n• Safety alerts\n• Community events\n\nKeep it short and clear.\n\n📱 Send your message here to broadcast\n📍 ${request.region} • Valid until ${validUntil.toLocaleDateString()}\n\n🌐 moments.unamifoundation.org`
               }
             })
           }
