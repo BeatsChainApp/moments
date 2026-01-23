@@ -433,7 +433,15 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load presets when create-authority is clicked
     document.addEventListener('click', (e) => {
         if (e.target.closest('[data-action="create-authority"]')) {
-            loadAuthorityPresets();
+            if (window.dashboardCore?.showSection) {
+                window.dashboardCore.showSection('authority-form-section');
+            }
+            setTimeout(() => loadAuthorityPresets(), 100);
+        }
+        if (e.target.closest('[data-action="close-authority-form"]')) {
+            if (window.dashboardCore?.showSection) {
+                window.dashboardCore.showSection('authority');
+            }
         }
     });
 });
