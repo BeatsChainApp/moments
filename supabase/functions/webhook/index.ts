@@ -83,19 +83,9 @@ async function handleCategorySelection(phoneNumber: string, categoryString: stri
 async function handleRegionSelection(phoneNumber: string, regionString: string, supabase: any) {
   try {
     const regionCodes = regionString.toUpperCase().split(/\s+/)
-    const regionMap: { [key: string]: string } = {
-      'KZN': 'KwaZulu-Natal',
-      'WC': 'Western Cape', 
-      'GP': 'Gauteng',
-      'EC': 'Eastern Cape',
-      'FS': 'Free State',
-      'LP': 'Limpopo',
-      'MP': 'Mpumalanga',
-      'NC': 'Northern Cape',
-      'NW': 'North West'
-    }
-    
-    const selectedRegions = regionCodes.map(code => regionMap[code]).filter(Boolean)
+    const selectedRegions = regionCodes.filter(code => 
+      ['KZN', 'WC', 'GP', 'EC', 'FS', 'LP', 'MP', 'NC', 'NW'].includes(code)
+    )
     
     if (selectedRegions.length === 0) {
       await sendWhatsAppMessage(phoneNumber, '❌ Invalid region codes. Reply REGIONS to see valid options.')
@@ -123,7 +113,7 @@ async function handleRegionSelection(phoneNumber: string, regionString: string, 
         consent_method: existing?.consent_method || 'whatsapp_optin'
       }, { onConflict: 'phone_number' })
     
-    const confirmMessage = `✅ Regions updated!\n\nYou'll now receive updates from:\n${selectedRegions.map(region => `📍 ${region}`).join('\n')}`
+    const confirmMessage = `✅ Regions updated!\n\nYou'll now receive updates from:\n${selectedRegions.join(', ')}`
     
     await sendInteractiveButtons(phoneNumber, confirmMessage, [
       { id: 'see_moments', title: '📰 See Moments' },
