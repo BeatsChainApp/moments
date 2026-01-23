@@ -552,7 +552,7 @@ serve(async (req) => {
     }
 
     // Create moment with auto-broadcast logic
-    if (path.includes('/moments') && method === 'POST' && body) {
+    if (path.includes('/moments') && !path.includes('/broadcast') && method === 'POST' && body) {
       // Marketing compliance validation
       const complianceIssues = []
       if (body.is_sponsored || body.sponsor_id) {
@@ -800,7 +800,7 @@ ${moment.content}
         // Get moment details
         const { data: moment, error: momentError } = await supabase
           .from('moments')
-          .select('id, title, content, region, category, status, pwa_link, is_sponsored, sponsor_id, broadcasted_at, created_at')
+          .select('id, title, content, region, category, status, pwa_link, is_sponsored, sponsor_id, broadcasted_at, created_at, created_by, content_source')
           .eq('id', momentId)
           .single()
 
@@ -867,9 +867,41 @@ ${moment.content}
         })
         .eq('id', momentId)
 
-      // Format broadcast message with dynamic URL
+      // Format broadcast message with authority attribution
       const dynamicUrl = moment.pwa_link || `https://moments.unamifoundation.org/m/${momentId}`
-      const broadcastMessage = `📢 Unami Foundation Moments — ${moment.region}
+      
+      let attribution = 'Unami Foundation Moments App'
+      if (moment.content_source === 'whatsapp' && moment.created_by && moment.created_by !== 'admin') {
+        const { data: comment } = await supabase
+          .from('whatsapp_comments')
+          .select('from_number')
+          .eq('moment_id', momentId)
+          .single()
+        
+        if (comment?.from_number) {
+          const { data: authority } = await supabase
+            .from('authority_profiles')
+            .select('institution')
+            .eq('user_identifier', comment.from_number)
+            .eq('status', 'active')
+            .single()
+          
+          if (authority?.institution) {
+            attribution = `${moment.created_by} at ${authority.institution} — ${moment.region}
+Verified by Unami Foundation Moments App`
+          } else {
+            attribution = `${moment.created_by} — ${moment.region}
+Verified by Unami Foundation Moments App`
+          }
+        } else {
+          attribution = `${moment.created_by} — ${moment.region}
+Verified by Unami Foundation Moments App`
+        }
+      } else {
+        attribution = `Unami Foundation Moments App — ${moment.region}`
+      }
+      
+      const broadcastMessage = `📢 ${attribution}
 
 ${moment.title}
 

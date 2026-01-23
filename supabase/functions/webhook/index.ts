@@ -854,6 +854,13 @@ serve(async (req) => {
               // MCP Analysis with Authority Integration
               try {
                 const content = message.text?.body || message.caption || ''
+                
+                if (!content || content.trim().length === 0) {
+                  console.warn(`⚠️ Empty message content from ${message.from}, skipping`)
+                  continue
+                }
+                
+                console.log(`📨 Message content (${content.length} chars): "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`)                
                 const mcpAnalysis = await analyzeMCPContent(content, message.from)
                 
                 await supabase.from('advisories').insert({
@@ -873,41 +880,55 @@ serve(async (req) => {
                 const autoApprove = mcpAnalysis.confidence < threshold
                 
                 if (autoApprove) {
-                  await supabase.from('messages').update({
-                    moderation_status: 'approved',
-                    authority_context: {
-                      ...authorityContext,
-                      mcp_confidence: mcpAnalysis.confidence,
-                      auto_approved: true,
-                      threshold_used: threshold
-                    },
-                    processed: true
-                  }).eq('id', messageRecord.id)
-                  
-                  const words = content.trim().split(' ')
-                  const title = words.length <= 8 ? content : words.slice(0, 8).join(' ') + '...'
-                  
-                  const { data: autoMoment } = await supabase.from('moments').insert({
-                    title,
-                    content: content,
-                    region: authorityContext?.scope_identifier || 'National',
-                    category: 'Community',
-                    status: 'draft',
-                    created_by: authorityContext?.role || 'authority',
-                    content_source: 'whatsapp',
-                    is_verified: !!authorityContext
-                  }).select().single()
-                  
-                  if (autoMoment) {
-                    await supabase.from('whatsapp_comments').insert({
-                      whatsapp_message_id: message.id,
-                      from_number: message.from,
-                      moment_id: autoMoment.id,
-                      media_type: 'text'
-                    })
+                  try {
+                    await supabase.from('messages').update({
+                      moderation_status: 'approved',
+                      authority_context: {
+                        ...authorityContext,
+                        mcp_confidence: mcpAnalysis.confidence,
+                        auto_approved: true,
+                        threshold_used: threshold
+                      },
+                      processed: true
+                    }).eq('id', messageRecord.id)
+                    
+                    const words = content.trim().split(' ')
+                    const title = words.length <= 8 ? content.trim() : words.slice(0, 8).join(' ') + '...'
+                    
+                    console.log(`📝 Creating moment: title="${title}", content="${content.substring(0, 30)}...", region=${authorityContext?.region || 'National'}, role=${authorityContext?.role || 'community'}`)
+                    
+                    const { data: autoMoment, error: momentError } = await supabase.from('moments').insert({
+                      title: title,
+                      content: content,
+                      region: authorityContext?.region || 'National',
+                      category: 'Community',
+                      status: 'draft',
+                      created_by: authorityContext?.role || 'community',
+                      content_source: 'whatsapp'
+                    }).select().single()
+                    
+                    if (momentError) {
+                      console.error('❌ Moment insert failed:', momentError)
+                      throw momentError
+                    }
+                    
+                    if (autoMoment) {
+                      const { error: commentError } = await supabase.from('whatsapp_comments').insert({
+                        whatsapp_message_id: message.id,
+                        from_number: message.from,
+                        moment_id: autoMoment.id,
+                        media_type: 'text'
+                      })
+                      
+                      if (commentError) {
+                        console.error('❌ Comment insert failed:', commentError)
+                      }
+                    }
+                    
+                    console.log(`✅ Auto-approved (threshold=${threshold}): message ${messageRecord.id}, moment ${autoMoment?.id}, authority=${authorityContext?.role}`)
+                  } catch (approvalError) {
+                    console.error('❌ Auto-approval failed:', approvalError)
                   }
-                  
-                  console.log(`✅ Auto-approved (threshold=${threshold}): message ${messageRecord.id}, moment ${autoMoment?.id}, authority=${authorityContext?.role}`)
                 }
               } catch (mcpError) {
                 console.error('MCP analysis failed:', mcpError)
