@@ -2495,6 +2495,33 @@ ${moment.content}
         console.error('Request update failed:', updateError)
       }
       
+      // Send WhatsApp notification directly
+      try {
+        const whatsappResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${Deno.env.get('WHATSAPP_PHONE_ID')}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to: request.phone_number,
+              type: 'text',
+              text: {
+                body: `✅ Authority Verified!\n\nYou've been verified as ${preset.name}\n\n📊 Authority Level: ${preset.authority_level}\n👥 Max Recipients: ${preset.blast_radius.toLocaleString()}\n📍 Scope: ${request.institution}\n🌍 Region: ${request.region}\n⏰ Valid Until: ${validUntil.toLocaleDateString()}\n\nYou can now broadcast messages to your community.\n\n📱 Send messages here to broadcast\n❓ Reply HELP for commands`
+              }
+            })
+          }
+        )
+        if (whatsappResponse.ok) {
+          console.log(`Authority notification sent to ${request.phone_number}`)
+        }
+      } catch (notifError) {
+        console.error('WhatsApp notification failed:', notifError)
+      }
+      
       return new Response(JSON.stringify({ success: true, profile_id: profile.id }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
