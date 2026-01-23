@@ -1222,6 +1222,95 @@ router.post('/logout', async (req, res) => {
 });
 
 // --- Authority management (Phase 3: Admin API Integration) ---
+// Get authority requests (Phase 3) - MUST BE BEFORE /authority route
+router.get('/authority/requests', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('authority_requests')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false });
+    
+    if (error) throw error;
+    res.json({ success: true, requests: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Approve authority request (Phase 3)
+router.post('/authority/requests/:id/approve', requireRole(['content_admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { phone, role, institution, region } = req.body;
+    const user = await getUserFromRequest(req);
+    
+    // Create authority profile
+    const roleMap = {
+      school_principal: { level: 2, scope: 'school', blast_radius: 500 },
+      community_leader: { level: 3, scope: 'community', blast_radius: 1000 },
+      government_official: { level: 4, scope: 'region', blast_radius: 5000 },
+      ngo_coordinator: { level: 2, scope: 'community', blast_radius: 500 },
+      event_organizer: { level: 1, scope: 'community', blast_radius: 200 }
+    };
+    
+    const config = roleMap[role] || { level: 1, scope: 'community', blast_radius: 100 };
+    
+    const { data: profile, error: profileError } = await supabase
+      .from('authority_profiles')
+      .insert({
+        user_identifier: phone,
+        authority_level: config.level,
+        role_label: role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
+        scope: config.scope,
+        scope_identifier: institution,
+        blast_radius: config.blast_radius,
+        created_by: user?.id
+      })
+      .select()
+      .single();
+    
+    if (profileError) throw profileError;
+    
+    // Update request status
+    await supabase
+      .from('authority_requests')
+      .update({ 
+        status: 'approved',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id
+      })
+      .eq('id', id);
+    
+    res.json({ success: true, profile });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Reject authority request (Phase 3)
+router.post('/authority/requests/:id/reject', requireRole(['content_admin','superadmin']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    const user = await getUserFromRequest(req);
+    
+    await supabase
+      .from('authority_requests')
+      .update({ 
+        status: 'rejected',
+        admin_notes: reason,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id
+      })
+      .eq('id', id);
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // List authority profiles
 router.get('/authority', async (req, res) => {
   try {
@@ -1454,95 +1543,6 @@ router.get('/authority/lookup/:user_identifier', async (req, res) => {
       authority: authority,
       has_authority: !!authority
     });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get authority requests (Phase 3)
-router.get('/authority/requests', async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from('authority_requests')
-      .select('*')
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false });
-    
-    if (error) throw error;
-    res.json({ success: true, requests: data || [] });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Approve authority request (Phase 3)
-router.post('/authority/requests/:id/approve', requireRole(['content_admin','superadmin']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { phone, role, institution, region } = req.body;
-    const user = await getUserFromRequest(req);
-    
-    // Create authority profile
-    const roleMap = {
-      school_principal: { level: 2, scope: 'school', blast_radius: 500 },
-      community_leader: { level: 3, scope: 'community', blast_radius: 1000 },
-      government_official: { level: 4, scope: 'region', blast_radius: 5000 },
-      ngo_coordinator: { level: 2, scope: 'community', blast_radius: 500 },
-      event_organizer: { level: 1, scope: 'community', blast_radius: 200 }
-    };
-    
-    const config = roleMap[role] || { level: 1, scope: 'community', blast_radius: 100 };
-    
-    const { data: profile, error: profileError } = await supabase
-      .from('authority_profiles')
-      .insert({
-        user_identifier: phone,
-        authority_level: config.level,
-        role_label: role.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
-        scope: config.scope,
-        scope_identifier: institution,
-        blast_radius: config.blast_radius,
-        created_by: user?.id
-      })
-      .select()
-      .single();
-    
-    if (profileError) throw profileError;
-    
-    // Update request status
-    await supabase
-      .from('authority_requests')
-      .update({ 
-        status: 'approved',
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user?.id
-      })
-      .eq('id', id);
-    
-    res.json({ success: true, profile });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Reject authority request (Phase 3)
-router.post('/authority/requests/:id/reject', requireRole(['content_admin','superadmin']), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { reason } = req.body;
-    const user = await getUserFromRequest(req);
-    
-    await supabase
-      .from('authority_requests')
-      .update({ 
-        status: 'rejected',
-        admin_notes: reason,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user?.id
-      })
-      .eq('id', id);
-    
-    res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
