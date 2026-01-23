@@ -6,8 +6,12 @@ let selectedPreset = null;
 
 async function loadAuthorityPresets() {
     const container = document.getElementById('role-presets');
-    if (!container) return;
+    if (!container) {
+        console.error('role-presets container not found');
+        return;
+    }
     
+    console.log('Loading authority presets...');
     const API_BASE = window.API_BASE_URL || window.location.origin;
     
     try {
@@ -15,9 +19,13 @@ async function loadAuthorityPresets() {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
-        if (!response.ok) throw new Error('Failed to load presets');
+        if (!response.ok) {
+            console.error('Presets API failed:', response.status);
+            throw new Error('Failed to load presets');
+        }
         
         const { presets } = await response.json();
+        console.log('Presets loaded:', Object.keys(presets));
         
         container.innerHTML = Object.entries(presets).map(([key, preset]) => `
             <div class="role-preset" data-preset-key="${key}" onclick="selectPreset('${key}', ${JSON.stringify(preset).replace(/"/g, '&quot;')})">
@@ -433,15 +441,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load presets when create-authority is clicked
     document.addEventListener('click', (e) => {
         if (e.target.closest('[data-action="create-authority"]')) {
-            if (window.dashboardCore?.showSection) {
-                window.dashboardCore.showSection('authority-form-section');
+            console.log('Create authority clicked');
+            const formSection = document.getElementById('authority-form-section');
+            if (formSection) {
+                formSection.style.display = 'block';
+                document.getElementById('authority')?.style.setProperty('display', 'none');
             }
-            setTimeout(() => loadAuthorityPresets(), 100);
+            setTimeout(() => {
+                console.log('Calling loadAuthorityPresets');
+                loadAuthorityPresets();
+            }, 200);
         }
         if (e.target.closest('[data-action="close-authority-form"]')) {
-            if (window.dashboardCore?.showSection) {
-                window.dashboardCore.showSection('authority');
-            }
+            document.getElementById('authority-form-section')?.style.setProperty('display', 'none');
+            document.getElementById('authority')?.style.setProperty('display', 'block');
         }
     });
 });
