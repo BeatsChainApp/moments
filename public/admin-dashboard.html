@@ -1767,6 +1767,23 @@
         }
     </script>
 
+    <!-- Authority Detail Modal -->
+    <div id="authority-detail-modal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h3 id="authority-detail-title" style="margin: 0;">Authority Details</h3>
+                <button class="btn btn-secondary" onclick="closeModal('authority-detail-modal')" style="padding: 0.5rem 1rem;">×</button>
+            </div>
+            <div id="authority-detail-body"></div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem; flex-wrap: wrap;">
+                <button class="btn" id="authority-edit-btn" onclick="editAuthorityFromModal()">Edit</button>
+                <button class="btn" id="authority-toggle-btn" onclick="toggleAuthorityStatus()">Suspend</button>
+                <button class="btn" onclick="extendAuthorityModal()">Extend</button>
+                <button class="btn danger" onclick="deleteAuthorityModal()">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- CSV Import Modal -->
     <div id="csv-import-modal" class="modal">
         <div class="modal-content">

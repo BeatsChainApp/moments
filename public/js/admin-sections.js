@@ -141,8 +141,141 @@ async function loadAuthoritySection() {
 }
 
 function viewAuthorityDetails(id) {
-    console.log('View details for:', id);
-    alert('Authority details coming soon!');
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    fetch(`${API_BASE}/admin/authority?id=${id}`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const auth = data.authority_profiles?.[0];
+        if (!auth) return alert('Authority not found');
+        
+        const expiry = new Date(auth.valid_until);
+        const daysLeft = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+        const statusText = daysLeft < 0 ? 'Expired' : daysLeft < 7 ? 'Expiring Soon' : 'Active';
+        const statusColor = daysLeft < 0 ? '#dc2626' : daysLeft < 7 ? '#f59e0b' : '#10b981';
+        
+        document.getElementById('authority-detail-title').textContent = auth.role_label || 'Authority';
+        document.getElementById('authority-detail-body').innerHTML = `
+            <div style="display: grid; gap: 1rem;">
+                <div>
+                    <strong style="color: #6b7280;">Phone Number</strong>
+                    <div style="font-size: 1.1rem;">${auth.user_identifier}</div>
+                </div>
+                <div>
+                    <strong style="color: #6b7280;">Institution</strong>
+                    <div>${auth.scope_identifier || 'N/A'}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <strong style="color: #6b7280;">Region</strong>
+                        <div>${auth.region || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #6b7280;">Authority Level</strong>
+                        <div>Level ${auth.authority_level}</div>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div>
+                        <strong style="color: #6b7280;">Max Recipients</strong>
+                        <div>${auth.blast_radius?.toLocaleString() || 'N/A'}</div>
+                    </div>
+                    <div>
+                        <strong style="color: #6b7280;">Safety Threshold</strong>
+                        <div>${auth.risk_threshold ? (auth.risk_threshold * 100).toFixed(0) + '%' : 'N/A'}</div>
+                    </div>
+                </div>
+                <div>
+                    <strong style="color: #6b7280;">Status</strong>
+                    <div style="color: ${statusColor}; font-weight: 600;">${statusText} (${daysLeft} days)</div>
+                </div>
+                <div>
+                    <strong style="color: #6b7280;">Valid Until</strong>
+                    <div>${expiry.toLocaleDateString()} ${expiry.toLocaleTimeString()}</div>
+                </div>
+            </div>
+        `;
+        
+        window.currentAuthorityId = id;
+        window.currentAuthorityStatus = auth.status;
+        
+        const toggleBtn = document.getElementById('authority-toggle-btn');
+        toggleBtn.textContent = auth.status === 'active' ? 'Suspend' : 'Activate';
+        toggleBtn.className = auth.status === 'active' ? 'btn' : 'btn';
+        
+        document.getElementById('authority-detail-modal').style.display = 'flex';
+    })
+    .catch(err => {
+        console.error('Failed to load authority:', err);
+        alert('Failed to load authority details');
+    });
+}
+
+function editAuthorityFromModal() {
+    closeModal('authority-detail-modal');
+    // TODO: Populate edit form with current authority data
+    alert('Edit functionality coming soon');
+}
+
+function toggleAuthorityStatus() {
+    const newStatus = window.currentAuthorityStatus === 'active' ? 'suspended' : 'active';
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    fetch(`${API_BASE}/admin/authority/${window.currentAuthorityId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(() => {
+        alert(`Authority ${newStatus === 'active' ? 'activated' : 'suspended'}`);
+        closeModal('authority-detail-modal');
+        if (window.loadAuthoritySection) window.loadAuthoritySection();
+    })
+    .catch(err => alert('Failed: ' + err.message));
+}
+
+function extendAuthorityModal() {
+    const days = prompt('Extend by how many days?', '90');
+    if (!days) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    fetch(`${API_BASE}/admin/authority/bulk-extend`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ ids: [window.currentAuthorityId], days: parseInt(days) })
+    })
+    .then(() => {
+        alert(`Extended by ${days} days`);
+        closeModal('authority-detail-modal');
+        if (window.loadAuthoritySection) window.loadAuthoritySection();
+    })
+    .catch(err => alert('Failed: ' + err.message));
+}
+
+function deleteAuthorityModal() {
+    if (!confirm('Delete this authority? This cannot be undone!')) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    fetch(`${API_BASE}/admin/authority/${window.currentAuthorityId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+    })
+    .then(() => {
+        alert('Authority deleted');
+        closeModal('authority-detail-modal');
+        if (window.loadAuthoritySection) window.loadAuthoritySection();
+    })
+    .catch(err => alert('Failed: ' + err.message));
 }
 
 async function saveAuthority(formData) {
@@ -492,6 +625,10 @@ window.loadAuthoritySection = loadAuthoritySection;
 window.loadAuthorityPresets = loadAuthorityPresets;
 window.selectPreset = selectPreset;
 window.viewAuthorityDetails = viewAuthorityDetails;
+window.editAuthorityFromModal = editAuthorityFromModal;
+window.toggleAuthorityStatus = toggleAuthorityStatus;
+window.extendAuthorityModal = extendAuthorityModal;
+window.deleteAuthorityModal = deleteAuthorityModal;
 window.loadBudgetSection = loadBudgetSection;
 window.loadAnalyticsSection = loadAnalyticsSection;
 window.editAuthority = async (id) => {
