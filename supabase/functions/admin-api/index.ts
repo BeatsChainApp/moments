@@ -2479,7 +2479,7 @@ ${moment.content}
         valid_from: validFrom.toISOString(),
         valid_until: validUntil.toISOString(),
         status: 'active',
-        metadata: { region: request.region, institution: request.institution }
+        region: request.region
       }).select().single()
       
       if (insertError) {
