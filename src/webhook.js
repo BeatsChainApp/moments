@@ -91,7 +91,7 @@ async function processMessage(message, value) {
         content = `[${messageType} message]`;
     }
 
-    // Handle commands
+    // Handle commands BEFORE storing message
     const command = content.toLowerCase().trim();
     
     if (command === 'stop' || command === 'unsubscribe') {
@@ -123,6 +123,18 @@ async function processMessage(message, value) {
     const requestState = await checkAuthorityRequestState(fromNumber);
     if (requestState) {
       await handleAuthorityRequestStep(fromNumber, content, requestState);
+      return;
+    }
+    
+    // Handle region selection (e.g., "KZN WC GP")
+    if (isRegionSelection(command)) {
+      await handleRegionSelection(fromNumber, command);
+      return;
+    }
+    
+    // Handle casual chat attempts
+    if (isCasualMessage(command)) {
+      await handleCasualChat(fromNumber);
       return;
     }
     
