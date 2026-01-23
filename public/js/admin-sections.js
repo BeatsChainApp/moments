@@ -53,52 +53,63 @@ function selectPreset(key, preset) {
 }
 
 async function loadAuthoritySection() {
-    const container = document.getElementById('authority-profiles-list');
+    const container = document.getElementById('authority-list');
     if (!container) return;
     
     const API_BASE = window.API_BASE_URL || window.location.origin;
     
     try {
-        window.dashboardCore.showSkeleton('authority-profiles-list', 'list', 5);
+        container.innerHTML = '<div class="loading">Loading...</div>';
         
         const response = await fetch(`${API_BASE}/admin/authority`, {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
-        if (!response.ok) throw new Error('Failed to load authority profiles');
+        if (!response.ok) throw new Error('Failed to load');
         
-        const { profiles, total } = await response.json();
+        const { authority_profiles } = await response.json();
         
-        if (profiles.length === 0) {
-            window.dashboardCore.showEmptyState('authority-profiles-list', {
-                icon: '🔐',
-                title: 'No Authority Profiles',
-                message: 'Assign authority levels to users for content moderation.',
-                action: { label: 'Assign Authority', handler: 'handleAction("create-authority")' }
-            });
+        if (!authority_profiles || authority_profiles.length === 0) {
+            container.innerHTML = '<p class="empty-message">No authorities assigned yet</p>';
             return;
         }
         
-        container.innerHTML = profiles.map(profile => `
-            <div class="authority-profile-item">
-                <div class="profile-header">
-                    <strong>${profile.role_label}</strong>
-                    <span class="badge ${profile.status}">${profile.status}</span>
-                </div>
-                <div class="profile-details">
-                    <span>User: ${profile.user_identifier}</span>
-                    <span>Level: ${profile.authority_level}</span>
-                    <span>Scope: ${profile.scope}</span>
-                </div>
-                <div class="profile-actions">
-                    <button class="btn-small" onclick="editAuthority('${profile.id}')">Edit</button>
-                    <button class="btn-small danger" onclick="deleteAuthority('${profile.id}')">Delete</button>
-                </div>
-            </div>
-        `).join('');
-        
+        container.innerHTML = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" onchange="selectAllAuthorities(this)"></th>
+                        <th>Phone</th>
+                        <th>Role</th>
+                        <th>Institution</th>
+                        <th>Region</th>
+                        <th>Status</th>
+                        <th>Expires</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${authority_profiles.map(a => {
+                        const expiry = new Date(a.valid_until);
+                        const daysLeft = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+                        const statusBadge = daysLeft < 0 ? '🔴 Expired' : daysLeft < 7 ? '🟡 Expiring' : '🟢 Active';
+                        
+                        return `
+                        <tr>
+                            <td><input type="checkbox" class="authority-checkbox" data-id="${a.id}" onchange="toggleAuthority('${a.id}', this)"></td>
+                            <td>${a.user_identifier}</td>
+                            <td>${a.role_label || 'N/A'}</td>
+                            <td>${a.scope_identifier || 'N/A'}</td>
+                            <td>${a.region || 'N/A'}</td>
+                            <td>${statusBadge}</td>
+                            <td>${expiry.toLocaleDateString()} (${daysLeft}d)</td>
+                        </tr>
+                    `}).join('')}
+                </tbody>
+            </table>
+        `;
     } catch (error) {
-        window.dashboardCore.handleError(error, 'loadAuthoritySection');
+        container.innerHTML = '<p class="error">Failed to load authorities</p>';
+        console.error(error);
     }
 }
 

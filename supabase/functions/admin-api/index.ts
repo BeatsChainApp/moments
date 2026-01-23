@@ -2320,6 +2320,89 @@ ${moment.content}
       })
     }
 
+    // Bulk import authorities from CSV
+    if (path.includes('/authority/bulk-import') && method === 'POST' && body) {
+      const { authorities } = body
+      const results = { success: 0, failed: 0, errors: [] }
+      
+      for (let i = 0; i < authorities.length; i++) {
+        const auth = authorities[i]
+        try {
+          const presets = {
+            school_principal: { authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 500, risk_threshold: 0.70, validity_days: 365 },
+            community_leader: { authority_level: 3, scope: "community", approval_mode: "auto", blast_radius: 300, risk_threshold: 0.70, validity_days: 180 },
+            government_official: { authority_level: 5, scope: "national", approval_mode: "auto", blast_radius: 5000, risk_threshold: 0.90, validity_days: 730 },
+            ngo_coordinator: { authority_level: 4, scope: "regional", approval_mode: "ai_review", blast_radius: 2000, risk_threshold: 0.80, validity_days: 365 },
+            event_organizer: { authority_level: 2, scope: "community", approval_mode: "ai_review", blast_radius: 200, risk_threshold: 0.60, validity_days: 90 }
+          }
+          const preset = presets[auth.preset_key]
+          if (!preset) throw new Error('Invalid preset')
+          
+          const validFrom = new Date()
+          const validUntil = new Date(validFrom.getTime() + preset.validity_days * 24 * 60 * 60 * 1000)
+          
+          await supabase.from('authority_profiles').insert({
+            user_identifier: auth.phone,
+            role_label: preset.name || auth.preset_key,
+            authority_level: preset.authority_level,
+            scope: preset.scope,
+            scope_identifier: auth.scope_identifier,
+            approval_mode: preset.approval_mode,
+            blast_radius: preset.blast_radius,
+            risk_threshold: preset.risk_threshold,
+            valid_from: validFrom.toISOString(),
+            valid_until: validUntil.toISOString(),
+            status: 'active',
+            region: auth.region || null
+          })
+          results.success++
+        } catch (error) {
+          results.failed++
+          results.errors.push({ row: i + 2, phone: auth.phone, error: error.message })
+        }
+      }
+      
+      return new Response(JSON.stringify(results), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Bulk suspend authorities
+    if (path.includes('/authority/bulk-suspend') && method === 'POST' && body) {
+      const { ids } = body
+      const { error } = await supabase.from('authority_profiles').update({ status: 'suspended' }).in('id', ids)
+      if (error) throw error
+      return new Response(JSON.stringify({ success: true, count: ids.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Bulk extend authorities
+    if (path.includes('/authority/bulk-extend') && method === 'POST' && body) {
+      const { ids, days } = body
+      const { data: profiles } = await supabase.from('authority_profiles').select('id, valid_until').in('id', ids)
+      
+      for (const profile of profiles || []) {
+        const currentExpiry = new Date(profile.valid_until)
+        const newExpiry = new Date(currentExpiry.getTime() + days * 24 * 60 * 60 * 1000)
+        await supabase.from('authority_profiles').update({ valid_until: newExpiry.toISOString() }).eq('id', profile.id)
+      }
+      
+      return new Response(JSON.stringify({ success: true, count: ids.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Bulk delete authorities
+    if (path.includes('/authority/bulk-delete') && method === 'POST' && body) {
+      const { ids } = body
+      const { error } = await supabase.from('authority_profiles').delete().in('id', ids)
+      if (error) throw error
+      return new Response(JSON.stringify({ success: true, count: ids.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Search authority profiles
     if (path.includes('/authority/search') && method === 'GET') {
       const query = url.searchParams.get('q') || ''

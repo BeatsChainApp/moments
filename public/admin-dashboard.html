@@ -1353,7 +1353,10 @@
             <div class="card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 1rem;">
                     <h2>🔐 Authority Management</h2>
-                    <button class="btn" data-action="create-authority">➕ Assign Authority</button>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn" data-action="create-authority">➕ Assign Authority</button>
+                        <button class="btn" data-action="import-csv">📤 Import CSV</button>
+                    </div>
                 </div>
                 
                 <div class="alert alert-info" style="margin-bottom: 1rem;">
@@ -1748,8 +1751,41 @@
             }, 100);
         }
     </script>
+
+    <!-- CSV Import Modal -->
+    <div id="csv-import-modal" class="modal">
+        <div class="modal-content">
+            <h3>Import Authorities from CSV</h3>
+            <div style="margin: 1rem 0;">
+                <h4>1. Download Template</h4>
+                <button class="btn" onclick="downloadCSVTemplate()">📅 Download Template</button>
+                <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Template: phone, preset_key, scope_identifier, region</p>
+            </div>
+            <div style="margin: 1rem 0;">
+                <h4>2. Upload CSV</h4>
+                <input type="file" id="csv-file-input" accept=".csv">
+                <button class="btn" onclick="parseCSV()">🔍 Preview</button>
+            </div>
+            <div id="csv-preview" style="margin: 1rem 0; max-height: 300px; overflow-y: auto;"></div>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="btn" id="import-csv-btn" onclick="importCSV()" disabled>📤 Import</button>
+                <button class="btn btn-secondary" onclick="closeModal('csv-import-modal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Actions Toolbar -->
+    <div id="bulk-actions-toolbar" style="display:none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000;">
+        <span id="selected-count" style="margin-right: 1rem; font-weight: bold;">0 selected</span>
+        <button class="btn-small" onclick="bulkSuspend()">⏸️ Suspend</button>
+        <button class="btn-small" onclick="bulkExtend()">📅 Extend</button>
+        <button class="btn-small danger" onclick="bulkDelete()">🗑️ Delete</button>
+        <button class="btn-small" onclick="clearSelection()">Clear</button>
+    </div>
+
     <script src="/js/admin-dashboard-core.js?v=2.0.4"></script>
     <script src="/js/admin-sections.js?v=1.0.0"></script>
+    <script src="/js/authority-phase2.js"></script>
     <script src="/js/admin-notifications.js"></script>
     <script src="/js/dark-mode.js?v=2.0.4"></script>
     <script src="/js/keyboard-shortcuts.js?v=2.0.4"></script>
