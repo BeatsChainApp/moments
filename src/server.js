@@ -114,8 +114,53 @@ app.get('/login', (req, res) => {
 // Admin login endpoint (no CSRF for login) - MUST be before admin routes
 app.post('/admin/login', adminLogin);
 
-// Mount admin routes with CSRF enforcement for state-changing requests
-app.use('/admin', csrfMiddleware, adminRoutes);
+// Proxy ALL /admin/* requests to Supabase admin-api edge function
+app.use('/admin', async (req, res, next) => {
+  // Skip login endpoint (already handled above)
+  if (req.path === '/login' && req.method === 'POST') {
+    return next();
+  }
+
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://bxmdzcxejcxbinghtyfw.supabase.co';
+    const proxyUrl = `${supabaseUrl}/functions/v1/admin-api${req.path}`;
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': process.env.SUPABASE_ANON_KEY || ''
+    };
+
+    // Forward Authorization header if present
+    if (req.headers.authorization) {
+      headers['Authorization'] = req.headers.authorization;
+    }
+
+    const options = {
+      method: req.method,
+      headers
+    };
+
+    // Add body for POST/PUT/PATCH requests
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+      options.body = JSON.stringify(req.body);
+    }
+
+    // Add query parameters
+    const queryString = new URL(req.url, 'http://localhost').search;
+    const fullUrl = proxyUrl + queryString;
+
+    const response = await fetch(fullUrl, options);
+    const data = await response.json();
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('Admin proxy error:', error);
+    res.status(500).json({ error: 'Admin API unavailable' });
+  }
+});
+
+// Mount admin routes with CSRF enforcement for state-changing requests (FALLBACK - should not be reached)
+app.use('/admin-local', csrfMiddleware, adminRoutes);
 
 // Mount public routes (no auth required)
 app.use('/public', publicRoutes);

@@ -670,14 +670,47 @@ function authenticateAdmin(req, res, next) {
     return res.status(401).json({ error: 'Invalid token' });
   }
   
-  // For now, accept any valid-looking token
-  // In production, validate against Supabase JWT
   req.user = { token };
   next();
 }
 
-// Basic admin endpoints
-app.get('/admin/analytics', authenticateAdmin, async (req, res) => {
+// Proxy ALL /admin/* requests to Supabase admin-api edge function
+app.use('/admin', authenticateAdmin, async (req, res) => {
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL || 'https://bxmdzcxejcxbinghtyfw.supabase.co';
+    const proxyUrl = `${supabaseUrl}/functions/v1/admin-api${req.path}`;
+    
+    const headers = {
+      'Content-Type': 'application/json',
+      'apikey': process.env.SUPABASE_ANON_KEY || '',
+      'Authorization': req.headers.authorization
+    };
+
+    const options = {
+      method: req.method,
+      headers
+    };
+
+    if (['POST', 'PUT', 'PATCH'].includes(req.method) && req.body) {
+      options.body = JSON.stringify(req.body);
+    }
+
+    const queryString = new URL(req.url, 'http://localhost').search;
+    const fullUrl = proxyUrl + queryString;
+
+    const response = await fetch(fullUrl, options);
+    const data = await response.json();
+
+    res.status(response.status).json(data);
+  } catch (error) {
+    console.error('Admin proxy error:', error);
+    res.status(500).json({ error: 'Admin API unavailable' });
+  }
+});
+
+// OLD LOCAL ADMIN ROUTES BELOW (DEPRECATED - kept for reference)
+/*
+app.get('/admin/analytics-old', authenticateAdmin, async (req, res) => {
   try {
     const { data, error } = await supabase.rpc('get_admin_analytics');
     
