@@ -1828,7 +1828,7 @@ ${moment.content}
           .single()
 
         // Log compliance
-        await supabase.from('marketing_compliance').insert({
+        const { error: complianceError } = await supabase.from('marketing_compliance').insert({
           moment_id: moment.id,
           broadcast_id: broadcast.id,
           template_used: templateName,
@@ -1837,7 +1837,11 @@ ${moment.content}
           opt_out_included: true,
           pwa_link_included: true,
           compliance_score: 100
-        }).catch(() => {})
+        })
+
+        if (complianceError) {
+          console.error('Compliance log failed:', complianceError)
+        }
 
         // Trigger webhook
         const webhookUrl = `${Deno.env.get('SUPABASE_URL')}/functions/v1/broadcast-webhook`
