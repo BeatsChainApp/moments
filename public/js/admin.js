@@ -238,6 +238,9 @@ async function handleAction(action, element) {
                 document.getElementById('authority-form-title').textContent = 'Assign Authority';
                 document.getElementById('authority-submit-btn').textContent = 'Assign Authority';
                 showSection('authority-form-section');
+                if (window.loadAuthorityPresets) {
+                    setTimeout(() => window.loadAuthorityPresets(), 100);
+                }
                 break;
             case 'close-authority-form':
                 showSection('authority');
