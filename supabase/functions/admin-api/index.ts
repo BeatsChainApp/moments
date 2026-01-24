@@ -2534,7 +2534,7 @@ ${moment.content}
         console.error('Request update failed:', updateError)
       }
       
-      // Send WhatsApp notification directly
+      // Send WhatsApp notification and log
       try {
         const whatsappResponse = await fetch(
           `https://graph.facebook.com/v18.0/${Deno.env.get('WHATSAPP_PHONE_ID')}/messages`,
@@ -2554,11 +2554,31 @@ ${moment.content}
             })
           }
         )
-        if (whatsappResponse.ok) {
-          console.log(`Authority notification sent to ${request.phone_number}`)
+        
+        const delivered = whatsappResponse.ok
+        
+        // Log notification
+        await supabase.from('authority_notifications').insert({
+          authority_id: profile.id,
+          notification_type: 'granted',
+          delivered,
+          created_at: new Date().toISOString()
+        })
+        
+        if (delivered) {
+          console.log(`✅ Authority notification sent to ${request.phone_number}`)
+        } else {
+          console.error(`❌ WhatsApp API error: ${whatsappResponse.status}`)
         }
       } catch (notifError) {
-        console.error('WhatsApp notification failed:', notifError)
+        console.error('❌ WhatsApp notification failed:', notifError)
+        // Log failed notification
+        await supabase.from('authority_notifications').insert({
+          authority_id: profile.id,
+          notification_type: 'granted',
+          delivered: false,
+          created_at: new Date().toISOString()
+        })
       }
       
       return new Response(JSON.stringify({ success: true, profile_id: profile.id }), {
@@ -2686,18 +2706,51 @@ ${moment.content}
 
       if (error) throw error
       
-      // Send WhatsApp notification
+      // Send WhatsApp notification and log
       try {
-        await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/authority-notification`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ authority_id: data.id, notification_type: 'granted' })
+        const whatsappResponse = await fetch(
+          `https://graph.facebook.com/v18.0/${Deno.env.get('WHATSAPP_PHONE_ID')}/messages`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              messaging_product: 'whatsapp',
+              to: data.user_identifier,
+              type: 'text',
+              text: {
+                body: `🎉 You're now a ${data.role_label}!\n\n💡 Share what matters:\n• Local opportunities\n• Safety alerts\n• Community events\n\nKeep it short and clear.\n\n📱 Send your message here to broadcast\n📍 ${data.region || 'National'} • Valid until ${new Date(data.valid_until).toLocaleDateString()}\n\n🌐 moments.unamifoundation.org`
+              }
+            })
+          }
+        )
+        
+        const delivered = whatsappResponse.ok
+        
+        // Log notification
+        await supabase.from('authority_notifications').insert({
+          authority_id: data.id,
+          notification_type: 'granted',
+          delivered,
+          created_at: new Date().toISOString()
         })
+        
+        if (delivered) {
+          console.log(`✅ Authority notification sent to ${data.user_identifier}`)
+        } else {
+          console.error(`❌ WhatsApp API error: ${whatsappResponse.status}`)
+        }
       } catch (notifError) {
-        console.error('Notification failed:', notifError)
+        console.error('❌ Notification failed:', notifError)
+        // Log failed notification
+        await supabase.from('authority_notifications').insert({
+          authority_id: data.id,
+          notification_type: 'granted',
+          delivered: false,
+          created_at: new Date().toISOString()
+        })
       }
       
       return new Response(JSON.stringify({ authority_profile: data }), {
@@ -2707,6 +2760,14 @@ ${moment.content}
 
     if (path.match(/\/authority\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
       const id = path.split('/authority/')[1]
+      
+      // Get old status before update
+      const { data: oldProfile } = await supabase
+        .from('authority_profiles')
+        .select('status, user_identifier, role_label')
+        .eq('id', id)
+        .single()
+      
       const { data, error } = await supabase
         .from('authority_profiles')
         .update(body)
@@ -2715,6 +2776,52 @@ ${moment.content}
         .single()
 
       if (error) throw error
+      
+      // Send notification if status changed to suspended
+      if (oldProfile && oldProfile.status !== 'suspended' && body.status === 'suspended') {
+        try {
+          const whatsappResponse = await fetch(
+            `https://graph.facebook.com/v18.0/${Deno.env.get('WHATSAPP_PHONE_ID')}/messages`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${Deno.env.get('WHATSAPP_TOKEN')}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                messaging_product: 'whatsapp',
+                to: data.user_identifier,
+                type: 'text',
+                text: {
+                  body: `⏸️ Authority Suspended\n\nYour ${data.role_label} authority has been temporarily suspended.\n\nPlease contact support for more information.\n\n🌐 moments.unamifoundation.org`
+                }
+              })
+            }
+          )
+          
+          const delivered = whatsappResponse.ok
+          
+          await supabase.from('authority_notifications').insert({
+            authority_id: data.id,
+            notification_type: 'suspended',
+            delivered,
+            created_at: new Date().toISOString()
+          })
+          
+          if (delivered) {
+            console.log(`✅ Suspension notification sent to ${data.user_identifier}`)
+          }
+        } catch (notifError) {
+          console.error('❌ Suspension notification failed:', notifError)
+          await supabase.from('authority_notifications').insert({
+            authority_id: data.id,
+            notification_type: 'suspended',
+            delivered: false,
+            created_at: new Date().toISOString()
+          })
+        }
+      }
+      
       return new Response(JSON.stringify({ authority_profile: data }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
