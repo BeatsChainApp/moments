@@ -12,3 +12,6 @@
 
 # Weekly digest on Monday at 8 AM UTC
 0 8 * * 1 notification-digest-processor
+
+# Process email notifications every 5 minutes
+*/5 * * * * email-notification-processor
