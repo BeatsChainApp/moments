@@ -2854,6 +2854,39 @@ ${moment.content}
       })
     }
 
+    // Notification analytics endpoint
+    if (path.includes('/notifications/analytics') && method === 'GET') {
+      const days = parseInt(url.searchParams.get('days') || '30')
+      const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+      
+      const [total, delivered, failed, byType] = await Promise.all([
+        supabase.from('authority_notifications').select('id', { count: 'exact', head: true }).gte('created_at', since),
+        supabase.from('authority_notifications').select('id', { count: 'exact', head: true }).eq('delivered', true).gte('created_at', since),
+        supabase.from('authority_notifications').select('id', { count: 'exact', head: true }).eq('delivered', false).gte('created_at', since),
+        supabase.from('authority_notifications').select('notification_type, delivered').gte('created_at', since)
+      ])
+      
+      const byTypeStats = {}
+      byType.data?.forEach(n => {
+        if (!byTypeStats[n.notification_type]) {
+          byTypeStats[n.notification_type] = { total: 0, delivered: 0, failed: 0 }
+        }
+        byTypeStats[n.notification_type].total++
+        if (n.delivered) byTypeStats[n.notification_type].delivered++
+        else byTypeStats[n.notification_type].failed++
+      })
+      
+      return new Response(JSON.stringify({
+        total: total.count || 0,
+        delivered: delivered.count || 0,
+        failed: failed.count || 0,
+        delivery_rate: total.count ? ((delivered.count || 0) / total.count * 100).toFixed(1) : 0,
+        by_type: byTypeStats
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
   } catch (error) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
     await logError(supabase, 'api_error', error.message, { path: new URL(req.url).pathname }, 'high')
