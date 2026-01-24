@@ -3,3 +3,6 @@
 
 # Check for expiring authorities daily at 9 AM UTC (11 AM SAST)
 0 9 * * * authority-expiry-check
+
+# Retry failed notifications every 6 hours
+0 */6 * * * notification-retry
