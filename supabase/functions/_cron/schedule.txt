@@ -6,3 +6,9 @@
 
 # Retry failed notifications every 6 hours
 0 */6 * * * notification-retry
+
+# Daily digest at 8 AM UTC (10 AM SAST)
+0 8 * * * notification-digest-processor
+
+# Weekly digest on Monday at 8 AM UTC
+0 8 * * 1 notification-digest-processor
