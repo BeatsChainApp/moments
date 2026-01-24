@@ -2887,6 +2887,34 @@ ${moment.content}
       })
     }
 
+    // Notification templates endpoints
+    if (path.includes('/notifications/templates') && method === 'GET') {
+      const { data: templates } = await supabase
+        .from('notification_templates')
+        .select('*')
+        .eq('active', true)
+        .order('template_name')
+      
+      return new Response(JSON.stringify({ templates: templates || [] }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (path.match(/\/notifications\/templates\/[a-f0-9-]{36}$/) && method === 'PUT' && body) {
+      const id = path.split('/templates/')[1]
+      const { data, error } = await supabase
+        .from('notification_templates')
+        .update({ message_template: body.message_template, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single()
+      
+      if (error) throw error
+      return new Response(JSON.stringify({ template: data }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
   } catch (error) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '')
     await logError(supabase, 'api_error', error.message, { path: new URL(req.url).pathname }, 'high')
