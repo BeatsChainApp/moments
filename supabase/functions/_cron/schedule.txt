@@ -1,0 +1,5 @@
+# Supabase Edge Functions Cron Jobs
+# Format: cron_expression function_name
+
+# Check for expiring authorities daily at 9 AM UTC (11 AM SAST)
+0 9 * * * authority-expiry-check
