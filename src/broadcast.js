@@ -145,22 +145,29 @@ export async function broadcastMoment(momentId) {
 
     if (broadcastError) throw broadcastError;
 
-    // Select template and build params
+    // Send generic template first, then full attributed moment
     const template = selectTemplate(moment, authorityContext, moment.sponsors);
     const templateParams = await buildTemplateParams(moment, authorityContext, moment.sponsors);
+    
+    // Compose full moment with attribution (sent after template)
+    const fullMoment = await composeMomentMessage(momentId);
     
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers using approved template
+    // Two-message pattern: Template + Full Moment
     for (const subscriber of subscribers || []) {
       try {
+        // 1. Send generic marketing template (starts conversation)
         await sendTemplateMessage(
           subscriber.phone_number,
           template.name,
           template.language,
           templateParams
         );
+        
+        // 2. Immediately send full attributed moment (same conversation)
+        await sendWhatsAppMessage(subscriber.phone_number, fullMoment);
         
         // Log to notification_log
         await supabase.from('notification_log').insert({

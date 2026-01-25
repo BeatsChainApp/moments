@@ -49,17 +49,36 @@ npm start
 1. **User sends message** → WhatsApp webhook → API processing
 2. **MCP analysis** → Advisory generation → Database storage
 3. **Admin creates Moment** → Broadcast system → WhatsApp distribution
-4. **Users receive Moments** → No replies processed (broadcast only)
+4. **Users receive Moments** → Two-message pattern (template + full moment)
 
-### Broadcast Format
+### Broadcast Pattern (Marketing Templates)
+
+**Message 1: Generic Template (Meta-approved shell)**
 ```
-📢 [Sponsored] Moment — KZN
-Local women-led farming co-op opens new training hub.
-📍 Open day: Friday
-🌱 Skills & mentorship
-Brought to you by Unami Foundation Partners
-🌐 More info: /moments?province=KZN
+You have a new update from Unami Foundation Moments.
+
+This message contains information shared by a verified community contributor.
 ```
+
+**Message 2: Full Attributed Moment (Immediate follow-up)**
+```
+📢 Community Leader (Verified)
+Scope: KwaZulu-Natal
+📍 Coverage: Safety
+🏛️ Affiliation: Unami Timber (Community Partner)
+🟡 Trust Level: Verified • Limited Scope
+
+Reminder to residents: please be aware of scheduled maintenance work.
+
+Reply FEEDBACK to respond
+Reply STOP to unsubscribe
+```
+
+**Why Two Messages:**
+- Marketing templates must be generic shells (no authority claims)
+- Attribution lives in the follow-up message (same conversation)
+- One marketing conversation, not two separate charges
+- WhatsApp-only, no links required
 
 ### User Commands
 - `START` / `JOIN` - Opt into broadcasts
