@@ -56,7 +56,12 @@ Scope: ${moment.region || 'National'}
   
   const role = userProfile.role || 'general';
   const trustLevel = TRUST_LEVELS[role];
-  if (!trustLevel) return '';
+  
+  // For roles without trust levels (like 'general'), don't show attribution block
+  if (!trustLevel) {
+    console.log(`No attribution block for role: ${role}`);
+    return '';
+  }
   
   return `📢 ${ROLE_LABELS[role]} (Verified)
 Scope: ${moment.region || 'National'}

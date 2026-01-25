@@ -273,7 +273,14 @@ router.post('/moments/:id/broadcast', async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Create WhatsApp intent
+    // Ensure slug exists
+    if (!moment.slug) {
+      const slug = generateSlug(moment.title, moment.id);
+      await supabase.from('moments').update({ slug }).eq('id', id);
+      moment.slug = slug;
+    }
+
+    // Create WhatsApp intent with proper URL
     const { data: whatsappIntent, error: intentError } = await supabase
       .from('moment_intents')
       .insert({
@@ -284,7 +291,9 @@ router.post('/moments/:id/broadcast', async (req, res) => {
         payload: {
           title: moment.title,
           full_text: moment.content,
-          link: `https://moments.unamifoundation.org/moments/${moment.slug || moment.id.substring(0, 8)}`
+          region: moment.region,
+          category: moment.category,
+          link: `https://moments.unamifoundation.org/moments/${moment.slug}`
         }
       })
       .select()
@@ -1821,5 +1830,16 @@ router.post('/compliance/check', async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// Generate slug from title and ID
+function generateSlug(title, id) {
+  let slug = title.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .substring(0, 60);
+  
+  slug += '-' + id.substring(0, 6);
+  return slug;
+}
 
 export default router;

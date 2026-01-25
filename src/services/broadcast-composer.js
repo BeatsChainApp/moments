@@ -1,7 +1,7 @@
 // Broadcast Composition Service - Standardized message formatting
 // Integrates attribution, content, and footer per governance standards
 
-import { supabase } from '../config/supabase.js';
+import { supabase } from '../../config/supabase.js';
 import { buildAttributionBlock, buildFooter, generateAttributionMetadata } from './attribution.js';
 
 /**
@@ -49,7 +49,7 @@ export async function composeMomentMessage(momentId) {
       identifier: moment.created_by
     };
     
-    // If created_by is a phone number, lookup authority
+    // If created_by is a phone number, lookup authority first
     if (moment.created_by && moment.created_by.startsWith('+')) {
       try {
         const { data: authority } = await supabase.rpc('lookup_authority', {
@@ -68,6 +68,31 @@ export async function composeMomentMessage(momentId) {
         }
       } catch (authError) {
         console.warn('Authority lookup failed:', authError);
+      }
+    } else {
+      // For non-phone identifiers, check created_by for role hints first
+      const createdByLower = (moment.created_by || '').toLowerCase();
+      
+      if (createdByLower.includes('community leader')) {
+        creator.role = 'community_leader';
+      } else if (createdByLower.includes('principal')) {
+        creator.role = 'school_principal';
+      } else if (createdByLower.includes('admin')) {
+        creator.role = 'admin';
+      } else {
+        // Fall back to content source mapping
+        const contentSourceRoleMap = {
+          'admin': 'admin',
+          'campaign': 'campaign', 
+          'community': 'community_member',
+          'whatsapp': 'community_member',
+          'partner': 'partner',
+          'ngo': 'ngo_representative'
+        };
+        
+        if (contentSourceRoleMap[moment.content_source]) {
+          creator.role = contentSourceRoleMap[moment.content_source];
+        }
       }
     }
     
