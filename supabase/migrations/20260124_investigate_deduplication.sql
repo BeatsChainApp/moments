@@ -21,12 +21,16 @@ HAVING COUNT(*) > 1
 ORDER BY duplicate_count DESC;
 
 -- 3. Count how many duplicates exist
+WITH duplicate_counts AS (
+    SELECT phone_number, COUNT(*) as cnt
+    FROM subscriptions
+    GROUP BY phone_number
+    HAVING COUNT(*) > 1
+)
 SELECT 
-    COUNT(DISTINCT phone_number) as unique_phones_with_duplicates,
-    SUM(COUNT(*) - 1) as total_duplicate_records_to_remove
-FROM subscriptions
-GROUP BY phone_number
-HAVING COUNT(*) > 1;
+    COUNT(*) as unique_phones_with_duplicates,
+    SUM(cnt - 1) as total_duplicate_records_to_remove
+FROM duplicate_counts;
 
 -- 4. Check if unique constraint already exists
 SELECT 
@@ -125,14 +129,26 @@ WHERE conrelid = 'subscriptions'::regclass
 AND conname = 'subscriptions_phone_unique';
 -- Should return 1 row
 
--- 3. Check audit log
+-- 3. Check audit log (only if table exists)
+DO $$
+BEGIN
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'subscriber_deduplication_log') THEN
+        RAISE NOTICE 'Audit log exists. Querying...';
+        PERFORM COUNT(*) FROM subscriber_deduplication_log;
+    ELSE
+        RAISE NOTICE 'Audit log does not exist yet. Will be created during migration.';
+    END IF;
+END $$;
+
+-- If audit log exists, show summary
 SELECT 
     COUNT(*) as total_deduplication_events,
     SUM(duplicate_count) as total_phone_numbers_deduplicated,
     SUM(array_length(deleted_ids, 1)) as total_records_deleted
-FROM subscriber_deduplication_log;
+FROM subscriber_deduplication_log
+WHERE EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'subscriber_deduplication_log');
 
--- 4. View audit log details
+-- 4. View audit log details (only if table exists)
 SELECT 
     phone_number,
     duplicate_count,
@@ -140,7 +156,9 @@ SELECT
     kept_id,
     deduplicated_at
 FROM subscriber_deduplication_log
-ORDER BY duplicate_count DESC, deduplicated_at DESC;
+WHERE EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'subscriber_deduplication_log')
+ORDER BY duplicate_count DESC, deduplicated_at DESC
+LIMIT 10;
 
 -- 5. Verify index exists
 SELECT 
