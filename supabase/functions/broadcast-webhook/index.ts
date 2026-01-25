@@ -386,6 +386,28 @@ serve(async (req) => {
 
     const { broadcast_id, moment_data, recipients, moment_id } = requestData
 
+    // CHECK: If broadcast already exists and is processing/completed, skip to prevent duplicates
+    if (broadcast_id) {
+      const { data: existingBroadcast } = await supabase
+        .from('broadcasts')
+        .select('id, status')
+        .eq('id', broadcast_id)
+        .single()
+      
+      if (existingBroadcast && ['processing', 'completed'].includes(existingBroadcast.status)) {
+        console.log(`⚠️ Broadcast ${broadcast_id} already ${existingBroadcast.status} - skipping to prevent duplicate`)
+        return new Response(JSON.stringify({
+          skipped: true,
+          broadcast_id,
+          reason: `Broadcast already ${existingBroadcast.status}`,
+          message: 'Duplicate broadcast prevented'
+        }), {
+          status: 200,
+          headers: corsHeaders
+        })
+      }
+    }
+
     // Validate required fields
     if (!broadcast_id || !Array.isArray(recipients) || recipients.length === 0) {
       console.error(`❌ Missing required fields`)

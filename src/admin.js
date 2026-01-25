@@ -1,7 +1,7 @@
 import express from 'express';
 import { supabase } from '../config/supabase.js';
 import { requireRole, getUserFromRequest } from './auth.js';
-import { broadcastMoment, scheduleNextBroadcasts } from './broadcast.js';
+import { scheduleNextBroadcasts } from './broadcast.js';
 import { composeMomentMessage } from './services/broadcast-composer.js';
 
 const router = express.Router();
