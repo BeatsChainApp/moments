@@ -699,7 +699,7 @@ serve(async (req) => {
               .insert({
                 moment_id: moment.id,
                 recipient_count: subscribers.length,
-                status: 'processing',
+                status: 'pending',
                 broadcast_started_at: new Date().toISOString()
               })
               .select()
@@ -1856,7 +1856,7 @@ ${moment.content}
           .insert({
             moment_id: moment.id,
             recipient_count: recipientCount,
-            status: 'processing',
+            status: 'pending',
             broadcast_started_at: new Date().toISOString(),
             authority_context: authorityContext
           })
