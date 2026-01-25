@@ -199,6 +199,12 @@ async function processMessage(message, value) {
       return;
     }
 
+    // Send confirmation to user
+    await sendMessage(fromNumber, 
+      `✅ Message received! We'll review and may share it with the community.\n\n` +
+      `Reply HELP for commands or STOP to unsubscribe.`
+    );
+
     // Auto-link message to moment as comment
     try {
       const { data: commentId } = await supabase.rpc('create_comment_from_message', {

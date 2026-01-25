@@ -284,7 +284,7 @@ router.post('/moments/:id/broadcast', async (req, res) => {
         payload: {
           title: moment.title,
           full_text: moment.content,
-          link: moment.pwa_link || `https://moments.unamifoundation.org/m/${id}`
+          link: `https://moments.unamifoundation.org/moments/${moment.slug || moment.id.substring(0, 8)}`
         }
       })
       .select()

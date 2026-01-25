@@ -148,32 +148,13 @@ export async function broadcastMoment(momentId) {
     // Compose standardized message with attribution
     const composedMessage = await composeMomentMessage(momentId);
     
-    // Decide: Use composed message directly or via templates
-    const useDirectMessage = moment.content_source === 'admin' || 
-                            moment.content_source === 'campaign' || 
-                            authorityContext?.authority_level >= 2;
-    
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers
+    // Send to subscribers (always use composed message)
     for (const subscriber of subscribers || []) {
       try {
-        if (useDirectMessage) {
-          // Direct send with composed message (governance-compliant)
-          await sendWhatsAppMessage(subscriber.phone_number, composedMessage);
-        } else {
-          // Template-based send (existing system)
-          const template = selectTemplate(moment, authorityContext, moment.sponsors);
-          const templateParams = buildTemplateParams(moment, authorityContext, moment.sponsors);
-          await sendTemplateMessage(
-            subscriber.phone_number,
-            template.name,
-            template.language,
-            templateParams,
-            moment.media_urls
-          );
-        }
+        await sendWhatsAppMessage(subscriber.phone_number, composedMessage);
         
         // Log to notification_log
         await supabase.from('notification_log').insert({
@@ -182,8 +163,8 @@ export async function broadcastMoment(momentId) {
           channel: 'whatsapp',
           priority: authorityContext?.authority_level >= 4 ? 3 : 2,
           status: 'sent',
-          message_content: useDirectMessage ? composedMessage : templateParams.join(' | '),
-          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: useDirectMessage ? 'direct' : 'template' },
+          message_content: composedMessage,
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: 'direct' },
           broadcast_id: broadcast.id,
           moment_id: momentId,
           sent_at: new Date().toISOString()
