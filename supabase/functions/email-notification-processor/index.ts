@@ -11,9 +11,9 @@ serve(async (req) => {
 
     const { data: notifications, error } = await supabase
       .from('notification_log')
-      .select('*')
+      .select('*, notification_types(type_code)')
       .eq('channel', 'email')
-      .eq('delivery_status', 'pending')
+      .eq('status', 'queued')
       .order('priority', { ascending: false })
       .limit(50)
 
@@ -31,8 +31,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             from: 'Unami Moments <notifications@unamifoundation.org>',
-            to: notif.recipient,
-            subject: getSubject(notif.notification_type),
+            to: notif.recipient_phone,
+            subject: getSubject(notif.notification_types?.type_code),
             html: formatEmail(notif),
           }),
         })
@@ -41,8 +41,8 @@ serve(async (req) => {
           await supabase
             .from('notification_log')
             .update({ 
-              delivery_status: 'delivered',
-              delivered_at: new Date().toISOString()
+              status: 'sent',
+              sent_at: new Date().toISOString()
             })
             .eq('id', notif.id)
           results.sent++
@@ -53,8 +53,9 @@ serve(async (req) => {
         await supabase
           .from('notification_log')
           .update({ 
-            delivery_status: 'failed',
-            error_message: err.message
+            status: 'failed',
+            failed_at: new Date().toISOString(),
+            failure_reason: err.message
           })
           .eq('id', notif.id)
         results.failed++
