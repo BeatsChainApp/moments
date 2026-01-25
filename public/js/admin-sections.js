@@ -631,6 +631,39 @@ window.extendAuthorityModal = extendAuthorityModal;
 window.deleteAuthorityModal = deleteAuthorityModal;
 window.loadBudgetSection = loadBudgetSection;
 window.loadAnalyticsSection = loadAnalyticsSection;
+
+// Preview Functionality (Phase 1: Critical Fix)
+async function previewMoment(momentId) {
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    try {
+        const response = await fetch(`${API_BASE}/admin/moments/${momentId}/compose`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to compose message');
+        
+        const { message } = await response.json();
+        showPreviewModal('Moment Preview', message);
+    } catch (error) {
+        window.dashboardCore?.showNotification('Preview failed: ' + error.message, 'error');
+    }
+}
+
+function showPreviewModal(title, content) {
+    const modal = document.getElementById('preview-modal');
+    if (!modal) {
+        console.error('Preview modal not found');
+        return;
+    }
+    
+    document.getElementById('preview-title').textContent = title;
+    document.getElementById('preview-content').innerHTML = content.replace(/\n/g, '<br>');
+    modal.classList.add('active');
+}
+
+window.previewMoment = previewMoment;
+window.showPreviewModal = showPreviewModal;
+
 window.editAuthority = async (id) => {
     // Load authority data and populate form
     const response = await fetch(`${API_BASE}/admin/authority?id=${id}`, {

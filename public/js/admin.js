@@ -467,6 +467,7 @@ function displayMoments() {
                     </div>
                     <div class="moment-actions">
                         <span class="status-badge status-${moment.status}">${moment.status}</span>
+                        <button class="btn btn-sm btn-secondary" onclick="previewMoment('${moment.id}')">👁️ Preview</button>
                         ${moment.status === 'draft' ? `<button class="btn btn-sm btn-success" data-action="broadcast" data-id="${moment.id}">📡 Broadcast Now</button>` : ''}
                         ${moment.status !== 'broadcasted' ? `<button class="btn btn-sm" data-action="edit" data-id="${moment.id}">✏️ Edit</button>` : ''}
                         <button class="btn btn-sm btn-danger" data-action="delete" data-id="${moment.id}">🗑️ Delete</button>
