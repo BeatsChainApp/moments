@@ -32,6 +32,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_admin_flagged_content ON advisories;
 CREATE TRIGGER trigger_admin_flagged_content
 AFTER INSERT ON advisories
 FOR EACH ROW
@@ -71,6 +72,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_admin_broadcast_completed ON broadcasts;
 CREATE TRIGGER trigger_admin_broadcast_completed
 AFTER UPDATE ON broadcasts
 FOR EACH ROW
@@ -110,6 +112,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_admin_broadcast_failed ON broadcasts;
 CREATE TRIGGER trigger_admin_broadcast_failed
 AFTER UPDATE ON broadcasts
 FOR EACH ROW
@@ -148,6 +151,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_admin_campaign_pending ON campaigns;
 CREATE TRIGGER trigger_admin_campaign_pending
 AFTER INSERT ON campaigns
 FOR EACH ROW
@@ -183,6 +187,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_sponsor_campaign_approved ON campaigns;
 CREATE TRIGGER trigger_sponsor_campaign_approved
 AFTER UPDATE ON campaigns
 FOR EACH ROW
@@ -223,6 +228,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_sponsor_campaign_completed ON campaigns;
 CREATE TRIGGER trigger_sponsor_campaign_completed
 AFTER UPDATE ON campaigns
 FOR EACH ROW
@@ -258,6 +264,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_sponsor_moment_published ON moments;
 CREATE TRIGGER trigger_sponsor_moment_published
 AFTER UPDATE ON moments
 FOR EACH ROW
