@@ -212,9 +212,15 @@ router.get('/moments/:id/compose', async (req, res) => {
   try {
     const { id } = req.params;
     const message = await composeMomentMessage(id);
+    
+    if (!message) {
+      return res.status(500).json({ error: 'Failed to compose message - no content returned' });
+    }
+    
     res.json({ success: true, message });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Compose error:', error);
+    res.status(500).json({ error: error.message || 'Failed to compose message' });
   }
 });
 
