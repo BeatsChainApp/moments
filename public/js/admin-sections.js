@@ -352,29 +352,35 @@ async function loadBudgetOverview() {
         
         const data = await response.json();
         
+        // Safe number handling with defaults
+        const totalBudget = parseFloat(data.total_budget) || 0;
+        const spent = parseFloat(data.spent) || 0;
+        const remaining = totalBudget - spent;
+        const percentageUsed = totalBudget > 0 ? ((spent / totalBudget) * 100).toFixed(1) : '0.0';
+        
         container.innerHTML = `
             <div class="budget-stats">
                 <div class="stat-card">
                     <h3>Monthly Budget</h3>
-                    <div class="stat-value">R${data.total_budget.toFixed(2)}</div>
+                    <div class="stat-value">R${totalBudget.toFixed(2)}</div>
                 </div>
                 <div class="stat-card">
                     <h3>Spent</h3>
-                    <div class="stat-value">R${data.spent.toFixed(2)}</div>
+                    <div class="stat-value">R${spent.toFixed(2)}</div>
                 </div>
                 <div class="stat-card">
                     <h3>Remaining</h3>
-                    <div class="stat-value">R${data.remaining.toFixed(2)}</div>
+                    <div class="stat-value">R${remaining.toFixed(2)}</div>
                 </div>
                 <div class="stat-card">
                     <h3>Usage</h3>
-                    <div class="stat-value">${data.percentage_used.toFixed(1)}%</div>
+                    <div class="stat-value">${percentageUsed}%</div>
                 </div>
             </div>
             <div class="budget-progress">
                 <div class="progress-bar">
-                    <div class="progress-fill ${data.percentage_used >= 80 ? 'warning' : ''}" 
-                         style="width: ${Math.min(data.percentage_used, 100)}%"></div>
+                    <div class="progress-fill ${parseFloat(percentageUsed) >= 80 ? 'warning' : ''}" 
+                         style="width: ${Math.min(parseFloat(percentageUsed), 100)}%"></div>
                 </div>
             </div>
             ${data.alerts && data.alerts.length > 0 ? `
@@ -389,7 +395,8 @@ async function loadBudgetOverview() {
             ` : ''}
         `;
     } catch (error) {
-        window.dashboardCore.handleError(error, 'loadBudgetOverview');
+        container.innerHTML = '<div class="error">Budget data unavailable</div>';
+        console.error('Budget overview error:', error);
     }
 }
 
