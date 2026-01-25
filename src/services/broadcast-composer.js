@@ -11,12 +11,12 @@ import { buildAttributionBlock, buildFooter, generateAttributionMetadata } from 
  */
 export async function composeMomentMessage(momentId) {
   try {
+    // Fetch moment with sponsor join only (created_by is not a foreign key)
     const { data: moment, error } = await supabase
       .from('moments')
       .select(`
         *,
-        creator:created_by(role, organization),
-        sponsor:sponsor_id(name, display_name, website)
+        sponsors!sponsor_id(name, display_name, website_url)
       `)
       .eq('id', momentId)
       .single();
@@ -42,9 +42,16 @@ export async function composeMomentMessage(momentId) {
       moment.slug = slug;
     }
     
-    // Provide default creator if missing
-    const creator = moment.creator || { role: 'admin', organization: 'Unami Foundation Moments App' };
-    const sponsor = moment.sponsor || null;
+    // Build creator profile from moment data
+    // created_by is just a string identifier, not a foreign key
+    const creator = {
+      role: moment.content_source || 'admin', // Use content_source as role indicator
+      organization: 'Unami Foundation Moments App',
+      identifier: moment.created_by
+    };
+    
+    // Get sponsor from join result
+    const sponsor = moment.sponsors || null;
     
     // Generate and store attribution metadata
     try {

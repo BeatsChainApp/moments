@@ -3,9 +3,11 @@
 
 const TRUST_LEVELS = {
   admin: { emoji: '🟢', label: 'Verified • Full Authority' },
+  campaign: { emoji: '🟢', label: 'Verified • Campaign' },
   school: { emoji: '🟢', label: 'Verified • Institutional' },
   principal: { emoji: '🟢', label: 'Verified • Institutional' },
   community_leader: { emoji: '🟡', label: 'Verified • Limited Scope' },
+  community: { emoji: '🟡', label: 'Community Contribution' },
   partner: { emoji: '🟢', label: 'Verified • Partner' },
   ngo: { emoji: '🟢', label: 'Verified • Partner' },
   general: null
@@ -13,9 +15,11 @@ const TRUST_LEVELS = {
 
 const ROLE_LABELS = {
   admin: 'Administrator',
+  campaign: 'Campaign',
   school: 'School Official',
   principal: 'School Principal',
   community_leader: 'Community Leader',
+  community: 'Community Member',
   partner: 'Partner Organization',
   ngo: 'NGO Representative',
   general: 'Community Member'
@@ -72,7 +76,7 @@ export function buildFooter(canonicalUrl, sponsor = null) {
   if (sponsor) {
     const sponsorName = sponsor.name || sponsor.display_name || 'Unknown Sponsor';
     footer += `💼 Sponsored by ${sponsorName}\n`;
-    if (sponsor.website) footer += `Learn more: ${sponsor.website}\n\n`;
+    if (sponsor.website_url) footer += `Learn more: ${sponsor.website_url}\n\n`;
   }
   
   footer += `💬 Replies are received by Unami Foundation Moments App`;
@@ -96,7 +100,7 @@ export function generateAttributionMetadata(userProfile, sponsor = null) {
     affiliation: userProfile.organization || 'Unami Foundation Moments App',
     is_sponsored: !!sponsor,
     sponsor_name: sponsor?.name || sponsor?.display_name || null,
-    sponsor_website: sponsor?.website || null,
+    sponsor_website: sponsor?.website_url || null,
     generated_at: new Date().toISOString()
   };
 }
