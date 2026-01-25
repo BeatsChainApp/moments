@@ -145,16 +145,22 @@ export async function broadcastMoment(momentId) {
 
     if (broadcastError) throw broadcastError;
 
-    // Compose standardized message with attribution
-    const composedMessage = await composeMomentMessage(momentId);
+    // Select template and build params
+    const template = selectTemplate(moment, authorityContext, moment.sponsors);
+    const templateParams = await buildTemplateParams(moment, authorityContext, moment.sponsors);
     
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers (always use composed message)
+    // Send to subscribers using approved template
     for (const subscriber of subscribers || []) {
       try {
-        await sendWhatsAppMessage(subscriber.phone_number, composedMessage);
+        await sendTemplateMessage(
+          subscriber.phone_number,
+          template.name,
+          template.language,
+          templateParams
+        );
         
         // Log to notification_log
         await supabase.from('notification_log').insert({
@@ -163,8 +169,8 @@ export async function broadcastMoment(momentId) {
           channel: 'whatsapp',
           priority: authorityContext?.authority_level >= 4 ? 3 : 2,
           status: 'sent',
-          message_content: composedMessage,
-          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: 'direct' },
+          message_content: JSON.stringify({ template: template.name, params: templateParams }),
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: 'template' },
           broadcast_id: broadcast.id,
           moment_id: momentId,
           sent_at: new Date().toISOString()
@@ -183,7 +189,7 @@ export async function broadcastMoment(momentId) {
           priority: authorityContext?.authority_level >= 4 ? 3 : 2,
           status: 'failed',
           failure_reason: error.message,
-          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: useDirectMessage ? 'direct' : 'template' },
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: 'template' },
           broadcast_id: broadcast.id,
           moment_id: momentId,
           failed_at: new Date().toISOString()

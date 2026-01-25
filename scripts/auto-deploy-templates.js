@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import dotenv from 'dotenv';
-import { MARKETING_TEMPLATES } from '../src/whatsapp-templates-comprehensive.js';
+import { MARKETING_TEMPLATES } from '../src/whatsapp-templates-marketing.js';
 
 // Load environment variables
 dotenv.config();
