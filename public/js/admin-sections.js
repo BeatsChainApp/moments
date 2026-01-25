@@ -639,6 +639,251 @@ window.deleteAuthorityModal = deleteAuthorityModal;
 window.loadBudgetSection = loadBudgetSection;
 window.loadAnalyticsSection = loadAnalyticsSection;
 
+// Phase 3: Search and Bulk Operations
+let selectedMoments = new Set();
+
+function searchMoments() {
+    const query = document.getElementById('moment-search-box')?.value;
+    if (window.loadMomentsSection) {
+        window.loadMomentsSection({ search: query });
+    }
+}
+
+function selectAllMoments(checkbox) {
+    document.querySelectorAll('.moment-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+        if (checkbox.checked) {
+            selectedMoments.add(cb.dataset.id);
+        } else {
+            selectedMoments.delete(cb.dataset.id);
+        }
+    });
+    updateBulkActions();
+}
+
+function toggleMoment(id, checkbox) {
+    if (checkbox.checked) {
+        selectedMoments.add(id);
+    } else {
+        selectedMoments.delete(id);
+    }
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const bulkBar = document.getElementById('bulk-actions-bar');
+    const count = document.getElementById('selected-count');
+    if (bulkBar && count) {
+        bulkBar.style.display = selectedMoments.size > 0 ? 'flex' : 'none';
+        count.textContent = selectedMoments.size;
+    }
+}
+
+async function bulkBroadcast() {
+    if (!confirm(`Broadcast ${selectedMoments.size} moments?`)) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    try {
+        const response = await fetch(`${API_BASE}/admin/moments/bulk`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                operation: 'broadcast',
+                moment_ids: Array.from(selectedMoments)
+            })
+        });
+        
+        if (!response.ok) throw new Error('Bulk broadcast failed');
+        
+        window.dashboardCore?.showNotification(`${selectedMoments.size} moments queued for broadcast`, 'success');
+        selectedMoments.clear();
+        updateBulkActions();
+        if (window.loadMomentsSection) window.loadMomentsSection();
+    } catch (error) {
+        window.dashboardCore?.showNotification('Bulk broadcast failed: ' + error.message, 'error');
+    }
+}
+
+async function bulkDelete() {
+    if (!confirm(`Delete ${selectedMoments.size} moments? This cannot be undone!`)) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    try {
+        const response = await fetch(`${API_BASE}/admin/moments/bulk`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                operation: 'delete',
+                moment_ids: Array.from(selectedMoments)
+            })
+        });
+        
+        if (!response.ok) throw new Error('Bulk delete failed');
+        
+        window.dashboardCore?.showNotification(`${selectedMoments.size} moments deleted`, 'success');
+        selectedMoments.clear();
+        updateBulkActions();
+        if (window.loadMomentsSection) window.loadMomentsSection();
+    } catch (error) {
+        window.dashboardCore?.showNotification('Bulk delete failed: ' + error.message, 'error');
+    }
+}
+
+async function bulkUpdateStatus() {
+    const status = prompt('Enter new status (draft/scheduled/broadcasted):');
+    if (!status || !['draft', 'scheduled', 'broadcasted'].includes(status)) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    try {
+        const response = await fetch(`${API_BASE}/admin/moments/bulk`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                operation: 'update',
+                moment_ids: Array.from(selectedMoments),
+                updates: { status }
+            })
+        });
+        
+        if (!response.ok) throw new Error('Bulk update failed');
+        
+        window.dashboardCore?.showNotification(`${selectedMoments.size} moments updated`, 'success');
+        selectedMoments.clear();
+        updateBulkActions();
+        if (window.loadMomentsSection) window.loadMomentsSection();
+    } catch (error) {
+        window.dashboardCore?.showNotification('Bulk update failed: ' + error.message, 'error');
+    }
+}
+
+// Activity Logs
+async function loadActivityLogs() {
+    const container = document.getElementById('activity-logs-list');
+    if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    const filter = document.getElementById('activity-filter')?.value || '';
+    
+    try {
+        let url = `${API_BASE}/admin/activity-logs?limit=50`;
+        if (filter) url += `&action=${filter}`;
+        
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load activity logs');
+        
+        const { logs } = await response.json();
+        
+        if (!logs || logs.length === 0) {
+            container.innerHTML = '<p class="empty-message">No activity logs found</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Admin</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${logs.map(log => `
+                        <tr>
+                            <td>${new Date(log.created_at).toLocaleString()}</td>
+                            <td>${log.admin_phone}</td>
+                            <td><span class="badge">${log.action}</span></td>
+                            <td>${log.entity_type}</td>
+                            <td><small>${JSON.stringify(log.details).substring(0, 50)}...</small></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (error) {
+        container.innerHTML = '<div class="error">Failed to load activity logs</div>';
+        console.error(error);
+    }
+}
+
+// Sponsor Analytics Dashboard
+async function loadSponsorAnalytics() {
+    const container = document.getElementById('sponsor-analytics-list');
+    if (!container) return;
+    
+    const API_BASE = window.API_BASE_URL || window.location.origin;
+    
+    try {
+        const response = await fetch(`${API_BASE}/admin/sponsors-analytics`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+        });
+        
+        if (!response.ok) throw new Error('Failed to load sponsor analytics');
+        
+        const { analytics } = await response.json();
+        
+        if (!analytics || analytics.length === 0) {
+            container.innerHTML = '<p class="empty-message">No sponsor data available</p>';
+            return;
+        }
+        
+        container.innerHTML = `
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Sponsor</th>
+                        <th>Moments</th>
+                        <th>Broadcasts</th>
+                        <th>Recipients</th>
+                        <th>Delivered</th>
+                        <th>Delivery Rate</th>
+                        <th>Last Broadcast</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${analytics.map(a => `
+                        <tr onclick="viewSponsorDetails('${a.sponsor_id}')" style="cursor: pointer;">
+                            <td>${a.sponsor_name}</td>
+                            <td>${a.total_moments}</td>
+                            <td>${a.total_broadcasts}</td>
+                            <td>${a.total_recipients.toLocaleString()}</td>
+                            <td>${a.total_delivered.toLocaleString()}</td>
+                            <td><span class="badge ${a.delivery_rate >= 80 ? 'badge-success' : a.delivery_rate >= 50 ? 'badge-warning' : 'badge-danger'}">${a.delivery_rate}%</span></td>
+                            <td>${a.last_broadcast_at ? new Date(a.last_broadcast_at).toLocaleDateString() : 'Never'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    } catch (error) {
+        container.innerHTML = '<div class="error">Failed to load sponsor analytics</div>';
+        console.error(error);
+    }
+}
+
+window.searchMoments = searchMoments;
+window.selectAllMoments = selectAllMoments;
+window.toggleMoment = toggleMoment;
+window.bulkBroadcast = bulkBroadcast;
+window.bulkDelete = bulkDelete;
+window.bulkUpdateStatus = bulkUpdateStatus;
+window.loadActivityLogs = loadActivityLogs;
+window.loadSponsorAnalytics = loadSponsorAnalytics;
+
 // Preview Functionality (Phase 1: Critical Fix)
 async function previewMoment(momentId) {
     const API_BASE = window.API_BASE_URL || window.location.origin;

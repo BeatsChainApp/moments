@@ -25,7 +25,7 @@ const sanitizeArrayOfStrings = (arr) => {
 // Get all moments with pagination and filters
 router.get('/moments', async (req, res) => {
   try {
-    const { page = 1, limit = 20, status, region, category } = req.query;
+    const { page = 1, limit = 20, status, region, category, search } = req.query;
     const offset = (page - 1) * limit;
 
     let query = supabase
@@ -41,6 +41,7 @@ router.get('/moments', async (req, res) => {
     if (status) query = query.eq('status', status);
     if (region) query = query.eq('region', region);
     if (category) query = query.eq('category', category);
+    if (search) query = query.textSearch('title', search, { type: 'websearch' });
 
     const { data, error } = await query;
     if (error) throw error;
@@ -68,7 +69,8 @@ router.post('/moments', async (req, res) => {
       status = 'draft',
       publish_to_pwa = true,  // Default: publish to PWA
       publish_to_whatsapp = false,  // Default: admin control for WhatsApp
-      created_by = 'admin'
+      created_by = 'admin',
+      bulk_operation_id
     } = req.body;
 
     if (!title || !content || !region || !category) {
@@ -88,6 +90,8 @@ router.post('/moments', async (req, res) => {
       normalizedMedia = media_urls.split(',').map(u => u.trim()).filter(Boolean);
     }
 
+    const user = await getUserFromRequest(req);
+
     const { data, error } = await supabase
       .from('moments')
       .insert({
@@ -106,12 +110,23 @@ router.post('/moments', async (req, res) => {
         content_source: 'admin',
         publish_to_pwa,  // Enable PWA distribution
         publish_to_whatsapp,  // Optional WhatsApp distribution
-        created_by
+        created_by,
+        bulk_operation_id
       })
       .select()
       .single();
 
     if (error) throw error;
+
+    // Log activity
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: 'create_moment',
+      entity_type: 'moment',
+      entity_id: data.id,
+      details: { title, region, category, bulk_operation_id }
+    });
 
     res.json({ moment: data });
   } catch (error) {
@@ -136,6 +151,8 @@ router.put('/moments/:id', async (req, res) => {
       return res.status(400).json({ error: 'Cannot update broadcasted moments' });
     }
 
+    const user = await getUserFromRequest(req);
+
     const { data, error } = await supabase
       .from('moments')
       .update(updates)
@@ -144,6 +161,16 @@ router.put('/moments/:id', async (req, res) => {
       .single();
 
     if (error) throw error;
+
+    // Log activity
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: 'edit_moment',
+      entity_type: 'moment',
+      entity_id: id,
+      details: { updates }
+    });
 
     res.json({ moment: data });
   } catch (error) {
@@ -155,6 +182,7 @@ router.put('/moments/:id', async (req, res) => {
 router.delete('/moments/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await getUserFromRequest(req);
 
     const { error } = await supabase
       .from('moments')
@@ -162,6 +190,16 @@ router.delete('/moments/:id', async (req, res) => {
       .eq('id', id);
 
     if (error) throw error;
+
+    // Log activity
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: 'delete_moment',
+      entity_type: 'moment',
+      entity_id: id,
+      details: {}
+    });
 
     res.json({ success: true });
   } catch (error) {
@@ -213,6 +251,7 @@ router.get('/moments/by-slug/:slug', async (req, res) => {
 router.post('/moments/:id/broadcast', async (req, res) => {
   try {
     const { id } = req.params;
+    const user = await getUserFromRequest(req);
 
     // Update moment to enable WhatsApp broadcasting
     const { data: moment, error: updateError } = await supabase
@@ -250,6 +289,16 @@ router.post('/moments/:id/broadcast', async (req, res) => {
       throw new Error(`Failed to create WhatsApp intent: ${intentError.message}`);
     }
 
+    // Log activity
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: 'broadcast',
+      entity_type: 'moment',
+      entity_id: id,
+      details: { intent_id: whatsappIntent.id }
+    });
+
     res.json({
       success: true,
       moment_id: id,
@@ -274,6 +323,45 @@ router.get('/sponsors', async (req, res) => {
     if (error) throw error;
 
     res.json({ sponsors: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get sponsor analytics
+router.get('/sponsors/:id/analytics', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Refresh analytics
+    await supabase.rpc('refresh_sponsor_analytics');
+    
+    const { data, error } = await supabase
+      .from('sponsor_analytics')
+      .select('*')
+      .eq('sponsor_id', id)
+      .single();
+    
+    if (error) throw error;
+    res.json({ analytics: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all sponsor analytics
+router.get('/sponsors-analytics', async (req, res) => {
+  try {
+    // Refresh analytics
+    await supabase.rpc('refresh_sponsor_analytics');
+    
+    const { data, error } = await supabase
+      .from('sponsor_analytics')
+      .select('*')
+      .order('total_moments', { ascending: false });
+    
+    if (error) throw error;
+    res.json({ analytics: data || [] });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -306,6 +394,8 @@ router.post('/sponsors', async (req, res) => {
       return res.status(400).json({ error: 'Name and display name required' });
     }
 
+    const user = await getUserFromRequest(req);
+
     const { data, error } = await supabase
       .from('sponsors')
       .insert({ name, display_name, contact_email })
@@ -314,7 +404,98 @@ router.post('/sponsors', async (req, res) => {
 
     if (error) throw error;
 
+    // Log activity
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: 'create_sponsor',
+      entity_type: 'sponsor',
+      entity_id: data.id,
+      details: { name, display_name }
+    });
+
     res.json({ sponsor: data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get admin activity logs
+router.get('/activity-logs', async (req, res) => {
+  try {
+    const { limit = 50, action, entity_type } = req.query;
+    
+    let query = supabase
+      .from('admin_activity_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (action) query = query.eq('action', action);
+    if (entity_type) query = query.eq('entity_type', entity_type);
+    
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    res.json({ logs: data || [] });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk operations
+router.post('/moments/bulk', async (req, res) => {
+  try {
+    const { operation, moment_ids, updates } = req.body;
+    const user = await getUserFromRequest(req);
+    const bulk_operation_id = crypto.randomUUID();
+    
+    if (!operation || !moment_ids || !Array.isArray(moment_ids)) {
+      return res.status(400).json({ error: 'Invalid bulk operation request' });
+    }
+    
+    let results = [];
+    
+    if (operation === 'update') {
+      const { data, error } = await supabase
+        .from('moments')
+        .update({ ...updates, bulk_operation_id })
+        .in('id', moment_ids)
+        .select();
+      
+      if (error) throw error;
+      results = data;
+    } else if (operation === 'delete') {
+      const { error } = await supabase
+        .from('moments')
+        .delete()
+        .in('id', moment_ids);
+      
+      if (error) throw error;
+      results = moment_ids;
+    } else if (operation === 'broadcast') {
+      for (const id of moment_ids) {
+        await supabase.from('moments').update({ 
+          publish_to_whatsapp: true, 
+          status: 'broadcasted',
+          broadcasted_at: new Date().toISOString(),
+          bulk_operation_id
+        }).eq('id', id);
+      }
+      results = moment_ids;
+    }
+    
+    // Log bulk operation
+    await supabase.from('admin_activity_logs').insert({
+      admin_id: user?.id,
+      admin_phone: user?.phone || 'unknown',
+      action: `bulk_${operation}`,
+      entity_type: 'moment',
+      entity_id: bulk_operation_id,
+      details: { operation, count: moment_ids.length, moment_ids }
+    });
+    
+    res.json({ success: true, operation, count: results.length, bulk_operation_id });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

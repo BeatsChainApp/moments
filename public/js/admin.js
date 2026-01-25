@@ -379,9 +379,13 @@ async function loadRecentActivity() {
 }
 
 // Load moments
-async function loadMoments(page = 1) {
+async function loadMoments(page = 1, options = {}) {
     try {
-        const response = await apiFetch(`/moments?page=${page}&limit=10`);
+        const { search } = options;
+        let url = `/moments?page=${page}&limit=10`;
+        if (search) url += `&search=${encodeURIComponent(search)}`;
+        
+        const response = await apiFetch(url);
         const data = await response.json();
         allMoments = data.moments || [];
         currentPage = page;
@@ -390,6 +394,8 @@ async function loadMoments(page = 1) {
         document.getElementById('moments-list').innerHTML = '<div class="error">Failed to load moments</div>';
     }
 }
+
+window.loadMomentsSection = loadMoments;
 
 function filterMoments() {
     const statusFilter = document.getElementById('status-filter')?.value || '';
