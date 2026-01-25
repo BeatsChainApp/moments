@@ -21,8 +21,19 @@ export async function composeMomentMessage(momentId) {
       .eq('id', momentId)
       .single();
     
-    if (error) throw error;
-    if (!moment) throw new Error('Moment not found');
+    if (error) {
+      console.error('Database error fetching moment:', error);
+      throw new Error(`Failed to fetch moment: ${error.message}`);
+    }
+    
+    if (!moment) {
+      throw new Error('Moment not found');
+    }
+    
+    // Validate content exists
+    if (!moment.content || moment.content.trim() === '') {
+      throw new Error('Moment has no content');
+    }
     
     // Ensure slug exists
     if (!moment.slug) {
@@ -31,25 +42,36 @@ export async function composeMomentMessage(momentId) {
       moment.slug = slug;
     }
     
+    // Provide default creator if missing
+    const creator = moment.creator || { role: 'admin', organization: 'Unami Foundation Moments App' };
+    const sponsor = moment.sponsor || null;
+    
     // Generate and store attribution metadata
-    const attributionMetadata = generateAttributionMetadata(moment.creator, moment.sponsor);
-    await supabase
-      .from('moments')
-      .update({ attribution_data: attributionMetadata })
-      .eq('id', momentId);
-    
-    // Build message components
-    const attribution = buildAttributionBlock(moment, moment.creator, moment.sponsor);
-    const content = moment.content ? moment.content.trim() : '';
-    const canonicalUrl = `https://moments.unamifoundation.org/moments/${moment.slug}`;
-    const footer = buildFooter(canonicalUrl, moment.sponsor);
-    
-    // Ensure we have content
-    if (!content) {
-      throw new Error('Moment has no content');
+    try {
+      const attributionMetadata = generateAttributionMetadata(creator, sponsor);
+      await supabase
+        .from('moments')
+        .update({ attribution_data: attributionMetadata })
+        .eq('id', momentId);
+    } catch (attrError) {
+      console.warn('Failed to store attribution metadata:', attrError);
+      // Continue anyway - this is not critical
     }
     
-    return attribution + '\n\n' + content + '\n\n' + footer;
+    // Build message components
+    const attribution = buildAttributionBlock(moment, creator, sponsor);
+    const content = moment.content.trim();
+    const canonicalUrl = `https://moments.unamifoundation.org/moments/${moment.slug}`;
+    const footer = buildFooter(canonicalUrl, sponsor);
+    
+    // Compose final message
+    const composedMessage = attribution + '\n\n' + content + '\n\n' + footer;
+    
+    if (!composedMessage || composedMessage.trim() === '') {
+      throw new Error('Composed message is empty');
+    }
+    
+    return composedMessage;
   } catch (error) {
     console.error('composeMomentMessage error:', error);
     throw error;

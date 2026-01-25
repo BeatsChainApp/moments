@@ -892,12 +892,33 @@ async function previewMoment(momentId) {
             headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
         });
         
-        if (!response.ok) throw new Error('Failed to compose message');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || 'Failed to compose message');
+        }
         
-        const { message } = await response.json();
-        showPreviewModal('Moment Preview', message);
+        const data = await response.json();
+        
+        if (!data || !data.message) {
+            throw new Error('No message content received from server');
+        }
+        
+        showPreviewModal('Moment Preview', data.message);
     } catch (error) {
-        window.dashboardCore?.showNotification('Preview failed: ' + error.message, 'error');
+        console.error('Preview error:', error);
+        const errorMessage = error.message || 'Unknown error occurred';
+        
+        // Show error in notification
+        if (window.dashboardCore?.showNotification) {
+            window.dashboardCore.showNotification('Preview failed: ' + errorMessage, 'error');
+        } else if (window.showNotification) {
+            window.showNotification('Preview failed: ' + errorMessage, 'error');
+        } else {
+            alert('Preview failed: ' + errorMessage);
+        }
+        
+        // Also show error in modal
+        showPreviewModal('Preview Error', `Failed to load preview:\n\n${errorMessage}\n\nPlease check that the moment has content and try again.`);
     }
 }
 

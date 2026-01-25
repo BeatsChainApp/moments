@@ -22,14 +22,27 @@ const ROLE_LABELS = {
 };
 
 export function buildAttributionBlock(moment, userProfile, sponsor = null) {
+  // Validate inputs
+  if (!moment) {
+    console.warn('buildAttributionBlock: moment is null/undefined');
+    return '';
+  }
+  
+  if (!userProfile) {
+    console.warn('buildAttributionBlock: userProfile is null/undefined, using default');
+    userProfile = { role: 'admin', organization: 'Unami Foundation Moments App' };
+  }
+  
   if (sponsor) {
+    const sponsorName = sponsor.name || sponsor.display_name || 'Unknown Sponsor';
+    const roleLabel = ROLE_LABELS[userProfile.role] || 'Community Member';
     return `💼 SPONSORED CONTENT
-Presented by: ${sponsor.name || sponsor.display_name}
-In partnership with: ${ROLE_LABELS[userProfile.role] || 'Community Member'} (Verified)
+Presented by: ${sponsorName}
+In partnership with: ${roleLabel} (Verified)
 
 Scope: ${moment.region || 'National'}
 📍 Coverage: ${moment.category || 'General'}
-🏛️ Sponsor: ${sponsor.name || sponsor.display_name}
+🏛️ Sponsor: ${sponsorName}
 🟢 Trust Level: Verified • Sponsored
 
 `;
@@ -49,10 +62,16 @@ ${trustLevel.emoji} Trust Level: ${trustLevel.label}
 }
 
 export function buildFooter(canonicalUrl, sponsor = null) {
+  if (!canonicalUrl) {
+    console.warn('buildFooter: canonicalUrl is missing');
+    canonicalUrl = 'https://moments.unamifoundation.org';
+  }
+  
   let footer = `\n\n🌐 View details & respond:\n${canonicalUrl}\n\n`;
   
   if (sponsor) {
-    footer += `💼 Sponsored by ${sponsor.name || sponsor.display_name}\n`;
+    const sponsorName = sponsor.name || sponsor.display_name || 'Unknown Sponsor';
+    footer += `💼 Sponsored by ${sponsorName}\n`;
     if (sponsor.website) footer += `Learn more: ${sponsor.website}\n\n`;
   }
   
@@ -61,6 +80,11 @@ export function buildFooter(canonicalUrl, sponsor = null) {
 }
 
 export function generateAttributionMetadata(userProfile, sponsor = null) {
+  if (!userProfile) {
+    console.warn('generateAttributionMetadata: userProfile is null/undefined, using defaults');
+    userProfile = { role: 'admin', organization: 'Unami Foundation Moments App' };
+  }
+  
   const role = userProfile.role || 'general';
   const trustLevel = TRUST_LEVELS[role];
   
