@@ -668,8 +668,35 @@ function showPreviewModal(title, content) {
     modal.classList.add('active');
 }
 
+// Modal close function (Phase 1 Day 5: Critical Fix)
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+    }
+}
+
+// Close modal on outside click
+document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal') && e.target.classList.contains('active')) {
+        closeModal(e.target.id);
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal.active');
+        if (activeModal) {
+            closeModal(activeModal.id);
+        }
+    }
+});
+
 window.previewMoment = previewMoment;
 window.showPreviewModal = showPreviewModal;
+window.closeModal = closeModal;
 
 window.editAuthority = async (id) => {
     // Load authority data and populate form
