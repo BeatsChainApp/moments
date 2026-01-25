@@ -1,11 +1,8 @@
 import { supabase } from '../config/supabase.js';
 import { detectLanguage } from './language.js';
 import { downloadAndStoreMedia } from './media.js';
-import { 
-  sendWelcomeHybrid, 
-  sendUnsubscribeHybrid
-} from './broadcast-hybrid.js';
 import { getAuthorityContext } from './authority.js';
+import { sendWhatsAppMessage, sendTemplateMessage } from '../config/whatsapp.js';
 import axios from 'axios';
 
 export function verifyWebhook(req, res) {
@@ -297,8 +294,8 @@ async function handleOptOut(phoneNumber) {
         });
     }
     
-    // Send unsubscribe confirmation using approved template
-    await sendUnsubscribeHybrid(phoneNumber);
+    // Send unsubscribe confirmation
+    await sendTemplateMessage(phoneNumber, 'unsubscribe_confirm_v2', 'en', []);
     
     console.log(`User ${phoneNumber} opted out with hybrid confirmation`);
   } catch (error) {
