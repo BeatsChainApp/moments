@@ -739,9 +739,11 @@ ${moment.content}
 
             console.log(`📡 Auto-broadcast webhook: POST ${webhookUrl}`)
             console.log(`Status: Sending to ${subscribers.length} subscribers`)
+            console.log(`⚠️ DISABLED: N8N handles broadcasts via intents`)
 
+            // DISABLED: N8N handles broadcasts via intents
             // Trigger webhook asynchronously - don't block response
-            fetch(webhookUrl, {
+            /*fetch(webhookUrl, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -761,9 +763,7 @@ ${moment.content}
             }).catch(async (webhookError) => {
               console.error(`❌ Auto-broadcast webhook error: ${webhookError.message} (${webhookError.name})`)
               await logError(supabase, 'auto_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, moment_id: moment.id, webhook_url: webhookUrl }, 'high')
-            })
-            
-            console.log('📡 Broadcast webhook triggered asynchronously')
+            })*/
           }
         } catch (broadcastError) {
           console.error('Auto-broadcast failed:', broadcastError)
@@ -920,8 +920,10 @@ ${moment.content}
 
       console.log(`📡 Moment broadcast webhook: POST ${webhookUrl}`)
       console.log(`Status: Creating broadcast for ${recipientCount} subscribers`)
+      console.log(`⚠️ DISABLED: N8N handles broadcasts via intents`)
+      // DISABLED: N8N handles broadcasts via intents
       // Trigger webhook asynchronously - don't block response
-      fetch(webhookUrl, {
+      /*fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
@@ -941,9 +943,7 @@ ${moment.content}
       }).catch(async (webhookError) => {
         console.error(`❌ Broadcast webhook error: ${webhookError.message} (${webhookError.name})`)
         await logError(supabase, 'moment_broadcast_webhook_error', webhookError.message, { broadcast_id: broadcast.id, moment_id: momentId, webhook_url: webhookUrl, error_name: webhookError.name }, 'high')
-      })
-      
-        console.log('📡 Broadcast webhook triggered asynchronously')
+      })*/
 
         return new Response(JSON.stringify({
           success: true,
