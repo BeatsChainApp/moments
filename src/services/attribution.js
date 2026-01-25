@@ -9,6 +9,7 @@ const TRUST_LEVELS = {
   community_leader: { emoji: '🟡', label: 'Verified • Limited Scope' },
   community_member: { emoji: '🟡', label: 'Community Contribution' },
   community: { emoji: '🟡', label: 'Community Contribution' },
+  whatsapp: { emoji: '🟡', label: 'Community Contribution' },
   partner: { emoji: '🟢', label: 'Verified • Partner' },
   ngo_representative: { emoji: '🟢', label: 'Verified • Partner' },
   general: null
@@ -22,6 +23,7 @@ const ROLE_LABELS = {
   community_leader: 'Community Leader',
   community_member: 'Community Member',
   community: 'Community Member',
+  whatsapp: 'Community Member',
   partner: 'Partner Organization',
   ngo_representative: 'NGO Representative',
   general: 'Community Member'

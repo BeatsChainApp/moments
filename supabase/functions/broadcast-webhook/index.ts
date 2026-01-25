@@ -17,6 +17,71 @@ const supabase = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 )
 
+// Attribution composer (matches src/services/attribution.js)
+function composeMomentMessage(moment: any, creator: any, sponsor: any): string {
+  const TRUST_LEVELS: any = {
+    admin: { emoji: '🟢', label: 'Verified • Full Authority' },
+    campaign: { emoji: '🟢', label: 'Verified • Campaign' },
+    school_principal: { emoji: '🟢', label: 'Verified • Institutional' },
+    school_official: { emoji: '🟢', label: 'Verified • Institutional' },
+    community_leader: { emoji: '🟡', label: 'Verified • Limited Scope' },
+    community_member: { emoji: '🟡', label: 'Community Contribution' },
+    community: { emoji: '🟡', label: 'Community Contribution' },
+    whatsapp: { emoji: '🟡', label: 'Community Contribution' },
+    partner: { emoji: '🟢', label: 'Verified • Partner' },
+    ngo_representative: { emoji: '🟢', label: 'Verified • Partner' }
+  }
+
+  const ROLE_LABELS: any = {
+    admin: 'Administrator',
+    campaign: 'Campaign',
+    school_principal: 'School Principal',
+    school_official: 'School Official',
+    community_leader: 'Community Leader',
+    community_member: 'Community Member',
+    community: 'Community Member',
+    whatsapp: 'Community Member',
+    partner: 'Partner Organization',
+    ngo_representative: 'NGO Representative'
+  }
+
+  // Generate slug
+  let slug = moment.slug
+  if (!slug) {
+    slug = moment.title.toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .substring(0, 60) + '-' + moment.id.substring(0, 6)
+  }
+
+  const canonicalUrl = `https://moments.unamifoundation.org/moments/${slug}`
+
+  // Build attribution
+  let attribution = ''
+  if (sponsor) {
+    const sponsorName = sponsor.display_name || sponsor.name
+    const roleLabel = ROLE_LABELS[creator.role] || 'Administrator'
+    attribution = `💼 SPONSORED CONTENT\nPresented by: ${sponsorName}\nIn partnership with: ${roleLabel} (Verified)\n\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'General'}\n🏛️ Sponsor: ${sponsorName}\n🟢 Trust Level: Verified • Sponsored\n\n`
+  } else {
+    const trustLevel = TRUST_LEVELS[creator.role]
+    if (trustLevel) {
+      const roleLabel = ROLE_LABELS[creator.role] || 'Administrator'
+      attribution = `📢 ${roleLabel} (Verified)\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'General'}\n🏛️ Affiliation: ${creator.organization || 'Unami Foundation Moments App'}\n${trustLevel.emoji} Trust Level: ${trustLevel.label}\n\n`
+    }
+  }
+
+  // Build footer
+  let footer = `\n\n🌐 View details & respond:\n${canonicalUrl}\n\n`
+  if (sponsor) {
+    const sponsorName = sponsor.display_name || sponsor.name
+    footer += `💼 Sponsored by ${sponsorName}\n`
+    if (sponsor.website_url) footer += `Learn more: ${sponsor.website_url}\n\n`
+  }
+  footer += `💬 Replies are received by Unami Foundation Moments App`
+
+  return attribution + moment.content + footer
+}
+
 // Validation helpers
 function isValidPhoneNumber(phone: string): boolean {
   const normalized = phone.replace(/\D/g, '')
@@ -149,12 +214,12 @@ async function processBatch(batch: any, message: string) {
   let successCount = 0
   let failureCount = 0
   
-  // Send messages with faster rate (200ms delay instead of 1000ms)
+  // Send messages with faster rate (400ms delay for two-message pattern)
   for (let i = 0; i < batch.recipients.length; i++) {
     const recipient = batch.recipients[i]
     
     try {
-      const success = await sendWhatsAppMessage(recipient, message)
+      const success = await sendMomentBroadcast(recipient, { fullMessage: message })
       if (success) {
         successCount++
       } else {
@@ -165,9 +230,9 @@ async function processBatch(batch: any, message: string) {
       failureCount++
     }
     
-    // Faster rate limiting for batches: 5 messages per second
+    // Rate limiting for batches: 2 seconds per recipient (template + message)
     if (i < batch.recipients.length - 1) {
-      await new Promise(resolve => setTimeout(resolve, 200))
+      await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
   
@@ -193,8 +258,8 @@ const corsHeaders = {
   'Content-Type': 'application/json'
 }
 
-// WhatsApp API helper function with retry logic
-async function sendWhatsAppMessage(to: string, message: string, attempt = 1): Promise<boolean> {
+// WhatsApp API helper - Two-message pattern with template
+async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Promise<boolean> {
   const token = Deno.env.get('WHATSAPP_TOKEN')
   const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
   const maxRetries = 3
@@ -204,22 +269,49 @@ async function sendWhatsAppMessage(to: string, message: string, attempt = 1): Pr
     return false
   }
 
-  // Normalize phone number for South Africa (+27)
+  // Normalize phone number
   let normalizedPhone = to.replace(/\D/g, '')
   if (normalizedPhone.startsWith('27')) {
     // Already has country code
   } else if (normalizedPhone.startsWith('0')) {
-    // Remove leading 0 and add 27
     normalizedPhone = '27' + normalizedPhone.substring(1)
   } else if (normalizedPhone.length === 9) {
-    // Add country code
     normalizedPhone = '27' + normalizedPhone
   }
 
   try {
-    console.log(`📱 WhatsApp send attempt ${attempt}/${maxRetries} to ${normalizedPhone}`)
+    console.log(`📱 Sending two-message broadcast to ${normalizedPhone}`)
     
-    const response = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+    // Message 1: Generic template
+    const templateResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: normalizedPhone,
+        type: 'template',
+        template: {
+          name: 'moment_notification',
+          language: { code: 'en' },
+          components: []
+        }
+      })
+    })
+
+    if (!templateResponse.ok) {
+      const error = await templateResponse.text()
+      console.error(`⚠️ Template send failed: ${error}`)
+      return false
+    }
+
+    // Wait 1 second between messages
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Message 2: Full attributed moment
+    const fullMomentResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -229,34 +321,32 @@ async function sendWhatsAppMessage(to: string, message: string, attempt = 1): Pr
         messaging_product: 'whatsapp',
         to: normalizedPhone,
         type: 'text',
-        text: { body: message }
+        text: { body: momentData.fullMessage }
       })
     })
 
-    if (response.ok) {
-      const result = await response.json()
-      console.log(`✅ WhatsApp message sent to ${normalizedPhone}: ${result.messages?.[0]?.id || 'unknown'}`)
+    if (fullMomentResponse.ok) {
+      const result = await fullMomentResponse.json()
+      console.log(`✅ Two-message broadcast sent to ${normalizedPhone}`)
       return true
     } else {
-      const error = await response.text()
-      console.error(`⚠️ WhatsApp API error (${response.status}): ${error}`)
+      const error = await fullMomentResponse.text()
+      console.error(`⚠️ Full moment send failed: ${error}`)
 
-      // Retry on server errors with exponential backoff
-      if (response.status >= 500 && attempt < maxRetries) {
+      if (fullMomentResponse.status >= 500 && attempt < maxRetries) {
         const delay = Math.pow(2, attempt - 1) * 1000 + Math.random() * 1000
         await new Promise(resolve => setTimeout(resolve, delay))
-        return sendWhatsAppMessage(to, message, attempt + 1)
+        return sendMomentBroadcast(to, momentData, attempt + 1)
       }
       return false
     }
   } catch (error) {
-    console.error(`❌ WhatsApp send exception (attempt ${attempt}): ${error.message}`)
+    console.error(`❌ Broadcast exception (attempt ${attempt}): ${error.message}`)
 
-    // Retry on network errors with exponential backoff
     if (attempt < maxRetries) {
       const delay = Math.pow(2, attempt - 1) * 1000 + Math.random() * 1000
       await new Promise(resolve => setTimeout(resolve, delay))
-      return sendWhatsAppMessage(to, message, attempt + 1)
+      return sendMomentBroadcast(to, momentData, attempt + 1)
     }
     return false
   }
@@ -294,23 +384,69 @@ serve(async (req) => {
       })
     }
 
-    const { broadcast_id, message, recipients, moment_id } = requestData
+    const { broadcast_id, moment_data, recipients, moment_id } = requestData
 
     // Validate required fields
-    if (!broadcast_id || !message || !Array.isArray(recipients) || recipients.length === 0) {
-      console.error(`❌ Missing required fields: broadcast_id=${!!broadcast_id}, message=${!!message}, recipients=${Array.isArray(recipients) ? recipients.length : 0}`)
+    if (!broadcast_id || !Array.isArray(recipients) || recipients.length === 0) {
+      console.error(`❌ Missing required fields`)
       return new Response(JSON.stringify({
-        error: 'Missing required fields: broadcast_id, message, recipients (non-empty array)'
+        error: 'Missing required fields: broadcast_id, recipients'
       }), {
         status: 400,
         headers: corsHeaders
       })
     }
 
-    // Validate message content
-    if (!isValidMessage(message)) {
+    // Compose message if moment_id provided
+    let fullMessage = moment_data?.fullMessage
+    if (!fullMessage && moment_id) {
+      console.log(`🎭 Composing message for moment ${moment_id}`)
+      
+      // Fetch moment with sponsor
+      const { data: moment, error: momentError } = await supabase
+        .from('moments')
+        .select(`
+          *,
+          sponsors!sponsor_id(name, display_name, website_url)
+        `)
+        .eq('id', moment_id)
+        .single()
+      
+      if (momentError || !moment) {
+        return new Response(JSON.stringify({
+          error: `Moment not found: ${moment_id}`
+        }), {
+          status: 404,
+          headers: corsHeaders
+        })
+      }
+
+      // Determine creator
+      const creator = {
+        role: moment.content_source || 'admin',
+        organization: 'Unami Foundation Moments App'
+      }
+
+      // Lookup authority if phone number
+      if (moment.created_by?.startsWith('+')) {
+        const { data: authority } = await supabase.rpc('lookup_authority', {
+          p_user_identifier: moment.created_by
+        })
+        if (authority && authority.length > 0) {
+          const auth = authority[0]
+          creator.role = auth.role_label.toLowerCase().replace(/\s+/g, '_')
+          creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
+        }
+      }
+
+      fullMessage = composeMomentMessage(moment, creator, moment.sponsors)
+      console.log(`✅ Message composed: ${fullMessage.length} chars`)
+    }
+
+    // Validate message
+    if (!fullMessage || !isValidMessage(fullMessage)) {
       return new Response(JSON.stringify({
-        error: 'Message must be 1-4096 characters'
+        error: 'fullMessage must be 1-4096 characters'
       }), {
         status: 400,
         headers: corsHeaders
@@ -329,9 +465,10 @@ serve(async (req) => {
     }
 
     console.log(`📢 Starting broadcast ${broadcast_id}`)
-    console.log(`   - Message length: ${message.length} chars`)
+    console.log(`   - Message length: ${fullMessage.length} chars`)
     console.log(`   - Recipients: ${recipients.length}`)
     console.log(`   - Moment ID: ${moment_id || 'N/A'}`)
+    console.log(`   - Using two-message pattern (template + attribution)`)
 
     // Batch processing for large broadcasts (>50 recipients)
     const BATCH_SIZE = 50
@@ -369,7 +506,7 @@ serve(async (req) => {
       const recipient = recipients[i]
 
       try {
-        const success = await sendWhatsAppMessage(recipient, message)
+        const success = await sendMomentBroadcast(recipient, { fullMessage })
         if (success) {
           successCount++
         } else {
@@ -382,9 +519,9 @@ serve(async (req) => {
         failedRecipients.push(recipient)
       }
 
-      // Rate limiting: 1 message per second to respect WhatsApp limits
+      // Rate limiting: 2 seconds per recipient (template + message)
       if (i < recipients.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, 2000))
       }
     }
 
