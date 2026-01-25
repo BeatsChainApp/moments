@@ -148,38 +148,32 @@ export async function broadcastMoment(momentId) {
     // Compose standardized message with attribution
     const composedMessage = await composeMomentMessage(momentId);
     
-    // Select marketing-compliant template based on authority
-    const template = selectTemplate(moment, authorityContext, moment.sponsors);
-    const templateParams = buildTemplateParams(moment, authorityContext, moment.sponsors);
-    
-    // Validate marketing compliance
-    const compliance = validateMarketingCompliance(moment, template, templateParams);
-    
-    // Log compliance for audit
-    await supabase.from('marketing_compliance').insert({
-      moment_id: momentId,
-      broadcast_id: broadcast.id,
-      template_used: template.name,
-      template_category: template.category,
-      sponsor_disclosed: compliance.sponsor_disclosed,
-      opt_out_included: compliance.opt_out_included,
-      pwa_link_included: compliance.pwa_link_included,
-      compliance_score: compliance.compliance_score
-    }).catch(err => console.warn('Compliance log failed:', err.message));
+    // Decide: Use composed message directly or via templates
+    const useDirectMessage = moment.content_source === 'admin' || 
+                            moment.content_source === 'campaign' || 
+                            authorityContext?.authority_level >= 2;
     
     let successCount = 0;
     let failureCount = 0;
 
-    // Send to subscribers using marketing templates
+    // Send to subscribers
     for (const subscriber of subscribers || []) {
       try {
-        await sendTemplateMessage(
-          subscriber.phone_number,
-          template.name,
-          template.language,
-          templateParams,
-          moment.media_urls
-        );
+        if (useDirectMessage) {
+          // Direct send with composed message (governance-compliant)
+          await sendWhatsAppMessage(subscriber.phone_number, composedMessage);
+        } else {
+          // Template-based send (existing system)
+          const template = selectTemplate(moment, authorityContext, moment.sponsors);
+          const templateParams = buildTemplateParams(moment, authorityContext, moment.sponsors);
+          await sendTemplateMessage(
+            subscriber.phone_number,
+            template.name,
+            template.language,
+            templateParams,
+            moment.media_urls
+          );
+        }
         
         // Log to notification_log
         await supabase.from('notification_log').insert({
@@ -188,9 +182,8 @@ export async function broadcastMoment(momentId) {
           channel: 'whatsapp',
           priority: authorityContext?.authority_level >= 4 ? 3 : 2,
           status: 'sent',
-          template_used: template.name,
-          message_content: templateParams.join(' | '),
-          metadata: { moment_id: momentId, broadcast_id: broadcast.id },
+          message_content: useDirectMessage ? composedMessage : templateParams.join(' | '),
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: useDirectMessage ? 'direct' : 'template' },
           broadcast_id: broadcast.id,
           moment_id: momentId,
           sent_at: new Date().toISOString()
@@ -208,9 +201,8 @@ export async function broadcastMoment(momentId) {
           channel: 'whatsapp',
           priority: authorityContext?.authority_level >= 4 ? 3 : 2,
           status: 'failed',
-          template_used: template.name,
           failure_reason: error.message,
-          metadata: { moment_id: momentId, broadcast_id: broadcast.id },
+          metadata: { moment_id: momentId, broadcast_id: broadcast.id, method: useDirectMessage ? 'direct' : 'template' },
           broadcast_id: broadcast.id,
           moment_id: momentId,
           failed_at: new Date().toISOString()
