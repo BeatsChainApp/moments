@@ -53,6 +53,34 @@
     {
       "parameters": {
         "authentication": "headerAuth",
+        "requestMethod": "PATCH",
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/moment_intents?id=eq.' + $json.id}}",
+        "headerParametersUi": {
+          "parameter": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_ANON_KEY || $env.SUPABASE_API_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{$env.SUPABASE_SERVICE_ROLE}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "bodyParametersJson": "={{ JSON.stringify({ status: 'processing', updated_at: new Date().toISOString() }) }}"
+      },
+      "name": "Mark Processing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [920, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
         "requestMethod": "GET",
         "url": "={{$env.SUPABASE_URL + '/rest/v1/subscriptions?opted_in=eq.true&select=phone_number,name,regions'}}",
         "headerParametersUi": {
@@ -71,7 +99,7 @@
       "name": "Fetch Subscribers",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
-      "position": [1000, 220]
+      "position": [1100, 220]
     },
     {
       "parameters": {
@@ -80,7 +108,7 @@
       "name": "Render Messages",
       "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [1240, 220]
+      "position": [1340, 220]
     },
     {
       "parameters": {
@@ -105,7 +133,7 @@
       "name": "Send WhatsApp Message",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
-      "position": [1480, 220]
+      "position": [1580, 220]
     },
     {
       "parameters": {
@@ -133,7 +161,7 @@
       "name": "Mark Intent Sent",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 2,
-      "position": [1720, 220]
+      "position": [1820, 220]
     }
   ],
   "connections": {
@@ -160,6 +188,17 @@
       ]
     },
     "Split Intents": {
+      "main": [
+        [
+          {
+            "node": "Mark Processing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Processing": {
       "main": [
         [
           {
