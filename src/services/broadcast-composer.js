@@ -42,13 +42,34 @@ export async function composeMomentMessage(momentId) {
       moment.slug = slug;
     }
     
-    // Build creator profile from moment data
-    // created_by is just a string identifier, not a foreign key
-    const creator = {
-      role: moment.content_source || 'admin', // Use content_source as role indicator
+    // Lookup authority profile for creator
+    let creator = {
+      role: moment.content_source || 'admin',
       organization: 'Unami Foundation Moments App',
       identifier: moment.created_by
     };
+    
+    // If created_by is a phone number, lookup authority
+    if (moment.created_by && moment.created_by.startsWith('+')) {
+      try {
+        const { data: authority } = await supabase.rpc('lookup_authority', {
+          p_user_identifier: moment.created_by
+        });
+        
+        if (authority && authority.length > 0) {
+          const auth = authority[0];
+          creator = {
+            role: auth.role_label.toLowerCase().replace(/\s+/g, '_'),
+            authority_level: auth.authority_level,
+            scope: auth.scope,
+            organization: auth.scope_identifier || 'Unami Foundation Moments App',
+            identifier: moment.created_by
+          };
+        }
+      } catch (authError) {
+        console.warn('Authority lookup failed:', authError);
+      }
+    }
     
     // Get sponsor from join result
     const sponsor = moment.sponsors || null;

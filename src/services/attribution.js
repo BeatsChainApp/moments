@@ -4,24 +4,26 @@
 const TRUST_LEVELS = {
   admin: { emoji: '🟢', label: 'Verified • Full Authority' },
   campaign: { emoji: '🟢', label: 'Verified • Campaign' },
-  school: { emoji: '🟢', label: 'Verified • Institutional' },
-  principal: { emoji: '🟢', label: 'Verified • Institutional' },
+  school_principal: { emoji: '🟢', label: 'Verified • Institutional' },
+  school_official: { emoji: '🟢', label: 'Verified • Institutional' },
   community_leader: { emoji: '🟡', label: 'Verified • Limited Scope' },
+  community_member: { emoji: '🟡', label: 'Community Contribution' },
   community: { emoji: '🟡', label: 'Community Contribution' },
   partner: { emoji: '🟢', label: 'Verified • Partner' },
-  ngo: { emoji: '🟢', label: 'Verified • Partner' },
+  ngo_representative: { emoji: '🟢', label: 'Verified • Partner' },
   general: null
 };
 
 const ROLE_LABELS = {
   admin: 'Administrator',
   campaign: 'Campaign',
-  school: 'School Official',
-  principal: 'School Principal',
+  school_principal: 'School Principal',
+  school_official: 'School Official',
   community_leader: 'Community Leader',
+  community_member: 'Community Member',
   community: 'Community Member',
   partner: 'Partner Organization',
-  ngo: 'NGO Representative',
+  ngo_representative: 'NGO Representative',
   general: 'Community Member'
 };
 

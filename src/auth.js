@@ -25,7 +25,8 @@ export async function getUserFromRequest(req) {
       return {
         id: session.admin_users.id,
         email: session.admin_users.email,
-        name: session.admin_users.name
+        name: session.admin_users.name,
+        phone: session.admin_users.phone || session.admin_users.email
       };
     }
 
@@ -36,8 +37,15 @@ export async function getUserFromRequest(req) {
       return null;
     }
     const user = data?.user || null;
-    if (user && process.env.SENTRY_DSN) {
-      try { Sentry.setUser({ id: user.id, email: user.email }); } catch (e) {}
+    if (user) {
+      if (process.env.SENTRY_DSN) {
+        try { Sentry.setUser({ id: user.id, email: user.email }); } catch (e) {}
+      }
+      // Add phone from user metadata
+      return {
+        ...user,
+        phone: user.phone || user.user_metadata?.phone || user.email
+      };
     }
     return user;
   } catch (err) {
