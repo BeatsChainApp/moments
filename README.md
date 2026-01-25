@@ -104,6 +104,115 @@ Brought to you by Unami Foundation Partners
 - `broadcasts` - Broadcast logs and analytics
 - `subscriptions` - User opt-in/opt-out status
 
+## 📐 Moments Governance & Standards
+
+### Core Principles
+1. **System-Owned Attribution** - Users create content; system adds trust signals
+2. **Canonical URLs Only** - Human-readable slugs, never raw UUIDs
+3. **Progressive Enhancement** - Extend, don't refactor
+4. **Graceful Degradation** - Handle missing data safely
+5. **WhatsApp-First** - Respect platform constraints and user expectations
+
+### Standard Moment Structure
+
+Every Moment broadcast follows this exact structure:
+
+```
+[ATTRIBUTION BLOCK]
+
+[USER CONTENT]
+
+[FOOTER]
+```
+
+#### Attribution Block (System-Generated)
+
+**Standard Moment:**
+```
+📢 {ROLE} (Verified)
+Scope: {REGION}
+📍 Coverage: {CATEGORY}
+🏛️ Affiliation: {ORGANIZATION}
+{EMOJI} Trust Level: {TRUST_LABEL}
+```
+
+**Sponsored Moment:**
+```
+💼 SPONSORED CONTENT
+Presented by: {SPONSOR_NAME}
+In partnership with: {ROLE} (Verified)
+
+Scope: {REGION}
+📍 Coverage: {CATEGORY}
+🏛️ Sponsor: {SPONSOR_NAME}
+🟢 Trust Level: Verified • Sponsored
+```
+
+#### Role-to-Trust Mapping
+- **Admin** → 🟢 Verified • Full Authority
+- **School / Principal** → 🟢 Verified • Institutional
+- **Community Leader** → 🟡 Verified • Limited Scope
+- **Partner / NGO** → 🟢 Verified • Partner
+- **General Community** → No attribution block (footer only)
+
+#### Footer (All Moments)
+
+**Standard:**
+```
+🌐 View details & respond:
+https://moments.unamifoundation.org/moments/{slug}
+
+💬 Replies are received by Unami Foundation Moments App
+```
+
+**Sponsored:**
+```
+🌐 View details & respond:
+https://moments.unamifoundation.org/moments/{slug}
+
+💼 Sponsored by {SPONSOR_NAME}
+Learn more: {SPONSOR_WEBSITE}
+
+💬 Replies are received by Unami Foundation Moments App
+```
+
+### URL Standards
+
+**REQUIRED:**
+- ✅ `https://moments.unamifoundation.org/moments/{slug}`
+- Slugs are kebab-case, derived from title
+- Slugs are unique (append short hash if collision)
+
+**FORBIDDEN:**
+- ❌ `https://moments.unamifoundation.org/m/{uuid}`
+- ❌ `https://moments.unamifoundation.org/moments/{uuid}`
+- ❌ Any raw UUID exposure in user-facing content
+
+### Branding Standards
+
+**ALWAYS use full name:**
+- ✅ "Unami Foundation Moments App"
+
+**NEVER use:**
+- ❌ "Unami Foundation"
+- ❌ "Unami Moments"
+- ❌ "Moments"
+
+### Implementation Rules
+
+**MUST:**
+- Add logic via composition, not refactor
+- Extend existing flows, not replace
+- Use existing role, region, confidence data
+- Preserve all existing APIs and payloads
+- Handle missing data gracefully
+
+**MUST NOT:**
+- Change database schemas unless strictly additive
+- Introduce breaking changes
+- Allow users to edit attribution text
+- Expose internal IDs to end users
+
 ## 🔒 Content Moderation
 
 ### MCP Advisory System

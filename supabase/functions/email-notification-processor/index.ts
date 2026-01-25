@@ -30,7 +30,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Unami Moments <notifications@unamifoundation.org>',
+            from: 'Unami Foundation Moments App <notifications@unamifoundation.org>',
             to: notif.recipient_phone,
             subject: getSubject(notif.notification_types?.type_code),
             html: formatEmail(notif),
@@ -83,7 +83,7 @@ function getSubject(type: string): string {
     sponsor_campaign_completed: '🎉 Campaign Completed',
     sponsor_moment_published: '📢 Moment Published',
   }
-  return subjects[type] || 'Unami Moments Notification'
+  return subjects[type] || 'Unami Foundation Moments App Notification'
 }
 
 function formatEmail(notif: any): string {
@@ -102,14 +102,14 @@ function formatEmail(notif: any): string {
     <body>
       <div class="container">
         <div class="header">
-          <h2>Unami Moments</h2>
+          <h2>Unami Foundation Moments App</h2>
         </div>
         <div class="content">
           <p>${notif.message_content}</p>
           ${notif.metadata ? `<p><small>Details: ${JSON.stringify(notif.metadata, null, 2)}</small></p>` : ''}
         </div>
         <div class="footer">
-          <p>Unami Foundation | moments.unamifoundation.org</p>
+          <p>Unami Foundation Moments App | moments.unamifoundation.org</p>
         </div>
       </div>
     </body>

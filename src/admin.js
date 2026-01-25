@@ -2,6 +2,7 @@ import express from 'express';
 import { supabase } from '../config/supabase.js';
 import { requireRole, getUserFromRequest } from './auth.js';
 import { broadcastMoment, scheduleNextBroadcasts } from './broadcast.js';
+import { composeMomentMessage } from './services/broadcast-composer.js';
 
 const router = express.Router();
 
@@ -165,6 +166,46 @@ router.delete('/moments/:id', async (req, res) => {
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Compose moment message (preview before broadcast)
+router.get('/moments/:id/compose', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const message = await composeMomentMessage(id);
+    res.json({ success: true, message });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get moment by slug (public endpoint for PWA)
+router.get('/moments/by-slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+    
+    const { data: moment, error } = await supabase
+      .from('moments')
+      .select(`
+        *,
+        creator:created_by(role, organization),
+        sponsor:sponsor_id(name, display_name, website)
+      `)
+      .eq('slug', slug)
+      .single();
+    
+    if (error) throw error;
+    
+    const { buildAttributionBlock } = await import('./services/attribution.js');
+    const attribution = buildAttributionBlock(moment, moment.creator, moment.sponsor);
+    
+    res.json({
+      ...moment,
+      attribution_html: attribution.replace(/\n/g, '<br>')
+    });
+  } catch (error) {
+    res.status(404).json({ error: 'Moment not found' });
   }
 });
 

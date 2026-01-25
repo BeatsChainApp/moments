@@ -1,6 +1,7 @@
 import { supabase } from '../config/supabase.js';
 import { sendWhatsAppMessage, sendTemplateMessage } from '../config/whatsapp.js';
 import { selectTemplate, buildTemplateParams, validateMarketingCompliance } from './whatsapp-templates-marketing.js';
+import { composeMomentMessage } from './services/broadcast-composer.js';
 
 // Authority-based broadcast filtering (Phase 5: Broadcast Integration)
 async function getAuthorityContext(createdBy) {
@@ -144,6 +145,9 @@ export async function broadcastMoment(momentId) {
 
     if (broadcastError) throw broadcastError;
 
+    // Compose standardized message with attribution
+    const composedMessage = await composeMomentMessage(momentId);
+    
     // Select marketing-compliant template based on authority
     const template = selectTemplate(moment, authorityContext, moment.sponsors);
     const templateParams = buildTemplateParams(moment, authorityContext, moment.sponsors);
