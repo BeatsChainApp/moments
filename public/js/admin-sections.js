@@ -908,8 +908,13 @@ function showPreviewModal(title, content) {
         return;
     }
     
+    if (!content) {
+        console.error('No content provided to preview');
+        content = 'No content available';
+    }
+    
     document.getElementById('preview-title').textContent = title;
-    document.getElementById('preview-content').innerHTML = content.replace(/\n/g, '<br>');
+    document.getElementById('preview-content').innerHTML = String(content).replace(/\n/g, '<br>');
     modal.classList.add('active');
 }
 
