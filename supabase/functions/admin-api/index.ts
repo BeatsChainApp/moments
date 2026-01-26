@@ -59,6 +59,8 @@ serve(async (req) => {
     const url = new URL(req.url)
     const path = url.pathname
     const method = req.method
+    
+    console.log(`📥 ${method} ${path}`)
 
     // Parse request body once for POST/PUT requests (except file uploads)
     let body = null
@@ -1567,15 +1569,25 @@ ${moment.content}
 
     // GET /moments/:id/compose - Preview attributed message
     if (path.match(/\/(admin\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
+      console.log('✅ Compose endpoint matched!')
       const momentId = path.split('/moments/')[1].split('/compose')[0]
-      const { data: moment } = await supabase.from('moments').select('*').eq('id', momentId).single()
+      console.log(`🎯 Moment ID: ${momentId}`)
+      const { data: moment, error: momentError } = await supabase.from('moments').select('*').eq('id', momentId).single()
+      
+      if (momentError) {
+        console.error('❌ Moment fetch error:', momentError)
+      }
       
       if (!moment) {
+        console.log('❌ Moment not found')
         return new Response(JSON.stringify({ error: 'Moment not found' }), {
           status: 404,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
+      
+      console.log(`✅ Moment found: ${moment.title}`)
+      console.log(`🔑 Has authority_context: ${!!moment.authority_context}`)
 
       let attribution = ''
       if (moment.authority_context) {
