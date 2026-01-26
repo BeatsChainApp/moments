@@ -138,10 +138,34 @@ function displayMomentsWithMarkdown(moments) {
         const renderedContent = renderMomentContent(moment);
         const isLongContent = moment.content.length > 300;
         
+        // Authority attribution block
+        let attributionHtml = '';
+        if (moment.authority_context) {
+            const auth = moment.authority_context;
+            const roleLabels = {
+                community_leader: 'Community Leader',
+                school_principal: 'School Principal',
+                admin: 'Administrator',
+                partner: 'Partner Organization'
+            };
+            const role = roleLabels[auth.role] || 'Community Member';
+            const org = auth.scope_identifier || 'Unami Foundation Moments App';
+            const trustEmoji = (auth.role === 'admin' || auth.role === 'school_principal' || auth.role === 'partner') ? '🟢' : '🟡';
+            
+            attributionHtml = `
+                <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 0.75rem; margin-bottom: 1rem; border-radius: 0.25rem; font-size: 0.875rem;">
+                    <div style="font-weight: 600; color: #1f2937; margin-bottom: 0.25rem;">📢 ${escapeHtml(role)} (Verified)</div>
+                    <div style="color: #6b7280;">🏛️ ${escapeHtml(org)}</div>
+                    <div style="color: #6b7280;">${trustEmoji} Trust Level: Verified</div>
+                </div>
+            `;
+        }
+        
         return `
             <div class="moment-card">
                 ${renderSponsorBranding(moment.sponsors, moment.is_sponsored)}
                 <h3 class="moment-title">${escapeHtml(moment.title)}</h3>
+                ${attributionHtml}
                 <div class="moment-content ${isLongContent ? 'collapsed' : ''}" 
                      data-full-content="${escapeHtml(moment.content)}"
                      data-is-whatsapp="${moment.content_source === 'community' || moment.content_source === 'whatsapp'}">
