@@ -1,6 +1,7 @@
 // API configuration - uses backend proxy to avoid exposing credentials
 const API_BASE = '/admin';
 const SUPABASE_URL = window.location.origin;
+window.API_BASE_URL = window.location.origin;
 
 // Get auth token from localStorage
 function getAuthToken() {
