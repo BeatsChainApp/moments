@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Usage & Retention - Unami Foundation Moments</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
+        h1 { font-size: 2.5rem; margin-bottom: 20px; color: #1f2937; }
+        h2 { font-size: 1.8rem; margin-top: 40px; margin-bottom: 20px; color: #1f2937; }
+        p { margin-bottom: 20px; color: #4b5563; }
+        ul { margin-left: 20px; margin-bottom: 20px; }
+        li { margin-bottom: 10px; color: #4b5563; }
+        .back-link { display: inline-block; margin-bottom: 20px; color: #2563eb; text-decoration: none; }
+        .back-link:hover { text-decoration: underline; }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        th { background: #f3f4f6; font-weight: 600; color: #1f2937; }
+        .highlight { background: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Home</a>
+        
+        <h1>Data Usage & Retention</h1>
+        <p>Complete transparency on what data we collect, how we use it, and how long we keep it.</p>
+
+        <h2>Data We Collect</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data Type</th>
+                    <th>Purpose</th>
+                    <th>Retention Period</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>WhatsApp Phone Number</strong></td>
+                    <td>Message delivery, subscription management</td>
+                    <td>While subscribed + 30 days after STOP</td>
+                </tr>
+                <tr>
+                    <td><strong>Province Preferences</strong></td>
+                    <td>Send relevant local content</td>
+                    <td>While subscribed + 30 days after STOP</td>
+                </tr>
+                <tr>
+                    <td><strong>Interest Categories</strong></td>
+                    <td>Filter content by topics you care about</td>
+                    <td>While subscribed + 30 days after STOP</td>
+                </tr>
+                <tr>
+                    <td><strong>Subscription Status</strong></td>
+                    <td>Track opt-in/opt-out</td>
+                    <td>While subscribed + 30 days after STOP</td>
+                </tr>
+                <tr>
+                    <td><strong>Messages You Send</strong></td>
+                    <td>Content moderation, potential broadcast</td>
+                    <td>90 days or until broadcasted</td>
+                </tr>
+                <tr>
+                    <td><strong>Broadcast Logs (Aggregate)</strong></td>
+                    <td>Service analytics, no individual tracking</td>
+                    <td>12 months</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>How We Use Your Data</h2>
+        <ul>
+            <li><strong>Message Delivery:</strong> Send moments to your WhatsApp based on your preferences</li>
+            <li><strong>Content Filtering:</strong> Match content to your province and interests</li>
+            <li><strong>Service Improvement:</strong> Understand what content serves communities best (aggregate only)</li>
+            <li><strong>Moderation:</strong> Review submitted content for safety and relevance</li>
+            <li><strong>Compliance:</strong> Meet legal requirements under POPIA and WhatsApp policies</li>
+        </ul>
+
+        <div class="highlight">
+            <h2 style="margin-top: 0;">What We DON'T Do</h2>
+            <ul style="margin-bottom: 0;">
+                <li><strong>Never sell your data</strong> to third parties</li>
+                <li><strong>Never track individual reading behavior</strong></li>
+                <li><strong>Never share your phone number</strong> with sponsors or partners</li>
+                <li><strong>Never use your data for advertising</strong> outside our service</li>
+            </ul>
+        </div>
+
+        <h2>Data Retention Schedule</h2>
+        
+        <h3>Active Subscribers</h3>
+        <ul>
+            <li>All subscription data retained while you're opted in</li>
+            <li>Messages you send retained for 90 days or until processed</li>
+            <li>No automatic deletion while subscribed</li>
+        </ul>
+
+        <h3>After Unsubscribing (STOP Command)</h3>
+        <ul>
+            <li><strong>Day 0:</strong> Subscription marked as inactive</li>
+            <li><strong>Day 1-30:</strong> Data retained for potential re-subscription</li>
+            <li><strong>Day 30:</strong> All personal data permanently deleted</li>
+            <li><strong>Aggregate stats:</strong> Retained (no personal identifiers)</li>
+        </ul>
+
+        <h3>Broadcast Analytics</h3>
+        <ul>
+            <li>Total subscribers count: Retained indefinitely</li>
+            <li>Broadcast success rates: 12 months</li>
+            <li>Regional engagement: 12 months (aggregate only)</li>
+            <li>Individual delivery logs: 30 days</li>
+        </ul>
+
+        <h2>Data Security</h2>
+        <p>We protect your data using:</p>
+        <ul>
+            <li><strong>Encryption:</strong> All data encrypted at rest and in transit</li>
+            <li><strong>Access Controls:</strong> Limited staff access, role-based permissions</li>
+            <li><strong>Secure Infrastructure:</strong> Supabase (SOC 2 compliant)</li>
+            <li><strong>Regular Audits:</strong> Security reviews and updates</li>
+            <li><strong>WhatsApp Business API:</strong> Meta's secure messaging platform</li>
+        </ul>
+
+        <h2>Your Rights (POPIA)</h2>
+        <p>Under South Africa's Protection of Personal Information Act, you can:</p>
+        <ul>
+            <li><strong>Access:</strong> Request what data we have (email privacy@unamifoundation.org)</li>
+            <li><strong>Correction:</strong> Update preferences anytime via WhatsApp commands</li>
+            <li><strong>Deletion:</strong> Send "STOP" for immediate opt-out + 30-day deletion</li>
+            <li><strong>Portability:</strong> Request your data in readable format</li>
+            <li><strong>Objection:</strong> Object to any data processing</li>
+        </ul>
+
+        <h2>Third-Party Services</h2>
+        <p>We use these services to operate Moments:</p>
+        <ul>
+            <li><strong>WhatsApp Business API (Meta):</strong> Message delivery - <a href="https://www.whatsapp.com/legal/privacy-policy" style="color: #2563eb;">Privacy Policy</a></li>
+            <li><strong>Supabase:</strong> Database and storage - <a href="https://supabase.com/privacy" style="color: #2563eb;">Privacy Policy</a></li>
+        </ul>
+
+        <h2>Data Deletion Requests</h2>
+        <p>To delete your data immediately:</p>
+        <ul>
+            <li><strong>Quick:</strong> Send "STOP" to +27 65 829 5041 (30-day deletion)</li>
+            <li><strong>Immediate:</strong> Email privacy@unamifoundation.org with your phone number</li>
+        </ul>
+
+        <h2>Questions?</h2>
+        <p>Contact our privacy team:</p>
+        <ul>
+            <li><strong>Email:</strong> privacy@unamifoundation.org</li>
+            <li><strong>WhatsApp:</strong> +27 65 829 5041</li>
+        </ul>
+
+        <p style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280;">
+            Last Updated: January 2026
+        </p>
+    </div>
+</body>
+</html>
