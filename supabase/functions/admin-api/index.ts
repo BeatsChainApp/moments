@@ -542,7 +542,7 @@ serve(async (req) => {
     if (path.includes('/moments') && method === 'GET') {
       const { data: moments } = await supabase
         .from('moments')
-        .select('*, sponsors(*)')
+        .select('*, sponsors(*), authority_context, slug')
         .order('created_at', { ascending: false })
         .limit(50)
 
