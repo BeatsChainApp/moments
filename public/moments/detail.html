@@ -88,7 +88,9 @@
                     admin: 'Administrator',
                     partner: 'Partner Organization'
                 };
-                const role = roleLabels[auth.role] || 'Community Member';
+                // Normalize role to snake_case if it's in human-readable format
+                const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_');
+                const role = roleLabels[roleKey] || auth.role || 'Community Member';
                 const org = auth.scope_identifier || 'Unami Foundation Moments App';
                 
                 attributionHtml = `

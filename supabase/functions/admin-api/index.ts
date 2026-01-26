@@ -1566,7 +1566,7 @@ ${moment.content}
     }
 
     // GET /moments/:id/compose - Preview attributed message
-    if (path.match(/\/moments\/[^\/]+\/compose$/) && method === 'GET') {
+    if (path.match(/\/(admin\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
       const momentId = path.split('/moments/')[1].split('/compose')[0]
       const { data: moment } = await supabase.from('moments').select('*').eq('id', momentId).single()
       

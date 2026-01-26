@@ -488,7 +488,11 @@ function displayMoments() {
             <div class="moment-item">
                 <div class="moment-header">
                     <div class="moment-info">
-                        <div class="moment-title">${escapeHtml(moment.title)}</div>
+                        <div class="moment-title">
+                            <a href="https://moments.unamifoundation.org/moments/${moment.slug || 'moment-' + moment.id.substring(0, 8)}" target="_blank" style="color: inherit; text-decoration: none;">
+                                ${escapeHtml(moment.title)}
+                            </a>
+                        </div>
                         <div class="moment-meta">
                             ${moment.region} • ${moment.category} • ${formattedDateTime}
                             ${moment.is_sponsored ? ` • Sponsored by ${moment.sponsors?.display_name || 'Unknown'}` : ''}
