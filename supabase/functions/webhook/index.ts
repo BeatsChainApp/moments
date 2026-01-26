@@ -765,7 +765,7 @@ serve(async (req) => {
                       .delete()
                       .eq('phone_number', message.from)
                     
-                    await sendWhatsAppMessage(message.from, `✅ Request Submitted!\n\nYour authority request has been sent to our admin team for review.\n\nYou'll receive a notification once it's been reviewed.\n\nThank you!`)
+                    await sendWhatsAppMessage(message.from, `✅ Request Submitted!\n\nYour authority request has been sent to our admin team for review.\n\n📧 Optional: Email verification documents to info@unamifoundation.org\n(ID, proof of position, institutional letterhead)\n\n⚠️ WhatsApp Policy: Do not share personal details like ID numbers via WhatsApp. Use email for sensitive documents.\n\nYou'll receive a notification once reviewed.\n\nThank you!`)
                   }
                 }
                 continue
