@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/moments/([a-z0-9-]+)",
-      "dest": "/moments/detail.html"
+      "dest": "/public/moments/detail.html"
     },
     {
       "src": "/webhook",
