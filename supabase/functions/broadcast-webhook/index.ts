@@ -71,7 +71,7 @@ function composeMomentMessage(moment: any, creator: any, sponsor: any): string {
   }
 
   // Build footer
-  let footer = `\n\n🌐 View details & respond:\n${canonicalUrl}\n\n`
+  let footer = `\n\n🌐 View details:\n${canonicalUrl}\n\n`
   if (sponsor) {
     const sponsorName = sponsor.display_name || sponsor.name
     footer += `💼 Sponsored by ${sponsorName}\n`
