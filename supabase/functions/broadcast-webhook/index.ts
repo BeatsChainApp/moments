@@ -443,14 +443,20 @@ serve(async (req) => {
         })
       }
 
-      // Determine creator
+      // Determine creator from authority_context or fallback
       const creator = {
         role: moment.content_source || 'admin',
         organization: 'Unami Foundation Moments App'
       }
 
-      // Lookup authority if phone number
-      if (moment.created_by?.startsWith('+')) {
+      // Use authority_context if available
+      if (moment.authority_context) {
+        const auth = moment.authority_context
+        creator.role = auth.role || moment.content_source || 'community'
+        creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
+        console.log(`✅ Using authority context: role=${creator.role}, org=${creator.organization}`)
+      } else if (moment.created_by?.startsWith('+')) {
+        // Fallback: Lookup authority if phone number
         const { data: authority } = await supabase.rpc('lookup_authority', {
           p_user_identifier: moment.created_by
         })
@@ -458,6 +464,7 @@ serve(async (req) => {
           const auth = authority[0]
           creator.role = auth.role_label.toLowerCase().replace(/\s+/g, '_')
           creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
+          console.log(`✅ Looked up authority: role=${creator.role}, org=${creator.organization}`)
         }
       }
 

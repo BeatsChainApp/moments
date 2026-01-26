@@ -894,7 +894,8 @@ serve(async (req) => {
                       category: 'Community',
                       status: 'draft',
                       created_by: authorityContext?.role || 'community',
-                      content_source: 'whatsapp'
+                      content_source: 'whatsapp',
+                      authority_context: authorityContext
                     }).select().single()
                     
                     if (momentError) {

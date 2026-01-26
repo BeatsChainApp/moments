@@ -4,20 +4,22 @@
 
 BEGIN;
 
--- Delete all data except admin user
+-- Delete all data except admin user (in correct order to respect foreign keys)
+DELETE FROM notification_log;
+DELETE FROM broadcast_batches;
 DELETE FROM broadcasts;
 DELETE FROM moment_intents;
-DELETE FROM moments;
-DELETE FROM sponsors;
-DELETE FROM subscriptions;
-DELETE FROM flags;
+DELETE FROM moderation_audit;
 DELETE FROM advisories;
 DELETE FROM media;
+DELETE FROM moments;
+DELETE FROM campaigns;
 DELETE FROM messages;
-DELETE FROM authority_requests;
-DELETE FROM authorities 
-WHERE email != 'info@unamifoundation.org' 
-  AND phone_number != '+27727002502';
+DELETE FROM subscriptions;
+DELETE FROM sponsors WHERE name != 'unami-foundation';
+DELETE FROM admin_sessions;
+DELETE FROM admin_roles WHERE user_id NOT IN (SELECT id FROM admin_users WHERE email = 'info@unamifoundation.org');
+DELETE FROM admin_users WHERE email != 'info@unamifoundation.org';
 
 -- Reset sequences to 1
 ALTER SEQUENCE IF EXISTS messages_id_seq RESTART WITH 1;
@@ -34,7 +36,6 @@ ALTER SEQUENCE IF EXISTS authority_requests_id_seq RESTART WITH 1;
 COMMIT;
 
 -- Verify admin user still exists
-SELECT id, email, phone_number, role, organization 
-FROM authorities 
-WHERE email = 'info@unamifoundation.org' 
-   OR phone_number = '+27727002502';
+SELECT id, email, name, active
+FROM admin_users 
+WHERE email = 'info@unamifoundation.org';
