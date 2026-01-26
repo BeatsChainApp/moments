@@ -1577,15 +1577,24 @@ ${moment.content}
         })
       }
 
-      const roleMap = {
-        admin: '📢 Administrator (Verified)\n🟢 Trust Level: Verified • Full Authority',
-        school: '📢 School Principal (Verified)\n🟢 Trust Level: Verified • Institutional',
-        community_leader: '📢 Community Leader (Verified)\n🟡 Trust Level: Verified • Limited Scope',
-        partner: '📢 Partner Organization (Verified)\n🟢 Trust Level: Verified • Partner'
+      let attribution = ''
+      if (moment.authority_context) {
+        const auth = moment.authority_context
+        const roleLabels = {
+          community_leader: 'Community Leader',
+          school_principal: 'School Principal',
+          admin: 'Administrator',
+          partner: 'Partner Organization'
+        }
+        const role = roleLabels[auth.role] || 'Community Member'
+        const org = auth.scope_identifier || 'Unami Foundation Moments App'
+        const trustEmoji = (auth.role === 'admin' || auth.role === 'school_principal' || auth.role === 'partner') ? '🟢' : '🟡'
+        
+        attribution = `📢 ${role} (Verified)\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'Community'}\n🏛️ Affiliation: ${org}\n${trustEmoji} Trust Level: Verified\n\n`
       }
 
-      const attribution = roleMap[moment.content_source] || ''
-      const message = attribution ? `${attribution}\n\n${moment.content}\n\n🌐 moments.unamifoundation.org\n💬 Replies received by Unami Foundation Moments App` : moment.content
+      const slug = moment.slug || `moment-${moment.id.substring(0, 8)}`
+      const message = `${attribution}${moment.content}\n\n🌐 View details & respond:\nhttps://moments.unamifoundation.org/moments/${slug}\n\n💬 Replies are received by Unami Foundation Moments App`
 
       return new Response(JSON.stringify({ message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
