@@ -1568,7 +1568,7 @@ ${moment.content}
     }
 
     // GET /moments/:id/compose - Preview attributed message
-    if (path.match(/\/(admin\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
+    if (path.match(/\/(admin-api\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
       console.log('✅ Compose endpoint matched!')
       const momentId = path.split('/moments/')[1].split('/compose')[0]
       console.log(`🎯 Moment ID: ${momentId}`)
