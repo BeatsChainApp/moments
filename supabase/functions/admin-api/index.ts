@@ -1565,6 +1565,33 @@ ${moment.content}
       })
     }
 
+    // GET /moments/:id/compose - Preview attributed message
+    if (path.match(/\/moments\/[^\/]+\/compose$/) && method === 'GET') {
+      const momentId = path.split('/moments/')[1].split('/compose')[0]
+      const { data: moment } = await supabase.from('moments').select('*').eq('id', momentId).single()
+      
+      if (!moment) {
+        return new Response(JSON.stringify({ error: 'Moment not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      const roleMap = {
+        admin: '📢 Administrator (Verified)\n🟢 Trust Level: Verified • Full Authority',
+        school: '📢 School Principal (Verified)\n🟢 Trust Level: Verified • Institutional',
+        community_leader: '📢 Community Leader (Verified)\n🟡 Trust Level: Verified • Limited Scope',
+        partner: '📢 Partner Organization (Verified)\n🟢 Trust Level: Verified • Partner'
+      }
+
+      const attribution = roleMap[moment.content_source] || ''
+      const message = attribution ? `${attribution}\n\n${moment.content}\n\n🌐 moments.unamifoundation.org\n💬 Replies received by Unami Foundation Moments App` : moment.content
+
+      return new Response(JSON.stringify({ message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     // Comments endpoints
     // GET /moments/:id/comments
     if (path.match(/\/moments\/[^\/]+\/comments$/) && method === 'GET') {
