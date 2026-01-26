@@ -452,7 +452,9 @@ serve(async (req) => {
       // Use authority_context if available
       if (moment.authority_context) {
         const auth = moment.authority_context
-        creator.role = auth.role || moment.content_source || 'community'
+        // Map role label to role key (handle both formats)
+        const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
+        creator.role = roleKey || moment.content_source || 'community'
         creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
         console.log(`✅ Using authority context: role=${creator.role}, org=${creator.organization}`)
       } else if (moment.created_by?.startsWith('+')) {
