@@ -77,7 +77,7 @@ function composeMomentMessage(moment: any, creator: any, sponsor: any): string {
     footer += `💼 Sponsored by ${sponsorName}\n`
     if (sponsor.website_url) footer += `Learn more: ${sponsor.website_url}\n\n`
   }
-  footer += `💬 Replies are received by Unami Foundation Moments App`
+  footer += `Reply FEEDBACK to respond\nReply STOP to unsubscribe\n\nPowered by: Unami Foundation Moments App`
 
   return attribution + moment.content + footer
 }
