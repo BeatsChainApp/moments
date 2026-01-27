@@ -540,8 +540,8 @@ serve(async (req) => {
       })
     }
 
-    // Moments endpoint
-    if (path.includes('/moments') && method === 'GET') {
+    // Moments endpoint - must NOT match /moments/:id/compose
+    if (path.match(/\/(admin-api\/)?moments\/?$/) && method === 'GET') {
       const { data: moments } = await supabase
         .from('moments')
         .select('*, sponsors(*), authority_context, slug')
