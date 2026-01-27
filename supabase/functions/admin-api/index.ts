@@ -2981,7 +2981,8 @@ ${moment.content}
       const reviewed = url.searchParams.get('reviewed')
       let query = supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(50)
       if (reviewed) query = query.eq('reviewed', reviewed === 'true')
-      const { data } = await query
+      const { data, error } = await query
+      console.log(`💬 Feedback query: found ${data?.length || 0} items, error:`, error?.message || 'none')
       return new Response(JSON.stringify({ feedback: data || [] }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
