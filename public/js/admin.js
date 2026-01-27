@@ -2741,3 +2741,50 @@ window.testAuthorityLookup = async function() {
         showNotification('Authority lookup test failed: ' + error.message, 'error');
     }
 };
+
+async function loadFeedback() {
+    const filter = document.getElementById('feedback-filter')?.value || '';
+    const url = `/admin/feedback${filter ? `?reviewed=${filter}` : ''}`;
+    
+    try {
+        const response = await apiFetch(url);
+        const data = await response.json();
+        const list = document.getElementById('feedback-list');
+        
+        if (!data.feedback || data.feedback.length === 0) {
+            list.innerHTML = '<div class="empty-state">No feedback found</div>';
+            return;
+        }
+        
+        list.innerHTML = data.feedback.map(f => `
+            <div class="moment-item">
+                <div class="moment-header">
+                    <div class="moment-info">
+                        <div class="moment-title">${f.phone_number.replace(/\d(?=\d{4})/g, '*')}</div>
+                        <div class="moment-meta">${new Date(f.created_at).toLocaleString()}</div>
+                    </div>
+                    <div class="moment-actions">
+                        ${!f.reviewed ? `<button class="btn btn-sm" onclick="markFeedbackReviewed('${f.id}')">✓ Mark Reviewed</button>` : '<span class="badge badge-success">Reviewed</span>'}
+                    </div>
+                </div>
+                <div class="moment-content">${escapeHtml(f.feedback_text)}</div>
+            </div>
+        `).join('');
+    } catch (error) {
+        console.error('Feedback load error:', error);
+        document.getElementById('feedback-list').innerHTML = '<div class="error">Failed to load feedback</div>';
+    }
+}
+
+async function markFeedbackReviewed(id) {
+    try {
+        await apiFetch(`/admin/feedback/${id}/review`, { method: 'POST' });
+        showSuccess('Feedback marked as reviewed');
+        loadFeedback();
+    } catch (error) {
+        showError('Failed to mark feedback as reviewed');
+    }
+}
+
+window.loadFeedback = loadFeedback;
+window.markFeedbackReviewed = markFeedbackReviewed;
