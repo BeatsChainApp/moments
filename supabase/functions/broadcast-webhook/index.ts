@@ -452,11 +452,12 @@ serve(async (req) => {
       // Use authority_context if available
       if (moment.authority_context) {
         const auth = moment.authority_context
-        // Map role label to role key (handle both formats)
+        // auth.role contains human-readable label like "Community Leader"
+        // Convert to snake_case for role key lookup
         const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
         creator.role = roleKey || moment.content_source || 'community'
         creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
-        console.log(`✅ Using authority context: role=${creator.role}, org=${creator.organization}`)
+        console.log(`✅ Using authority context: role="${auth.role}" → roleKey="${roleKey}", org="${creator.organization}"`)
       } else if (moment.created_by?.startsWith('+')) {
         // Fallback: Lookup authority if phone number
         const { data: authority } = await supabase.rpc('lookup_authority', {
