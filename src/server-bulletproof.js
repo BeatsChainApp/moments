@@ -313,6 +313,14 @@ async function processMessage(message, value) {
     const command = content.toLowerCase().trim();
     console.log(`Command detected: "${command}"`);
     
+    // Check if message starts with FEEDBACK
+    if (command.startsWith('feedback')) {
+      console.log('Processing FEEDBACK command');
+      await handleFeedback(fromNumber, content, messageRecord.id);
+      await supabase.from('messages').update({ processed: true }).eq('id', messageRecord.id);
+      return;
+    }
+    
     if (command === 'stop' || command === 'unsubscribe') {
       console.log('Processing STOP command');
       await handleOptOut(fromNumber);
@@ -365,8 +373,8 @@ async function processMessage(message, value) {
     }
 
     function isCommand(text) {
-      const commands = ['start', 'stop', 'help', 'regions', 'join', 'unsubscribe'];
-      return commands.includes(text.toLowerCase().trim());
+      const commands = ['start', 'stop', 'help', 'regions', 'join', 'unsubscribe', 'feedback'];
+      return commands.includes(text.toLowerCase().trim()) || text.toLowerCase().trim().startsWith('feedback');
     }
     
     function generateTitle(text) {
@@ -597,6 +605,38 @@ South Africans share local opportunities and events here.
 📍 Commands: HELP, REGIONS, STOP`;
   
   await sendMessage(phoneNumber, chatMessage);
+}
+
+async function handleFeedback(phoneNumber, content, messageId) {
+  try {
+    // Extract feedback text (everything after "FEEDBACK")
+    const feedbackText = content.replace(/^feedback\s*/i, '').trim();
+    
+    if (!feedbackText) {
+      await sendMessage(phoneNumber, '📝 To send feedback, reply:\nFEEDBACK Your message here');
+      return;
+    }
+    
+    // Store feedback in database
+    const { error } = await supabase
+      .from('feedback')
+      .insert({
+        phone_number: phoneNumber,
+        message_id: messageId,
+        feedback_text: feedbackText,
+        created_at: new Date().toISOString()
+      });
+    
+    if (error) {
+      console.error('Feedback storage error:', error);
+    }
+    
+    // Silent acknowledgment - no reply to avoid conversation
+    console.log(`✅ Feedback captured from ${phoneNumber}`);
+    
+  } catch (error) {
+    console.error('Feedback handling error:', error);
+  }
 }
 
 async function sendMessage(phoneNumber, message) {
