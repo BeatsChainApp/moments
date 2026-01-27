@@ -572,6 +572,19 @@ serve(async (req) => {
 
       await logAudit(supabase, 'admin', 'create', 'moment', '', { ...body, compliance_warnings: complianceIssues })
 
+      // Build authority context for admin-created moments
+      const authorityContext = {
+        has_authority: true,
+        level: 5,
+        role: 'admin',
+        scope: 'national',
+        scope_identifier: 'Unami Foundation Moments App',
+        approval_mode: 'auto',
+        blast_radius: 10000,
+        risk_threshold: 0.9,
+        lookup_timestamp: new Date().toISOString()
+      }
+
       // Build partner attribution
       let partnerAttribution = null
       if (body.sponsor_id) {
@@ -602,6 +615,7 @@ serve(async (req) => {
           status: body.scheduled_at ? 'scheduled' : 'draft',
           created_by: 'admin',
           content_source: 'admin',
+          authority_context: authorityContext,
           publish_to_whatsapp: body.publish_to_whatsapp || false,
           publish_to_pwa: body.publish_to_pwa !== false
         })
