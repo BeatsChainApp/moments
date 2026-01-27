@@ -12,6 +12,10 @@
       "dest": "/public/moments/detail.html"
     },
     {
+      "src": "/public/(.*)",
+      "dest": "/public/$1"
+    },
+    {
       "src": "/webhook",
       "dest": "/src/server-bulletproof.js"
     },
