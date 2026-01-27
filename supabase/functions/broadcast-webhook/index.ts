@@ -462,15 +462,16 @@ serve(async (req) => {
       } else {
         console.log(`⚠️ No authority_context found, using fallback: content_source="${moment.content_source}", created_by="${moment.created_by}"`)
         if (moment.created_by?.startsWith('+')) {
-        // Fallback: Lookup authority if phone number
-        const { data: authority } = await supabase.rpc('lookup_authority', {
-          p_user_identifier: moment.created_by
-        })
-        if (authority && authority.length > 0) {
-          const auth = authority[0]
-          creator.role = auth.role_label.toLowerCase().replace(/\s+/g, '_')
-          creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
-          console.log(`✅ Looked up authority: role=${creator.role}, org=${creator.organization}`)
+          // Fallback: Lookup authority if phone number
+          const { data: authority } = await supabase.rpc('lookup_authority', {
+            p_user_identifier: moment.created_by
+          })
+          if (authority && authority.length > 0) {
+            const auth = authority[0]
+            creator.role = auth.role_label.toLowerCase().replace(/\s+/g, '_')
+            creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
+            console.log(`✅ Looked up authority: role=${creator.role}, org=${creator.organization}`)
+          }
         }
       }
 
@@ -595,9 +596,7 @@ serve(async (req) => {
       success_count: successCount,
       failure_count: failureCount,
       total_recipients: recipients.length,
-      duration_ms
-      
-      : duration,
+      duration_ms: duration,
       message: `Broadcast completed: ${successCount} sent, ${failureCount} failed`
     }), {
       status: 200,
