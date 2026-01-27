@@ -487,14 +487,64 @@ serve(async (req) => {
                 continue
               }
               
-              // Handle region/category selections from list
+              // Handle region/category selections from list (ADD to existing)
               if (['KZN', 'WC', 'GP', 'EC', 'FS', 'LP', 'MP', 'NC', 'NW'].includes(buttonId)) {
-                await handleRegionSelection(message.from, buttonId, supabase)
+                const { data: existing } = await supabase.from('subscriptions').select('*').eq('phone_number', message.from).single()
+                const currentRegions = existing?.regions || []
+                const newRegions = currentRegions.includes(buttonId) ? currentRegions : [...currentRegions, buttonId]
+                
+                await supabase.from('subscriptions').upsert({
+                  phone_number: message.from,
+                  regions: newRegions,
+                  categories: existing?.categories || ['Education', 'Safety', 'Opportunity'],
+                  language: existing?.language || 'eng',
+                  opted_in: true,
+                  last_activity: new Date().toISOString(),
+                  opted_in_at: existing?.opted_in_at || new Date().toISOString(),
+                  consent_timestamp: existing?.consent_timestamp || new Date().toISOString(),
+                  consent_method: existing?.consent_method || 'whatsapp_optin'
+                }, { onConflict: 'phone_number' })
+                
+                await sendInteractiveButtons(message.from,
+                  `✅ Region added: ${buttonId}\n\nYour regions: ${newRegions.join(', ')}`,
+                  [
+                    { id: 'add_more_regions', title: '➕ Add More' },
+                    { id: 'done', title: '✅ Done' }
+                  ]
+                )
                 continue
               }
               
               if (['EDU', 'SAF', 'OPP', 'HEA', 'EVE', 'CUL', 'TEC', 'COM'].includes(buttonId)) {
-                await handleCategorySelection(message.from, buttonId, supabase)
+                const categoryMap: { [key: string]: string } = {
+                  'EDU': 'Education', 'SAF': 'Safety', 'CUL': 'Culture', 'OPP': 'Opportunity',
+                  'EVE': 'Events', 'HEA': 'Health', 'TEC': 'Technology', 'COM': 'Community'
+                }
+                const categoryName = categoryMap[buttonId]
+                
+                const { data: existing } = await supabase.from('subscriptions').select('*').eq('phone_number', message.from).single()
+                const currentCategories = existing?.categories || []
+                const newCategories = currentCategories.includes(categoryName) ? currentCategories : [...currentCategories, categoryName]
+                
+                await supabase.from('subscriptions').upsert({
+                  phone_number: message.from,
+                  categories: newCategories,
+                  regions: existing?.regions || ['National'],
+                  language: existing?.language || 'eng',
+                  opted_in: true,
+                  last_activity: new Date().toISOString(),
+                  opted_in_at: existing?.opted_in_at || new Date().toISOString(),
+                  consent_timestamp: existing?.consent_timestamp || new Date().toISOString(),
+                  consent_method: existing?.consent_method || 'whatsapp_optin'
+                }, { onConflict: 'phone_number' })
+                
+                await sendInteractiveButtons(message.from,
+                  `✅ Interest added: ${categoryName}\n\nYour interests: ${newCategories.join(', ')}`,
+                  [
+                    { id: 'add_more_topics', title: '➕ Add More' },
+                    { id: 'done', title: '✅ Done' }
+                  ]
+                )
                 continue
               }
               
@@ -672,6 +722,43 @@ serve(async (req) => {
                 if (buttonId === 'see_moments') {
                   const { data: m } = await supabase.from('moments').select('title,region').eq('status','broadcasted').order('broadcasted_at',{ascending:false}).limit(3)
                   if (m?.length) await sendWhatsAppMessage(message.from, `📰 Latest:\n\n${m.map((x,i)=>`${i+1}. ${x.title}\n   📍 ${x.region}`).join('\n\n')}\n\n🌐 moments.unamifoundation.org/moments`)
+                } else if (buttonId === 'add_more_regions') {
+                  await sendInteractiveList(message.from,
+                    '📍 Add more regions:',
+                    'Select Region',
+                    [{
+                      title: 'Provinces',
+                      rows: [
+                        { id: 'KZN', title: '🏖️ KwaZulu-Natal', description: 'KZN' },
+                        { id: 'WC', title: '🍷 Western Cape', description: 'WC' },
+                        { id: 'GP', title: '🏙️ Gauteng', description: 'GP' },
+                        { id: 'EC', title: '🌊 Eastern Cape', description: 'EC' },
+                        { id: 'FS', title: '🌾 Free State', description: 'FS' },
+                        { id: 'LP', title: '🌳 Limpopo', description: 'LP' },
+                        { id: 'MP', title: '⛰️ Mpumalanga', description: 'MP' },
+                        { id: 'NC', title: '🏜️ Northern Cape', description: 'NC' },
+                        { id: 'NW', title: '💎 North West', description: 'NW' }
+                      ]
+                    }]
+                  )
+                } else if (buttonId === 'add_more_topics') {
+                  await sendInteractiveList(message.from,
+                    '🏷️ Add more interests:',
+                    'Select Topics',
+                    [{
+                      title: 'Categories',
+                      rows: [
+                        { id: 'EDU', title: '🎓 Education', description: 'Learning' },
+                        { id: 'SAF', title: '🛡️ Safety', description: 'Security' },
+                        { id: 'OPP', title: '💼 Opportunities', description: 'Jobs' },
+                        { id: 'HEA', title: '⚕️ Health', description: 'Wellness' },
+                        { id: 'EVE', title: '🎉 Events', description: 'Gatherings' },
+                        { id: 'CUL', title: '🎭 Culture', description: 'Arts' },
+                        { id: 'TEC', title: '📱 Technology', description: 'Digital' },
+                        { id: 'COM', title: '🏠 Community', description: 'News' }
+                      ]
+                    }]
+                  )
                 } else if (buttonId === 'done') {
                   await sendWhatsAppMessage(message.from, '✅ All set!\n\nUnami Foundation Moments App\nDigital Notice Board\n\n🌐 moments.unamifoundation.org/moments')
                 }
