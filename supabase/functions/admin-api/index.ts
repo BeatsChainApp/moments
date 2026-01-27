@@ -302,6 +302,57 @@ serve(async (req) => {
       })
     }
 
+    // GET /moments/:id/compose - Preview attributed message
+    if (path.match(/\/(admin-api\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
+      console.log('✅ Compose endpoint matched!')
+      const momentId = path.split('/moments/')[1].split('/compose')[0]
+      console.log(`🎯 Moment ID: ${momentId}`)
+      const { data: moment, error: momentError } = await supabase.from('moments').select('*').eq('id', momentId).single()
+      
+      if (momentError) {
+        console.error('❌ Moment fetch error:', momentError)
+      }
+      
+      if (!moment) {
+        console.log('❌ Moment not found')
+        return new Response(JSON.stringify({ error: 'Moment not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+      
+      console.log(`✅ Moment found: ${moment.title}`)
+      console.log(`🔑 Has authority_context: ${!!moment.authority_context}`)
+
+      let attribution = ''
+      if (moment.authority_context) {
+        const auth = moment.authority_context
+        const roleLabels = {
+          community_leader: 'Community Leader',
+          school_principal: 'School Principal',
+          admin: 'Administrator',
+          partner: 'Partner Organization'
+        }
+        // Normalize role to snake_case if it's in human-readable format
+        const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
+        const role = roleLabels[roleKey] || auth.role || 'Community Member'
+        const org = auth.scope_identifier || 'Unami Foundation Moments App'
+        const trustEmoji = (roleKey === 'admin' || roleKey === 'school_principal' || roleKey === 'partner') ? '🟢' : '🟡'
+        
+        attribution = `📢 ${role} (Verified)\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'Community'}\n🏛️ Affiliation: ${org}\n${trustEmoji} Trust Level: Verified\n\n`
+      }
+
+      const slug = moment.slug || `moment-${moment.id.substring(0, 8)}`
+      const message = `${attribution}${moment.content}\n\n🌐 View details:\nhttps://moments.unamifoundation.org/moments/${slug}\n\n💬 Replies are received by Unami Foundation Moments App`
+
+      return new Response(JSON.stringify({ message }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Comments endpoints
+    // GET /moments/:id/comments
+    if (path.match(/\/moments\/[^\/]+\/comments$/) && method === 'GET') {
     // Admin users endpoints
     if (path.includes('/admin-users') && method === 'GET') {
       const { data: users } = await supabase
@@ -1567,58 +1618,6 @@ ${moment.content}
       })
     }
 
-    // GET /moments/:id/compose - Preview attributed message
-    if (path.match(/\/(admin-api\/)?moments\/[^\/]+\/compose$/) && method === 'GET') {
-      console.log('✅ Compose endpoint matched!')
-      const momentId = path.split('/moments/')[1].split('/compose')[0]
-      console.log(`🎯 Moment ID: ${momentId}`)
-      const { data: moment, error: momentError } = await supabase.from('moments').select('*').eq('id', momentId).single()
-      
-      if (momentError) {
-        console.error('❌ Moment fetch error:', momentError)
-      }
-      
-      if (!moment) {
-        console.log('❌ Moment not found')
-        return new Response(JSON.stringify({ error: 'Moment not found' }), {
-          status: 404,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      }
-      
-      console.log(`✅ Moment found: ${moment.title}`)
-      console.log(`🔑 Has authority_context: ${!!moment.authority_context}`)
-
-      let attribution = ''
-      if (moment.authority_context) {
-        const auth = moment.authority_context
-        const roleLabels = {
-          community_leader: 'Community Leader',
-          school_principal: 'School Principal',
-          admin: 'Administrator',
-          partner: 'Partner Organization'
-        }
-        // Normalize role to snake_case if it's in human-readable format
-        const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
-        const role = roleLabels[roleKey] || auth.role || 'Community Member'
-        const org = auth.scope_identifier || 'Unami Foundation Moments App'
-        const trustEmoji = (roleKey === 'admin' || roleKey === 'school_principal' || roleKey === 'partner') ? '🟢' : '🟡'
-        
-        attribution = `📢 ${role} (Verified)\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'Community'}\n🏛️ Affiliation: ${org}\n${trustEmoji} Trust Level: Verified\n\n`
-      }
-
-      const slug = moment.slug || `moment-${moment.id.substring(0, 8)}`
-      const message = `${attribution}${moment.content}\n\n🌐 View details:\nhttps://moments.unamifoundation.org/moments/${slug}\n\n💬 Replies are received by Unami Foundation Moments App`
-
-      return new Response(JSON.stringify({ message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
-
-    // Comments endpoints
-    // GET /moments/:id/comments
-    if (path.match(/\/moments\/[^\/]+\/comments$/) && method === 'GET') {
-      const momentId = path.split('/moments/')[1].split('/comments')[0]
       const { data: comments } = await supabase
         .from('comments')
         .select('*')
