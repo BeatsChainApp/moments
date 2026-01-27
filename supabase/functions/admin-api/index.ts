@@ -1608,7 +1608,7 @@ ${moment.content}
       }
 
       const slug = moment.slug || `moment-${moment.id.substring(0, 8)}`
-      const message = `${attribution}${moment.content}\n\n🌐 View details:\nhttps://moments.unamifoundation.org/moments/${slug}\n\nReply FEEDBACK to respond\nReply STOP to unsubscribe\n\nPowered by: Unami Foundation Moments App`
+      const message = `${attribution}${moment.content}\n\n🌐 View details:\nhttps://moments.unamifoundation.org/moments/${slug}\n\nReply FEEDBACK - Share a response\nReply STOP to unsubscribe\n\nPowered by: Unami Foundation Moments App`
 
       return new Response(JSON.stringify({ message }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

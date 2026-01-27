@@ -77,7 +77,7 @@ function composeMomentMessage(moment: any, creator: any, sponsor: any): string {
     footer += `💼 Sponsored by ${sponsorName}\n`
     if (sponsor.website_url) footer += `Learn more: ${sponsor.website_url}\n\n`
   }
-  footer += `Reply FEEDBACK to respond\nReply STOP to unsubscribe\n\nPowered by: Unami Foundation Moments App`
+  footer += `Reply FEEDBACK - Share a response\nReply STOP to unsubscribe\n\nPowered by: Unami Foundation Moments App`
 
   return attribution + moment.content + footer
 }
@@ -452,13 +452,16 @@ serve(async (req) => {
       // Use authority_context if available
       if (moment.authority_context) {
         const auth = moment.authority_context
+        console.log(`🔍 Authority context found:`, JSON.stringify(auth))
         // auth.role contains human-readable label like "Community Leader"
         // Convert to snake_case for role key lookup
         const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
         creator.role = roleKey || moment.content_source || 'community'
         creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
         console.log(`✅ Using authority context: role="${auth.role}" → roleKey="${roleKey}", org="${creator.organization}"`)
-      } else if (moment.created_by?.startsWith('+')) {
+      } else {
+        console.log(`⚠️ No authority_context found, using fallback: content_source="${moment.content_source}", created_by="${moment.created_by}"`)
+        if (moment.created_by?.startsWith('+')) {
         // Fallback: Lookup authority if phone number
         const { data: authority } = await supabase.rpc('lookup_authority', {
           p_user_identifier: moment.created_by
@@ -592,7 +595,9 @@ serve(async (req) => {
       success_count: successCount,
       failure_count: failureCount,
       total_recipients: recipients.length,
-      duration_ms: duration,
+      duration_ms
+      
+      : duration,
       message: `Broadcast completed: ${successCount} sent, ${failureCount} failed`
     }), {
       status: 200,
