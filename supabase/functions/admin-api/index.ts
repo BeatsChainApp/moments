@@ -1606,6 +1606,7 @@ ${moment.content}
       let attribution = ''
       if (moment.authority_context) {
         const auth = moment.authority_context
+        console.log(`🔍 Authority context:`, JSON.stringify(auth))
         const roleLabels = {
           community_leader: 'Community Leader',
           school_principal: 'School Principal',
@@ -1616,6 +1617,7 @@ ${moment.content}
         const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
         const role = roleLabels[roleKey] || auth.role || 'Community Member'
         const org = auth.scope_identifier || 'Unami Foundation Moments App'
+        console.log(`✅ Parsed: auth.role="${auth.role}" → roleKey="${roleKey}" → role="${role}", org="${org}"`)
         const trustEmoji = (roleKey === 'admin' || roleKey === 'school_principal' || roleKey === 'partner') ? '🟢' : '🟡'
         
         attribution = `📢 ${role} (Verified)\nScope: ${moment.region || 'National'}\n📍 Coverage: ${moment.category || 'Community'}\n🏛️ Affiliation: ${org}\n${trustEmoji} Trust Level: Verified\n\n`
