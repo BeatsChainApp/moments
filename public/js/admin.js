@@ -2755,27 +2755,36 @@ async function loadFeedback() {
         const list = document.getElementById('feedback-list');
         
         if (!data.feedback || data.feedback.length === 0) {
-            list.innerHTML = '<div class="empty-state">No feedback found</div>';
+            list.innerHTML = `
+                <div style="text-align: center; padding: 3rem 1rem; color: #6b7280;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">📬</div>
+                    <div style="font-size: 1.125rem; font-weight: 500; margin-bottom: 0.5rem;">No feedback yet</div>
+                    <div style="font-size: 0.875rem;">User feedback will appear here when they reply with FEEDBACK</div>
+                </div>
+            `;
             return;
         }
         
         list.innerHTML = data.feedback.map(f => `
-            <div class="moment-item">
-                <div class="moment-header">
-                    <div class="moment-info">
-                        <div class="moment-title">${f.phone_number.replace(/\d(?=\d{4})/g, '*')}</div>
-                        <div class="moment-meta">${new Date(f.created_at).toLocaleString()}</div>
+            <div style="background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem; gap: 0.5rem; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-weight: 600; color: #1f2937; margin-bottom: 0.25rem;">📞 ${f.phone_number.replace(/\d(?=\d{4})/g, '*')}</div>
+                        <div style="font-size: 0.75rem; color: #6b7280;">${new Date(f.created_at).toLocaleString()}</div>
                     </div>
-                    <div class="moment-actions">
-                        ${!f.reviewed ? `<button class="btn btn-sm" onclick="markFeedbackReviewed('${f.id}')">✓ Mark Reviewed</button>` : '<span class="badge badge-success">Reviewed</span>'}
+                    <div style="flex-shrink: 0;">
+                        ${!f.reviewed ? 
+                            `<button class="btn btn-sm" onclick="markFeedbackReviewed('${f.id}')" style="background: #10b981; color: white; padding: 0.375rem 0.75rem; border-radius: 0.375rem; font-size: 0.875rem; white-space: nowrap;">✓ Mark Reviewed</button>` : 
+                            '<span style="background: #d1fae5; color: #065f46; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500;">✓ Reviewed</span>'
+                        }
                     </div>
                 </div>
-                <div class="moment-content">${escapeHtml(f.feedback_text)}</div>
+                <div style="background: #f9fafb; padding: 0.75rem; border-radius: 0.375rem; color: #374151; line-height: 1.5; word-wrap: break-word;">${escapeHtml(f.feedback_text)}</div>
             </div>
         `).join('');
     } catch (error) {
         console.error('Feedback load error:', error);
-        document.getElementById('feedback-list').innerHTML = '<div class="error">Failed to load feedback</div>';
+        document.getElementById('feedback-list').innerHTML = '<div style="color: #dc2626; padding: 1rem; text-align: center;">Failed to load feedback</div>';
     }
 }
 

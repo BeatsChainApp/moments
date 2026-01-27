@@ -933,15 +933,17 @@
 
         <!-- Feedback Section -->
         <div id="feedback" class="section">
-            <h2>User Feedback</h2>
-            <div class="filters">
-                <select id="feedback-filter" onchange="loadFeedback()">
-                    <option value="">All Feedback</option>
-                    <option value="false">Unreviewed</option>
-                    <option value="true">Reviewed</option>
-                </select>
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <h2 style="margin: 0;">💬 User Feedback</h2>
+                    <select id="feedback-filter" onchange="loadFeedback()" style="padding: 0.5rem; border-radius: 0.375rem; border: 1px solid #d1d5db;">
+                        <option value="">All Feedback</option>
+                        <option value="false">Unreviewed</option>
+                        <option value="true">Reviewed</option>
+                    </select>
+                </div>
+                <div id="feedback-list" style="margin-top: 1rem;"></div>
             </div>
-            <div id="feedback-list"></div>
         </div>
 
         <!-- Notifications Section -->
