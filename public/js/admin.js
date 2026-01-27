@@ -473,9 +473,11 @@ function displayMoments() {
                 admin: 'Administrator',
                 partner: 'Partner Organization'
             };
-            const role = roleLabels[auth.role] || 'Community Member';
+            // Normalize role to snake_case if it's in human-readable format
+            const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_');
+            const role = roleLabels[roleKey] || auth.role || 'Community Member';
             const org = auth.scope_identifier || 'Unami Foundation Moments App';
-            const trustEmoji = auth.role === 'admin' || auth.role === 'school_principal' || auth.role === 'partner' ? '🟢' : '🟡';
+            const trustEmoji = (roleKey === 'admin' || roleKey === 'school_principal' || roleKey === 'partner') ? '🟢' : '🟡';
             
             attributionHtml = `
                 <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 0.75rem; margin: 0.75rem 0; border-radius: 0.25rem; font-size: 0.875rem;">
