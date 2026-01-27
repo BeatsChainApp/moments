@@ -513,7 +513,7 @@ serve(async (req) => {
     if (USE_BATCHING) {
       console.log(`📦 Using batch processing: ${Math.ceil(recipients.length / BATCH_SIZE)} batches`)
       try {
-        return await processBatchedBroadcast(broadcast_id, message, recipients, moment_id)
+        return await processBatchedBroadcast(broadcast_id, fullMessage, recipients, moment_id)
       } catch (batchError) {
         console.warn(`⚠️ Batch processing failed, falling back to sequential: ${batchError.message}`)
         // Fall through to sequential processing
