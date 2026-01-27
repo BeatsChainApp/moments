@@ -70,8 +70,8 @@ function composeMomentMessage(moment: any, creator: any, sponsor: any): string {
     }
   }
 
-  // Build footer
-  let footer = `\n\n🌐 View details:\n${canonicalUrl}\n\n`
+  // Build footer (no URL for WhatsApp broadcasts)
+  let footer = `\n\n`
   if (sponsor) {
     const sponsorName = sponsor.display_name || sponsor.name
     footer += `💼 Sponsored by ${sponsorName}\n`
