@@ -369,6 +369,10 @@
                         <span class="icon icon-moderation"></span>
                         <span>Moderation</span>
                     </button>
+                    <button class="admin-nav-item" data-section="feedback" aria-label="Feedback section">
+                        <span class="icon icon-feedback"></span>
+                        <span>Feedback</span>
+                    </button>
                     <button class="admin-nav-item" data-section="subscribers" aria-label="Subscribers section">
                         <span class="icon icon-subscribers"></span>
                         <span>Subscribers</span>
@@ -925,6 +929,19 @@
                     <div class="loading">Loading broadcasts...</div>
                 </div>
             </div>
+        </div>
+
+        <!-- Feedback Section -->
+        <div id="feedback" class="section">
+            <h2>User Feedback</h2>
+            <div class="filters">
+                <select id="feedback-filter" onchange="loadFeedback()">
+                    <option value="">All Feedback</option>
+                    <option value="false">Unreviewed</option>
+                    <option value="true">Reviewed</option>
+                </select>
+            </div>
+            <div id="feedback-list"></div>
         </div>
 
         <!-- Notifications Section -->

@@ -119,6 +119,7 @@ function showSection(sectionId) {
             case 'users': loadAdminUsers().catch(console.warn); break;
             case 'broadcasts': loadBroadcasts().catch(console.warn); break;
             case 'moderation': loadModeration().catch(console.warn); break;
+            case 'feedback': loadFeedback().catch(console.warn); break;
             case 'settings': loadSettings().catch(console.warn); break;
             case 'budget-controls': loadBudgetControls().catch(console.warn); break;
             case 'authority': loadAuthorityProfiles().catch(console.warn); break;
