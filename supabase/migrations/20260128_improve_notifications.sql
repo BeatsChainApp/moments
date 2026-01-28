@@ -1,8 +1,8 @@
 -- Add notification types for subscriber and moment events
-INSERT INTO notification_types (type_code, display_name, description, default_enabled, default_priority)
+INSERT INTO notification_types (type_code, display_name, description, category, default_enabled, priority_level)
 VALUES 
-  ('admin_new_subscriber', 'New Subscriber', 'Notification when a new user subscribes', true, 1),
-  ('admin_moment_received', 'Moment Received', 'Notification when a new moment is submitted', true, 2)
+  ('admin_new_subscriber', 'New Subscriber', 'Notification when a new user subscribes', 'system', true, 1),
+  ('admin_moment_received', 'Moment Received', 'Notification when a new moment is submitted', 'individual', true, 2)
 ON CONFLICT (type_code) DO NOTHING;
 
 -- Trigger: Notify admin when new subscriber joins
@@ -12,7 +12,6 @@ DECLARE
   type_id uuid;
   admin_emails text[];
 BEGIN
-  -- Only notify on new opt-ins (not updates)
   IF (TG_OP = 'INSERT' AND NEW.opted_in = true) OR 
      (TG_OP = 'UPDATE' AND OLD.opted_in = false AND NEW.opted_in = true) THEN
     
@@ -29,7 +28,7 @@ BEGIN
         unnest(admin_emails),
         'email',
         1,
-        '📱 New Subscriber: ' || NEW.phone_number || E'\\n\\nRegions: ' || COALESCE(array_to_string(NEW.regions, ', '), 'None') || E'\\nInterests: ' || COALESCE(array_to_string(NEW.categories, ', '), 'None') || E'\\nLanguage: ' || COALESCE(NEW.language, 'eng'),
+        '📱 New Subscriber: ' || NEW.phone_number || E'\n\nRegions: ' || COALESCE(array_to_string(NEW.regions, ', '), 'None') || E'\nInterests: ' || COALESCE(array_to_string(NEW.categories, ', '), 'None') || E'\nLanguage: ' || COALESCE(NEW.language, 'eng'),
         jsonb_build_object('phone_number', NEW.phone_number, 'regions', NEW.regions, 'categories', NEW.categories),
         'queued';
     END IF;
@@ -45,7 +44,7 @@ CREATE TRIGGER trigger_notify_new_subscriber
   FOR EACH ROW
   EXECUTE FUNCTION notify_new_subscriber();
 
--- Trigger: Notify admin when new moment is received (exclude broadcasts you initiate)
+-- Trigger: Notify admin when new moment is received
 CREATE OR REPLACE FUNCTION notify_moment_received()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -53,13 +52,11 @@ DECLARE
   admin_emails text[];
   content_preview text;
 BEGIN
-  -- Only notify for WhatsApp-sourced moments in draft status
   IF NEW.content_source = 'whatsapp' AND NEW.status = 'draft' THEN
     
     SELECT id INTO type_id FROM notification_types WHERE type_code = 'admin_moment_received';
     SELECT array_agg(email) INTO admin_emails FROM admin_users WHERE active = true AND email IS NOT NULL;
     
-    -- Create content preview (first 200 chars)
     content_preview := CASE 
       WHEN length(NEW.content) > 200 THEN substring(NEW.content from 1 for 200) || '...'
       ELSE NEW.content
@@ -75,7 +72,7 @@ BEGIN
         unnest(admin_emails),
         'email',
         2,
-        '📝 New Moment Received' || E'\\n\\nTitle: ' || NEW.title || E'\\n\\nContent:\\n' || content_preview || E'\\n\\nRegion: ' || NEW.region || E'\\nCategory: ' || NEW.category || E'\\nSource: WhatsApp',
+        '📝 New Moment Received' || E'\n\nTitle: ' || NEW.title || E'\n\nContent:\n' || content_preview || E'\n\nRegion: ' || NEW.region || E'\nCategory: ' || NEW.category || E'\nSource: WhatsApp',
         jsonb_build_object('moment_id', NEW.id, 'title', NEW.title, 'region', NEW.region, 'category', NEW.category),
         'queued';
     END IF;
@@ -91,7 +88,7 @@ CREATE TRIGGER trigger_notify_moment_received
   FOR EACH ROW
   EXECUTE FUNCTION notify_moment_received();
 
--- Update broadcast notification trigger to exclude admin-initiated broadcasts
+-- Update broadcast notification trigger
 CREATE OR REPLACE FUNCTION notify_broadcast_completed()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -104,8 +101,6 @@ BEGIN
     SELECT array_agg(email) INTO admin_emails FROM admin_users WHERE active = true AND email IS NOT NULL;
     SELECT title INTO moment_title FROM moments WHERE id = NEW.moment_id;
     
-    -- SKIP notification if broadcast was manually initiated (you're aware of it)
-    -- Only notify for automated/scheduled broadcasts
     IF NEW.broadcast_type = 'scheduled' OR NEW.broadcast_type = 'automated' THEN
       IF array_length(admin_emails, 1) > 0 THEN
         INSERT INTO notification_log (
@@ -117,7 +112,7 @@ BEGIN
           unnest(admin_emails),
           'email',
           2,
-          '✅ Scheduled Broadcast Completed' || E'\\n\\nMoment: ' || moment_title || E'\\n\\nDelivered: ' || NEW.success_count || '/' || NEW.recipient_count || ' (' || ROUND((NEW.success_count::decimal / NULLIF(NEW.recipient_count, 0) * 100), 1) || '%)',
+          '✅ Scheduled Broadcast Completed' || E'\n\nMoment: ' || moment_title || E'\n\nDelivered: ' || NEW.success_count || '/' || NEW.recipient_count || ' (' || ROUND((NEW.success_count::decimal / NULLIF(NEW.recipient_count, 0) * 100), 1) || '%)',
           jsonb_build_object('moment_id', NEW.moment_id, 'title', moment_title),
           'queued',
           NEW.id
