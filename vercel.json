@@ -9,7 +9,7 @@
   "routes": [
     {
       "src": "/",
-      "dest": "/public/index.html"
+      "dest": "/index.html"
     },
     {
       "src": "/moments/([a-z0-9-]+)",
