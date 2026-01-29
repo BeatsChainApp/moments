@@ -8,10 +8,6 @@
   ],
   "routes": [
     {
-      "src": "/$",
-      "dest": "/index.html"
-    },
-    {
       "src": "/moments/([a-z0-9-]+)",
       "dest": "/public/moments/detail.html"
     },
@@ -26,6 +22,10 @@
     {
       "src": "/api/(.*)",
       "dest": "/src/server-bulletproof.js"
+    },
+    {
+      "src": "^/$",
+      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
