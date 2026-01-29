@@ -24,10 +24,6 @@
       "dest": "/src/server-bulletproof.js"
     },
     {
-      "src": "^/$",
-      "dest": "/index.html"
-    },
-    {
       "src": "/(.*)",
       "dest": "/src/server-bulletproof.js"
     }
