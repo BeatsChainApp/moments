@@ -917,7 +917,7 @@ serve(async (req) => {
                 whatsapp_id: message.id,
                 from_number: message.from,
                 message_type: message.type,
-                content: message.text?.body || message.caption || '',
+                content: message.text?.body || message.image?.caption || message.video?.caption || message.audio?.caption || message.document?.caption || '',
                 timestamp: new Date(parseInt(message.timestamp) * 1000).toISOString(),
                 processed: false,
                 authority_context: authorityContext // Store authority context
@@ -930,7 +930,7 @@ serve(async (req) => {
               
               // MCP Analysis with Authority Integration
               try {
-                const content = message.text?.body || message.caption || ''
+                const content = message.text?.body || message.image?.caption || message.video?.caption || message.audio?.caption || message.document?.caption || ''
                 
                 if (!content || content.trim().length === 0) {
                   console.warn(`⚠️ Empty message content from ${message.from}, skipping`)
@@ -1059,6 +1059,20 @@ serve(async (req) => {
                         await supabase.from('messages')
                           .update({ media_url: publicUrl.publicUrl })
                           .eq('id', messageRecord.id)
+                        
+                        // Update moment with media URL if auto-created
+                        const { data: relatedMoment } = await supabase
+                          .from('whatsapp_comments')
+                          .select('moment_id')
+                          .eq('whatsapp_message_id', message.id)
+                          .single()
+                        
+                        if (relatedMoment?.moment_id) {
+                          await supabase.from('moments')
+                            .update({ media_urls: [publicUrl.publicUrl] })
+                            .eq('id', relatedMoment.moment_id)
+                          console.log(`✅ Media attached to moment ${relatedMoment.moment_id}`)
+                        }
                       }
                     }
                   }

@@ -288,6 +288,7 @@ router.post('/moments/:id/broadcast', async (req, res) => {
 
     // Compose message
     const message = await composeMomentMessage(id);
+    const mediaUrls = moment.media_urls || [];
 
     // Create broadcast record
     const { data: broadcast, error: broadcastError } = await supabase
@@ -328,7 +329,7 @@ router.post('/moments/:id/broadcast', async (req, res) => {
             'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify({ batch_id: batch.id, message })
+          body: JSON.stringify({ batch_id: batch.id, message, mediaUrls })
         }).catch(err => console.error('Batch trigger failed:', err));
       }
     }

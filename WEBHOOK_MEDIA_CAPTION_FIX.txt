@@ -1,0 +1,12 @@
+-- Webhook media caption fix needed in supabase/functions/webhook/index.ts
+
+-- Line 1006 currently:
+-- const content = message.text?.body || message.caption || ''
+
+-- Should be:
+-- const content = message.text?.body || message.image?.caption || message.video?.caption || message.audio?.caption || message.document?.caption || ''
+
+-- This will capture captions from media messages which are nested in the media object, not at message level.
+
+-- After fixing, redeploy webhook function:
+-- supabase functions deploy webhook

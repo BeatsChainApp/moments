@@ -15,6 +15,118 @@ const corsHeaders = {
   'Content-Type': 'application/json'
 }
 
+// Two-message broadcast: template + media-with-caption OR text
+async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Promise<boolean> {
+  const token = Deno.env.get('WHATSAPP_TOKEN')
+  const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
+  const maxRetries = 3
+
+  if (!token || !phoneId) {
+    console.error('❌ WhatsApp credentials missing')
+    return false
+  }
+
+  let normalizedPhone = to.replace(/\D/g, '')
+  if (normalizedPhone.startsWith('27')) {
+  } else if (normalizedPhone.startsWith('0')) {
+    normalizedPhone = '27' + normalizedPhone.substring(1)
+  } else if (normalizedPhone.length === 9) {
+    normalizedPhone = '27' + normalizedPhone
+  }
+
+  try {
+    const hasMedia = momentData.mediaUrls && momentData.mediaUrls.length > 0
+    
+    // Message 1: Template
+    const templateResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messaging_product: 'whatsapp',
+        to: normalizedPhone,
+        type: 'template',
+        template: {
+          name: 'moment_notification',
+          language: { code: 'en' },
+          components: []
+        }
+      })
+    })
+
+    if (!templateResponse.ok) return false
+
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // Message 2: Media with caption OR text
+    if (hasMedia) {
+      const mediaUrl = momentData.mediaUrls[0]
+      const mediaType = mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') ? 'video' : 'image'
+      
+      const mediaResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedPhone,
+          type: mediaType,
+          [mediaType]: { 
+            link: mediaUrl,
+            caption: momentData.fullMessage
+          }
+        })
+      })
+
+      if (!mediaResponse.ok) {
+        if (mediaResponse.status >= 500 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt - 1) * 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return sendMomentBroadcast(to, momentData, attempt + 1)
+        }
+        return false
+      }
+    } else {
+      const textResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedPhone,
+          type: 'text',
+          text: { body: momentData.fullMessage }
+        })
+      })
+
+      if (!textResponse.ok) {
+        if (textResponse.status >= 500 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt - 1) * 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return sendMomentBroadcast(to, momentData, attempt + 1)
+        }
+        return false
+      }
+    }
+
+    return true
+
+  } catch (error) {
+    if (attempt < maxRetries) {
+      const delay = Math.pow(2, attempt - 1) * 1000
+      await new Promise(resolve => setTimeout(resolve, delay))
+      return sendMomentBroadcast(to, momentData, attempt + 1)
+    }
+    return false
+  }
+}
+
 // WhatsApp API helper function
 async function sendWhatsAppMessage(to: string, message: string, attempt = 1): Promise<boolean> {
   const token = Deno.env.get('WHATSAPP_TOKEN')
@@ -86,7 +198,7 @@ serve(async (req) => {
       })
     }
 
-    const { batch_id, message } = await req.json()
+    const { batch_id, message, mediaUrls } = await req.json()
 
     if (!batch_id || !message) {
       return new Response(JSON.stringify({ error: 'Missing batch_id or message' }), {
@@ -109,7 +221,7 @@ serve(async (req) => {
       })
     }
 
-    console.log(`📦 Processing batch ${batch.batch_number} with ${batch.recipients.length} recipients`)
+    console.log(`📦 Processing batch ${batch.batch_number} with ${batch.recipients.length} recipients, media: ${mediaUrls?.length || 0}`)
 
     // Update batch status to processing
     await supabase
@@ -131,11 +243,10 @@ serve(async (req) => {
       const recipient = batch.recipients[i]
       
       try {
-        const success = await sendWhatsAppMessage(recipient, message)
+        const success = await sendMomentBroadcast(recipient, { fullMessage: message, mediaUrls })
         if (success) {
           successCount++
           consecutiveFailures = 0
-          // Speed up if successful
           if (currentRateLimit > 150) {
             currentRateLimit = Math.max(150, currentRateLimit - 10)
           }
@@ -143,7 +254,6 @@ serve(async (req) => {
           failureCount++
           failedRecipients.push(recipient)
           consecutiveFailures++
-          // Slow down if failing
           if (consecutiveFailures > 3) {
             currentRateLimit = Math.min(500, currentRateLimit + 50)
             console.log(`⚠️ Adaptive rate limiting: increased to ${currentRateLimit}ms`)

@@ -199,10 +199,9 @@ async function processBatchedBroadcast(broadcastId: string, message: string, rec
 }
 
 // Process single batch
-async function processBatch(batch: any, message: string) {
+async function processBatch(batch: any, message: string, mediaUrls?: string[]) {
   console.log(`📦 Processing batch ${batch.batch_number} with ${batch.recipients.length} recipients`)
   
-  // Update batch status
   await supabase
     .from('broadcast_batches')
     .update({
@@ -214,12 +213,11 @@ async function processBatch(batch: any, message: string) {
   let successCount = 0
   let failureCount = 0
   
-  // Send messages with faster rate (400ms delay for two-message pattern)
   for (let i = 0; i < batch.recipients.length; i++) {
     const recipient = batch.recipients[i]
     
     try {
-      const success = await sendMomentBroadcast(recipient, { fullMessage: message })
+      const success = await sendMomentBroadcast(recipient, { fullMessage: message, mediaUrls })
       if (success) {
         successCount++
       } else {
@@ -230,13 +228,11 @@ async function processBatch(batch: any, message: string) {
       failureCount++
     }
     
-    // Rate limiting for batches: 2 seconds per recipient (template + message)
     if (i < batch.recipients.length - 1) {
       await new Promise(resolve => setTimeout(resolve, 2000))
     }
   }
   
-  // Update batch results
   await supabase
     .from('broadcast_batches')
     .update({
@@ -258,7 +254,7 @@ const corsHeaders = {
   'Content-Type': 'application/json'
 }
 
-// WhatsApp API helper - Two-message pattern with template
+// Two-message broadcast: template + media-with-caption OR text
 async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Promise<boolean> {
   const token = Deno.env.get('WHATSAPP_TOKEN')
   const phoneId = Deno.env.get('WHATSAPP_PHONE_ID')
@@ -269,10 +265,8 @@ async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Pr
     return false
   }
 
-  // Normalize phone number
   let normalizedPhone = to.replace(/\D/g, '')
   if (normalizedPhone.startsWith('27')) {
-    // Already has country code
   } else if (normalizedPhone.startsWith('0')) {
     normalizedPhone = '27' + normalizedPhone.substring(1)
   } else if (normalizedPhone.length === 9) {
@@ -280,9 +274,9 @@ async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Pr
   }
 
   try {
-    console.log(`📱 Sending two-message broadcast to ${normalizedPhone}`)
+    const hasMedia = momentData.mediaUrls && momentData.mediaUrls.length > 0
     
-    // Message 1: Generic template
+    // Message 1: Template
     const templateResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
       method: 'POST',
       headers: {
@@ -307,44 +301,74 @@ async function sendMomentBroadcast(to: string, momentData: any, attempt = 1): Pr
       return false
     }
 
-    // Wait 1 second between messages
     await new Promise(resolve => setTimeout(resolve, 1000))
 
-    // Message 2: Full attributed moment
-    const fullMomentResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        messaging_product: 'whatsapp',
-        to: normalizedPhone,
-        type: 'text',
-        text: { body: momentData.fullMessage }
+    // Message 2: Media with caption OR text only
+    if (hasMedia) {
+      const mediaUrl = momentData.mediaUrls[0]
+      const mediaType = mediaUrl.includes('.mp4') || mediaUrl.includes('.mov') ? 'video' : 'image'
+      
+      const mediaResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedPhone,
+          type: mediaType,
+          [mediaType]: { 
+            link: mediaUrl,
+            caption: momentData.fullMessage
+          }
+        })
       })
-    })
 
-    if (fullMomentResponse.ok) {
-      const result = await fullMomentResponse.json()
-      console.log(`✅ Two-message broadcast sent to ${normalizedPhone}`)
-      return true
-    } else {
-      const error = await fullMomentResponse.text()
-      console.error(`⚠️ Full moment send failed: ${error}`)
-
-      if (fullMomentResponse.status >= 500 && attempt < maxRetries) {
-        const delay = Math.pow(2, attempt - 1) * 1000 + Math.random() * 1000
-        await new Promise(resolve => setTimeout(resolve, delay))
-        return sendMomentBroadcast(to, momentData, attempt + 1)
+      if (!mediaResponse.ok) {
+        const error = await mediaResponse.text()
+        console.error(`⚠️ Media send failed: ${error}`)
+        if (mediaResponse.status >= 500 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt - 1) * 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return sendMomentBroadcast(to, momentData, attempt + 1)
+        }
+        return false
       }
-      return false
+    } else {
+      const textResponse = await fetch(`https://graph.facebook.com/v18.0/${phoneId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          messaging_product: 'whatsapp',
+          to: normalizedPhone,
+          type: 'text',
+          text: { body: momentData.fullMessage }
+        })
+      })
+
+      if (!textResponse.ok) {
+        const error = await textResponse.text()
+        console.error(`⚠️ Text send failed: ${error}`)
+        if (textResponse.status >= 500 && attempt < maxRetries) {
+          const delay = Math.pow(2, attempt - 1) * 1000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          return sendMomentBroadcast(to, momentData, attempt + 1)
+        }
+        return false
+      }
     }
+
+    console.log(`✅ Broadcast sent to ${normalizedPhone}`)
+    return true
+
   } catch (error) {
     console.error(`❌ Broadcast exception (attempt ${attempt}): ${error.message}`)
-
     if (attempt < maxRetries) {
-      const delay = Math.pow(2, attempt - 1) * 1000 + Math.random() * 1000
+      const delay = Math.pow(2, attempt - 1) * 1000
       await new Promise(resolve => setTimeout(resolve, delay))
       return sendMomentBroadcast(to, momentData, attempt + 1)
     }
@@ -421,10 +445,11 @@ serve(async (req) => {
 
     // Compose message if moment_id provided
     let fullMessage = moment_data?.fullMessage
+    let mediaUrls = moment_data?.mediaUrls
+    
     if (!fullMessage && moment_id) {
       console.log(`🎭 Composing message for moment ${moment_id}`)
       
-      // Fetch moment with sponsor
       const { data: moment, error: momentError } = await supabase
         .from('moments')
         .select(`
@@ -443,18 +468,16 @@ serve(async (req) => {
         })
       }
 
-      // Determine creator from authority_context or fallback
+      mediaUrls = moment.media_urls || []
+
       const creator = {
         role: moment.content_source || 'admin',
         organization: 'Unami Foundation Moments App'
       }
 
-      // Use authority_context if available
       if (moment.authority_context) {
         const auth = moment.authority_context
         console.log(`🔍 Authority context found:`, JSON.stringify(auth))
-        // auth.role contains human-readable label like "Community Leader"
-        // Convert to snake_case for role key lookup
         const roleKey = (auth.role || '').toLowerCase().replace(/\s+/g, '_')
         creator.role = roleKey || moment.content_source || 'community'
         creator.organization = auth.scope_identifier || 'Unami Foundation Moments App'
@@ -462,7 +485,6 @@ serve(async (req) => {
       } else {
         console.log(`⚠️ No authority_context found, using fallback: content_source="${moment.content_source}", created_by="${moment.created_by}"`)
         if (moment.created_by?.startsWith('+')) {
-          // Fallback: Lookup authority if phone number
           const { data: authority } = await supabase.rpc('lookup_authority', {
             p_user_identifier: moment.created_by
           })
@@ -476,7 +498,7 @@ serve(async (req) => {
       }
 
       fullMessage = composeMomentMessage(moment, creator, moment.sponsors)
-      console.log(`✅ Message composed: ${fullMessage.length} chars`)
+      console.log(`✅ Message composed: ${fullMessage.length} chars, media: ${mediaUrls.length}`)
     }
 
     // Validate message
@@ -542,7 +564,7 @@ serve(async (req) => {
       const recipient = recipients[i]
 
       try {
-        const success = await sendMomentBroadcast(recipient, { fullMessage })
+        const success = await sendMomentBroadcast(recipient, { fullMessage, mediaUrls })
         if (success) {
           successCount++
         } else {
