@@ -253,13 +253,12 @@ router.get('/moments/by-slug/:slug', async (req, res) => {
   }
 });
 
-// Broadcast moment immediately - use intent system
+// Broadcast moment immediately - use batch processing (no N8N dependency)
 router.post('/moments/:id/broadcast', async (req, res) => {
   try {
     const { id } = req.params;
     const user = await getUserFromRequest(req);
 
-    // Update moment to enable WhatsApp broadcasting
     const { data: moment, error: updateError } = await supabase
       .from('moments')
       .update({ 
@@ -273,52 +272,83 @@ router.post('/moments/:id/broadcast', async (req, res) => {
 
     if (updateError) throw updateError;
 
-    // Ensure slug exists
     if (!moment.slug) {
       const slug = generateSlug(moment.title, moment.id);
       await supabase.from('moments').update({ slug }).eq('id', id);
       moment.slug = slug;
     }
 
-    // Create WhatsApp intent with proper URL
-    const { data: whatsappIntent, error: intentError } = await supabase
-      .from('moment_intents')
+    // Get subscribers
+    let query = supabase.from('subscriptions').select('phone_number').eq('opted_in', true);
+    if (moment.region && moment.region !== 'National') {
+      query = query.contains('regions', [moment.region]);
+    }
+    const { data: subscribers } = await query;
+    const recipientCount = subscribers?.length || 0;
+
+    // Compose message
+    const message = await composeMomentMessage(id);
+
+    // Create broadcast record
+    const { data: broadcast, error: broadcastError } = await supabase
+      .from('broadcasts')
       .insert({
         moment_id: id,
-        channel: 'whatsapp',
-        action: 'publish',
-        status: 'pending',
-        payload: {
-          title: moment.title,
-          full_text: moment.content,
-          region: moment.region,
-          category: moment.category,
-          link: `https://moments.unamifoundation.org/moments/${moment.slug}`
-        }
+        recipient_count: recipientCount,
+        status: 'processing'
       })
       .select()
       .single();
 
-    if (intentError) {
-      console.error('WhatsApp intent creation failed:', intentError);
-      throw new Error(`Failed to create WhatsApp intent: ${intentError.message}`);
+    if (broadcastError) throw broadcastError;
+
+    // Create batches (50 per batch)
+    const batchSize = 50;
+    const batchRecords = [];
+    for (let i = 0; i < subscribers.length; i += batchSize) {
+      const batchRecipients = subscribers.slice(i, i + batchSize).map(s => s.phone_number);
+      batchRecords.push({
+        broadcast_id: broadcast.id,
+        batch_number: Math.floor(i / batchSize) + 1,
+        recipients: batchRecipients,
+        status: 'pending'
+      });
     }
 
-    // Log activity
+    if (batchRecords.length > 0) {
+      const { data: batches } = await supabase.from('broadcast_batches').insert(batchRecords).select();
+      await supabase.from('broadcasts').update({ batches_total: batchRecords.length }).eq('id', broadcast.id);
+
+      // Trigger batch processor for each batch
+      const processorUrl = `${process.env.SUPABASE_URL}/functions/v1/broadcast-batch-processor`;
+      for (const batch of batches) {
+        fetch(processorUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ batch_id: batch.id, message })
+        }).catch(err => console.error('Batch trigger failed:', err));
+      }
+    }
+
     await supabase.from('admin_activity_logs').insert({
       admin_id: user?.id,
       admin_phone: user?.phone || 'unknown',
       action: 'broadcast',
       entity_type: 'moment',
       entity_id: id,
-      details: { intent_id: whatsappIntent.id }
+      details: { broadcast_id: broadcast.id, batches: batchRecords.length }
     });
 
     res.json({
       success: true,
       moment_id: id,
-      intent_id: whatsappIntent.id,
-      message: 'Moment queued for WhatsApp broadcast. N8N will process within 1 minute.'
+      broadcast_id: broadcast.id,
+      recipients: recipientCount,
+      batches: batchRecords.length,
+      message: `Broadcast started with ${batchRecords.length} batches for ${recipientCount} recipients`
     });
   } catch (error) {
     console.error('Broadcast endpoint error:', error);
