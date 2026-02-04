@@ -129,10 +129,10 @@
             </h1>
             <p>Where neighbors share what matters - job openings, local events, safety alerts. Post your moment, discover what's happening nearby, all through WhatsApp.</p>
             <div class="cta-buttons">
-                <a href="/moments" class="btn btn-primary">
+                <a href="/moments" class="btn btn-primary" onclick="gtag('event','button_click',{event_category:'navigation',event_label:'browse_moments_hero'});">
                     📱 Browse Community Moments
                 </a>
-                <a href="https://wa.me/27658295041?text=START" class="btn btn-whatsapp" target="_blank">
+                <a href="https://wa.me/27658295041?text=START" class="btn btn-whatsapp" target="_blank" onclick="gtag('event','whatsapp_click',{event_category:'engagement',event_label:'hero_cta'});">
                     💬 Connect on WhatsApp
                 </a>
             </div>
@@ -281,13 +281,13 @@
             <p>Start sharing and discovering what matters in your community</p>
             <div class="whatsapp-number">📱 +27 65 829 5041</div>
             <div class="cta-buttons" style="justify-content: center; margin-bottom: 30px;">
-                <a href="https://wa.me/27658295041?text=START" class="btn btn-primary" target="_blank">
+                <a href="https://wa.me/27658295041?text=START" class="btn btn-primary" target="_blank" onclick="gtag('event','whatsapp_click',{event_category:'engagement',event_label:'footer_start'});">
                     🚀 Send "START"
                 </a>
-                <a href="https://wa.me/27658295041?text=HELP" class="btn btn-primary" target="_blank">
+                <a href="https://wa.me/27658295041?text=HELP" class="btn btn-primary" target="_blank" onclick="gtag('event','whatsapp_click',{event_category:'engagement',event_label:'footer_help'});">
                     ❓ Send "HELP"
                 </a>
-                <a href="https://wa.me/27658295041?text=REGIONS" class="btn btn-primary" target="_blank">
+                <a href="https://wa.me/27658295041?text=REGIONS" class="btn btn-primary" target="_blank" onclick="gtag('event','whatsapp_click',{event_category:'engagement',event_label:'footer_regions'});">
                     📍 Send "REGIONS"
                 </a>
             </div>

@@ -73,6 +73,14 @@ function generatePage(m) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-EBBC8NZYNK"></script>
+<script>
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+gtag('js',new Date());
+gtag('config','G-EBBC8NZYNK');
+gtag('event','moment_view',{moment_title:'${esc(m.title)}',moment_category:'${esc(m.category)}',moment_region:'${esc(m.region)}'});
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
@@ -161,7 +169,7 @@ ${attr}
 ${m.media_urls && m.media_urls.length > 0 ? `<div class="media-gallery">${m.media_urls.map(url => `<div class="media-item"><img src="${esc(url)}" alt="Moment media" loading="lazy"><a href="${esc(url)}" download class="download-btn">📥 Save</a></div>`).join('')}</div>` : ''}
 <div class="moment-footer">
 <p style="color:#6b7280;margin-bottom:1rem">💬 ${m.media_urls && m.media_urls.length > 0 ? 'View photos & share your thoughts' : 'Get updates like this'}</p>
-<a href="https://wa.me/27658295041?text=${encodeURIComponent('FEEDBACK: ' + m.title)}" class="whatsapp-cta">📱 ${m.media_urls && m.media_urls.length > 0 ? 'Message on WhatsApp' : 'Join on WhatsApp'}</a>
+<a href="https://wa.me/27658295041?text=${encodeURIComponent('FEEDBACK: ' + m.title)}" class="whatsapp-cta" onclick="gtag('event','whatsapp_click',{event_category:'engagement',event_label:'moment_detail_cta',moment_title:'${esc(m.title)}'});">📱 ${m.media_urls && m.media_urls.length > 0 ? 'Message on WhatsApp' : 'Join on WhatsApp'}</a>
 </div>
 </div>
 </div>
