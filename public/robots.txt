@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Allow: /moments/
+Disallow: /admin
+Disallow: /api/
+Disallow: /webhook
+
+Sitemap: https://moments.unamifoundation.org/sitemap.xml

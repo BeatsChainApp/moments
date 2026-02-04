@@ -4,12 +4,24 @@
     {
       "src": "src/server-bulletproof.js",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
+      "src": "/robots.txt",
+      "dest": "/public/robots.txt"
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "/api/sitemap.xml.js"
+    },
+    {
       "src": "/moments/([a-z0-9-]+)",
-      "dest": "/moments/detail.html"
+      "dest": "/api/moments/[slug].js?slug=$1"
     },
     {
       "src": "/public/(.*)",
