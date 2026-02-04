@@ -609,11 +609,18 @@ router.get('/analytics/report', async (req, res) => {
     res.json({
       momentsCreated,
       momentsBroadcasted,
+      momentsChange: 0,
+      broadcastChange: 0,
       newSubscribers,
+      subscribersChange: 0,
       activeSubscribers,
+      activeChange: 0,
       totalSubscribers,
+      totalBroadcasts: broadcasts?.length || 0,
       messages: totalSent,
+      messagesChange: 0,
       successRate: parseFloat(successRate),
+      successChange: 0,
       topRegion,
       topCategory,
       totalSent,
@@ -622,6 +629,7 @@ router.get('/analytics/report', async (req, res) => {
       churnRate: 3,
       regionalData,
       categoryData,
+      sponsorData: {},
       trends: []
     });
   } catch (error) {
