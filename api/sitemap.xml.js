@@ -39,7 +39,9 @@ function generateSitemap(moments) {
     { url: '/category/opportunities', priority: '0.9', changefreq: 'weekly' },
     { url: '/category/safety', priority: '0.9', changefreq: 'weekly' },
     { url: '/category/health', priority: '0.8', changefreq: 'weekly' },
-    { url: '/category/events', priority: '0.8', changefreq: 'weekly' }
+    { url: '/category/events', priority: '0.8', changefreq: 'weekly' },
+    { url: '/category/culture', priority: '0.8', changefreq: 'weekly' },
+    { url: '/category/technology', priority: '0.8', changefreq: 'weekly' }
   ];
 
   let urls = staticPages.map(p => `
