@@ -147,7 +147,7 @@ ${attr}
 ${m.media_urls && m.media_urls.length > 0 ? `<div class="media-gallery">${m.media_urls.map(url => `<div class="media-item"><img src="${esc(url)}" alt="Moment media" loading="lazy"><a href="${esc(url)}" download class="download-btn">📥 Save</a></div>`).join('')}</div>` : ''}
 <div class="moment-footer">
 <p style="color:#6b7280;margin-bottom:1rem">💬 ${m.media_urls && m.media_urls.length > 0 ? 'View photos & share your thoughts' : 'Get updates like this'}</p>
-<a href="https://wa.me/27658295041?text=${encodeURIComponent('Re: ' + m.title)}" class="whatsapp-cta">📱 ${m.media_urls && m.media_urls.length > 0 ? 'Message on WhatsApp' : 'Join on WhatsApp'}</a>
+<a href="https://wa.me/27658295041?text=${encodeURIComponent('FEEDBACK: ' + m.title)}" class="whatsapp-cta">📱 ${m.media_urls && m.media_urls.length > 0 ? 'Message on WhatsApp' : 'Join on WhatsApp'}</a>
 </div>
 </div>
 </div>
