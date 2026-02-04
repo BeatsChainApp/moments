@@ -226,37 +226,13 @@ function renderMedia(mediaUrls) {
             ${mediaItems.map((url, index) => {
                 if (!url || url.trim() === '') return '';
                 
-                const ext = url.split('.').pop()?.toLowerCase() || '';
-                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-                    return `
-                        <div class="media-preview">
-                            <img src="${escapeHtml(url)}" alt="Moment image" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🖼️</div>'">
-                            ${hasMore && index === 3 ? `<div class="media-count">+${mediaUrls.length - 4}</div>` : ''}
-                        </div>
-                    `;
-                } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
-                    return `
-                        <div class="media-preview">
-                            <video preload="metadata">
-                                <source src="${escapeHtml(url)}">
-                            </video>
-                            <div class="media-icon">▶️</div>
-                            ${hasMore && index === 3 ? `<div class="media-count">+${mediaUrls.length - 4}</div>` : ''}
-                        </div>
-                    `;
-                } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
-                    return `
-                        <div class="media-preview">
-                            <div class="media-icon">🎧</div>
-                        </div>
-                    `;
-                } else {
-                    return `
-                        <div class="media-preview">
-                            <div class="media-icon">📄</div>
-                        </div>
-                    `;
-                }
+                // Try image first (most WhatsApp media), fallback to icon on error
+                return `
+                    <div class="media-preview">
+                        <img src="${escapeHtml(url)}" alt="Moment media" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">📄</div>'">
+                        ${hasMore && index === 3 ? `<div class="media-count">+${mediaUrls.length - 4}</div>` : ''}
+                    </div>
+                `;
             }).filter(Boolean).join('')}
         </div>
     `;
