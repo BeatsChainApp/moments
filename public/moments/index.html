@@ -283,12 +283,17 @@
         
         async function loadStats() {
             try {
-                const response = await fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/functions/v1/admin-api/analytics');
+                const response = await fetch('/admin/analytics', {
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token') || 'public'}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 const stats = await response.json();
                 
-                document.getElementById('total-moments').textContent = stats.totalMoments || 0;
+                document.getElementById('total-moments').textContent = stats.broadcastedMoments || stats.totalMoments || 0;
                 document.getElementById('active-subscribers').textContent = stats.activeSubscribers || 0;
-                document.getElementById('total-broadcasts').textContent = stats.totalBroadcasts || 0;
+                document.getElementById('total-broadcasts').textContent = stats.successfulBroadcasts || stats.totalBroadcasts || 0;
             } catch (error) {
                 console.error('Failed to load stats:', error);
                 document.getElementById('total-moments').textContent = '0';
