@@ -291,17 +291,17 @@
         
         async function loadStats() {
             try {
-                const response = await fetch('/admin/analytics', {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('admin.auth.token') || 'public'}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                const stats = await response.json();
+                const apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ4bWR6Y3hlamN4YmluZ2h0eWZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgxNzMzOTYsImV4cCI6MjA4Mzc0OTM5Nn0.ccwWS_LPLjUrY8zqHD0Q7pTEamdN-QV0bv6f0B1uBUU';
                 
-                document.getElementById('total-moments').textContent = stats.broadcastedMoments || stats.totalMoments || 0;
-                document.getElementById('active-subscribers').textContent = stats.activeSubscribers || 0;
-                document.getElementById('total-broadcasts').textContent = stats.successfulBroadcasts || stats.totalBroadcasts || 0;
+                const [moments, subscribers, broadcasts] = await Promise.all([
+                    fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/moments?select=id&status=eq.broadcasted', {headers: {apikey}}).then(r => r.json()),
+                    fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/subscriptions?select=id&opted_in=eq.true', {headers: {apikey}}).then(r => r.json()),
+                    fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/broadcasts?select=id', {headers: {apikey}}).then(r => r.json())
+                ]);
+                
+                document.getElementById('total-moments').textContent = moments.length || 0;
+                document.getElementById('active-subscribers').textContent = subscribers.length || 0;
+                document.getElementById('total-broadcasts').textContent = broadcasts.length || 0;
             } catch (error) {
                 console.error('Failed to load stats:', error);
                 document.getElementById('total-moments').textContent = '0';
