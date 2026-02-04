@@ -345,7 +345,7 @@
                 
                 const [moments, subscribers, broadcasts] = await Promise.all([
                     fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/moments?select=id&status=eq.broadcasted', {headers: {apikey}}).then(r => r.json()),
-                    fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/subscriptions?select=id&status=eq.active', {headers: {apikey}}).then(r => r.json()),
+                    fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/subscriptions?select=id&opted_in=eq.true', {headers: {apikey}}).then(r => r.json()),
                     fetch('https://bxmdzcxejcxbinghtyfw.supabase.co/rest/v1/broadcasts?select=id', {headers: {apikey}}).then(r => r.json())
                 ]);
                 
