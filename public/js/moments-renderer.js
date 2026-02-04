@@ -164,7 +164,7 @@ function displayMomentsWithMarkdown(moments) {
         }
         
         return `
-            <div class="moment-card">
+            <div class="moment-card" style="cursor: pointer;" onclick="window.location.href='/moments/${escapeHtml(moment.slug)}'">
                 ${renderSponsorBranding(moment.sponsors, moment.is_sponsored)}
                 <h3 class="moment-title">${escapeHtml(moment.title)}</h3>
                 ${attributionHtml}
@@ -173,7 +173,7 @@ function displayMomentsWithMarkdown(moments) {
                      data-is-whatsapp="${moment.content_source === 'community' || moment.content_source === 'whatsapp'}">
                     ${isLongContent ? renderMomentContent({...moment, content: moment.content.substring(0, 300) + '...'}) : renderedContent}
                 </div>
-                ${isLongContent ? '<button class="expand-content" onclick="toggleMomentContent(this)">Read more</button>' : ''}
+                ${isLongContent ? '<button class="expand-content" onclick="event.stopPropagation(); toggleMomentContent(this)">Read more</button>' : ''}
                 
                 ${renderMedia(moment.media_urls)}
                 ${renderComments(moment.comments)}
