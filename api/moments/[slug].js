@@ -90,9 +90,12 @@ function generatePage(m) {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;line-height:1.6}
+.nav{background:white;border-bottom:1px solid #e5e7eb;padding:1rem;position:sticky;top:0;z-index:100}
+.nav-container{max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.nav-logo{font-weight:600;color:#2563eb;text-decoration:none;font-size:1.125rem}
+.nav-link{color:#6b7280;text-decoration:none;font-size:0.875rem}
+.nav-link:hover{color:#2563eb}
 .container{max-width:800px;margin:0 auto;padding:1rem}
-.header{background:linear-gradient(135deg,#2563eb 0%,#1d4ed8 100%);color:white;padding:2rem 1rem;text-align:center}
-.header h1{font-size:1.5rem;margin-bottom:0.5rem}
 .moment-card{background:white;border-radius:1rem;padding:2rem;margin:2rem 0;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
 .moment-title{font-size:1.75rem;font-weight:700;margin-bottom:1rem;color:#1f2937}
 .moment-meta{display:flex;gap:0.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
@@ -103,21 +106,26 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .attribution-title{font-weight:600;color:#1f2937;margin-bottom:0.5rem}
 .attribution-detail{font-size:0.875rem;color:#6b7280;margin-bottom:0.25rem}
 .moment-content{color:#374151;font-size:1.125rem;line-height:1.8;margin-bottom:1.5rem;white-space:pre-wrap}
-.media-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem;margin:1.5rem 0}
+.media-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1.5rem 0}
 .media-item{position:relative;border-radius:0.5rem;overflow:hidden;background:#f3f4f6}
-.media-item img{width:100%;height:200px;object-fit:cover}
+.media-item img{width:100%;height:auto;max-height:400px;object-fit:contain;display:block}
 .download-btn{position:absolute;bottom:0.5rem;right:0.5rem;background:rgba(0,0,0,0.7);color:white;padding:0.5rem;border-radius:0.375rem;text-decoration:none;font-size:0.875rem}
 .download-btn:hover{background:rgba(0,0,0,0.9)}
 .moment-footer{border-top:1px solid #e5e7eb;padding-top:1.5rem;margin-top:1.5rem}
 .whatsapp-cta{background:#25D366;color:white;padding:1rem 2rem;border-radius:0.5rem;text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;font-weight:500}
 .whatsapp-cta:hover{background:#128C7E}
+.footer{background:white;border-top:1px solid #e5e7eb;padding:2rem 1rem;margin-top:3rem;text-align:center;color:#6b7280;font-size:0.875rem}
+.footer a{color:#2563eb;text-decoration:none}
+.footer a:hover{text-decoration:underline}
 </style>
 </head>
 <body>
-<div class="header">
-<h1>📢 Unami Foundation Moments App</h1>
-<p>Your Digital Notice Board</p>
+<nav class="nav">
+<div class="nav-container">
+<a href="/" class="nav-logo">📢 Moments</a>
+<a href="/moments" class="nav-link">Browse All</a>
 </div>
+</nav>
 <div class="container">
 <div class="moment-card">
 <h1 class="moment-title">${esc(m.title)}</h1>
@@ -134,6 +142,10 @@ ${m.media_urls && m.media_urls.length > 0 ? `<div class="media-gallery">${m.medi
 </div>
 </div>
 </div>
+<footer class="footer">
+<p>&copy; 2024 Unami Foundation Moments App</p>
+<p style="margin-top:0.5rem"><a href="/">Home</a> • <a href="/moments">Browse Moments</a> • <a href="https://wa.me/27658295041?text=START">Join WhatsApp</a></p>
+</footer>
 </body>
 </html>`;
 }
