@@ -111,7 +111,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .moment-content{color:#374151;font-size:1.125rem;line-height:1.8;margin-bottom:1.5rem;white-space:pre-wrap}
 .media-gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1rem;margin:1.5rem 0}
 .media-item{position:relative;border-radius:0.5rem;overflow:hidden;background:#f3f4f6}
-.media-item img{width:100%;height:auto;max-height:400px;object-fit:contain;display:block}
+.media-item img{width:100%;height:auto;max-height:600px;object-fit:contain;display:block}
 .download-btn{position:absolute;bottom:0.5rem;right:0.5rem;background:rgba(0,0,0,0.7);color:white;padding:0.5rem;border-radius:0.375rem;text-decoration:none;font-size:0.875rem}
 .download-btn:hover{background:rgba(0,0,0,0.9)}
 .moment-footer{border-top:1px solid #e5e7eb;padding-top:1.5rem;margin-top:1.5rem}
