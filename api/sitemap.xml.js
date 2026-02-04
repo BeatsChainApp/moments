@@ -34,7 +34,12 @@ function generateSitemap(moments) {
     { url: '/about.html', priority: '0.8', changefreq: 'monthly' },
     { url: '/privacy.html', priority: '0.5', changefreq: 'monthly' },
     { url: '/terms.html', priority: '0.5', changefreq: 'monthly' },
-    { url: '/subscribe.html', priority: '0.7', changefreq: 'monthly' }
+    { url: '/subscribe.html', priority: '0.7', changefreq: 'monthly' },
+    { url: '/category/education', priority: '0.9', changefreq: 'weekly' },
+    { url: '/category/opportunities', priority: '0.9', changefreq: 'weekly' },
+    { url: '/category/safety', priority: '0.9', changefreq: 'weekly' },
+    { url: '/category/health', priority: '0.8', changefreq: 'weekly' },
+    { url: '/category/events', priority: '0.8', changefreq: 'weekly' }
   ];
 
   let urls = staticPages.map(p => `

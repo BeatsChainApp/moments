@@ -20,6 +20,10 @@
       "dest": "/api/sitemap.xml.js"
     },
     {
+      "src": "/category/([a-z]+)",
+      "dest": "/api/category/[category].js?category=$1"
+    },
+    {
       "src": "/moments/([a-z0-9-]+)",
       "dest": "/api/moments/[slug].js?slug=$1"
     },
