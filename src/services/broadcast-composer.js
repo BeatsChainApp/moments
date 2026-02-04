@@ -49,8 +49,19 @@ export async function composeMomentMessage(momentId) {
       identifier: moment.created_by
     };
     
-    // If created_by is a phone number, lookup authority first
-    if (moment.created_by && moment.created_by.startsWith('+')) {
+    // Priority 1: Use stored authority_context if available
+    if (moment.authority_context) {
+      creator = {
+        role: moment.authority_context.role || moment.content_source || 'community_member',
+        organization: moment.authority_context.scope_identifier || 'Unami Foundation Moments App',
+        authority_level: moment.authority_context.level,
+        scope: moment.authority_context.scope,
+        identifier: moment.created_by
+      };
+      console.log(`Using stored authority_context: role=${creator.role}, org=${creator.organization}`);
+    }
+    // Priority 2: If created_by is a phone number, lookup authority
+    else if (moment.created_by && moment.created_by.startsWith('+')) {
       try {
         const { data: authority } = await supabase.rpc('lookup_authority', {
           p_user_identifier: moment.created_by
@@ -65,11 +76,14 @@ export async function composeMomentMessage(momentId) {
             organization: auth.scope_identifier || 'Unami Foundation Moments App',
             identifier: moment.created_by
           };
+          console.log(`Looked up authority: role=${creator.role}, org=${creator.organization}`);
         }
       } catch (authError) {
         console.warn('Authority lookup failed:', authError);
       }
-    } else {
+    }
+    // Priority 3: Parse created_by for role hints (legacy support)
+    else {
       // For non-phone identifiers, check created_by for role hints first
       const createdByLower = (moment.created_by || '').toLowerCase();
       

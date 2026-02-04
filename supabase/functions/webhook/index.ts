@@ -980,7 +980,7 @@ serve(async (req) => {
                       region: authorityContext?.region || 'National',
                       category: 'Community',
                       status: 'draft',
-                      created_by: authorityContext?.role || 'community',
+                      created_by: message.from,
                       content_source: 'whatsapp',
                       authority_context: authorityContext
                     }).select().single()
