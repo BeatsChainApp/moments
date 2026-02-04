@@ -128,7 +128,13 @@ class ReportGenerator {
     
     async fetchData(startDate, endDate) {
         try {
-            const response = await apiFetch(`/analytics/report?start=${startDate.toISOString()}&end=${endDate.toISOString()}`);
+            const response = await fetch(`${window.API_BASE_URL}/admin/analytics/report?start=${startDate.toISOString()}&end=${endDate.toISOString()}`, {
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch');
             return await response.json();
         } catch (error) {
             console.error('Failed to fetch report data:', error);
@@ -265,8 +271,7 @@ class ReportGenerator {
         const report = await this.generateReport(type);
         
         if (format === 'pdf') {
-            // Would integrate with PDF library
-            showNotification('PDF export coming soon!', 'info');
+            if (window.dashboardCore) window.dashboardCore.showNotification('PDF export coming soon!', 'info');
         } else if (format === 'csv') {
             this.exportCSV(report);
         } else if (format === 'json') {
@@ -292,6 +297,7 @@ class ReportGenerator {
         a.href = url;
         a.download = `report-${Date.now()}.csv`;
         a.click();
+        if (window.dashboardCore) window.dashboardCore.showNotification('Report downloaded successfully');
     }
     
     exportJSON(report) {
@@ -323,7 +329,7 @@ class ReportScheduler {
         this.schedules.push(schedule);
         localStorage.setItem('report-schedules', JSON.stringify(this.schedules));
         
-        showNotification(`${type} report scheduled for ${frequency} delivery`, 'success');
+        if (window.dashboardCore) window.dashboardCore.showNotification(`${type} report scheduled for ${frequency} delivery`, 'success');
     }
     
     calculateNextRun(frequency) {
