@@ -78,9 +78,11 @@ function generatePage(m) {
 window.dataLayer=window.dataLayer||[];
 function gtag(){dataLayer.push(arguments);}
 gtag('js',new Date());
+gtag('consent','default',{'analytics_storage':'denied'});
 gtag('config','G-EBBC8NZYNK');
 gtag('event','moment_view',{moment_title:'${esc(m.title)}',moment_category:'${esc(m.category)}',moment_region:'${esc(m.region)}'});
 </script>
+<script src="/js/cookie-consent.js" defer></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(title)}</title>
