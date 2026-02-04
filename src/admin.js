@@ -556,11 +556,10 @@ router.get('/analytics', async (req, res) => {
       .select('status, content_source, created_at')
       .not('status', 'eq', 'draft');
 
-    // Get intent-based broadcast data (current system)
-    const { data: intents } = await supabase
-      .from('moment_intents')
-      .select('channel, status, created_at, payload')
-      .eq('channel', 'whatsapp');
+    // Get broadcast data from broadcasts table
+    const { data: broadcasts } = await supabase
+      .from('broadcasts')
+      .select('status, success_count, failure_count, recipient_count');
 
     // Get subscriber data
     const { data: subscribers } = await supabase
@@ -574,11 +573,11 @@ router.get('/analytics', async (req, res) => {
     const campaignMoments = moments?.filter(m => m.content_source === 'campaign').length || 0;
     const broadcastedMoments = moments?.filter(m => m.status === 'broadcasted').length || 0;
 
-    // Calculate intent-based broadcast stats
-    const totalIntents = intents?.length || 0;
-    const sentIntents = intents?.filter(i => i.status === 'sent').length || 0;
-    const pendingIntents = intents?.filter(i => i.status === 'pending').length || 0;
-    const failedIntents = intents?.filter(i => i.status === 'failed').length || 0;
+    // Calculate broadcast stats from broadcasts table
+    const totalBroadcasts = broadcasts?.length || 0;
+    const successfulBroadcasts = broadcasts?.reduce((sum, b) => sum + (b.success_count || 0), 0) || 0;
+    const failedBroadcasts = broadcasts?.reduce((sum, b) => sum + (b.failure_count || 0), 0) || 0;
+    const totalRecipients = broadcasts?.reduce((sum, b) => sum + (b.recipient_count || 0), 0) || 0;
 
     // Calculate subscriber stats
     const totalSubscribers = subscribers?.length || 0;
@@ -588,7 +587,8 @@ router.get('/analytics', async (req, res) => {
     ).length || 0;
 
     // Calculate success rate
-    const successRate = totalIntents > 0 ? ((sentIntents / totalIntents) * 100).toFixed(1) : '0';
+    const totalAttempts = successfulBroadcasts + failedBroadcasts;
+    const successRate = totalAttempts > 0 ? ((successfulBroadcasts / totalAttempts) * 100).toFixed(1) : '0';
 
     res.json({
       // Moment metrics
@@ -598,11 +598,11 @@ router.get('/analytics', async (req, res) => {
       adminMoments,
       campaignMoments,
       
-      // Broadcast metrics (intent-based)
-      totalBroadcasts: totalIntents,
-      successfulBroadcasts: sentIntents,
-      pendingBroadcasts: pendingIntents,
-      failedBroadcasts: failedIntents,
+      // Broadcast metrics
+      totalBroadcasts,
+      successfulBroadcasts,
+      failedBroadcasts,
+      totalRecipients,
       successRate,
       
       // Subscriber metrics
@@ -612,7 +612,7 @@ router.get('/analytics', async (req, res) => {
       
       // System health
       systemStatus: {
-        intentSystem: pendingIntents < 10 ? 'healthy' : 'backlog',
+        broadcastSystem: totalBroadcasts > 0 ? 'active' : 'idle',
         lastUpdated: new Date().toISOString()
       }
     });
