@@ -1,0 +1,170 @@
+<!-- GTM Settings Section - Add to Settings Section in admin-dashboard.html -->
+<div class="card" style="margin-top: 1rem;">
+    <h3>🔍 Google Tag Manager (GTM)</h3>
+    <div class="alert alert-info" style="margin-bottom: 1rem;">
+        <strong>SEO & Analytics:</strong> Add your GTM container ID to track user behavior, conversions, and optimize for Google Ad Grants.
+    </div>
+    
+    <div class="form-group">
+        <label>GTM Container ID</label>
+        <input type="text" id="gtm-container-id" placeholder="GTM-XXXXXXX" maxlength="20" style="font-family: monospace;">
+        <small style="color: #6b7280;">Format: GTM-XXXXXXX (found in your Google Tag Manager account)</small>
+    </div>
+    
+    <div class="form-group">
+        <label>
+            <input type="checkbox" id="gtm-enabled" checked>
+            Enable GTM tracking on public pages
+        </label>
+        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">
+            Applies to: Home page, Moments list, Moment detail pages, Category pages
+        </small>
+    </div>
+    
+    <div class="form-group">
+        <label>Additional Tracking Scripts (Optional)</label>
+        <textarea id="custom-tracking-scripts" rows="4" placeholder="<!-- Add custom tracking scripts here -->" style="font-family: monospace; font-size: 0.875rem;"></textarea>
+        <small style="color: #6b7280;">
+            Add custom analytics scripts (Google Analytics 4, Facebook Pixel, etc.)
+        </small>
+    </div>
+    
+    <div style="background: #f8fafc; padding: 1rem; border-radius: 0.375rem; margin-top: 1rem;">
+        <h4 style="font-size: 0.875rem; margin-bottom: 0.5rem;">Current Status:</h4>
+        <div id="gtm-status" style="font-size: 0.875rem; color: #6b7280;">
+            <div>GTM: <span id="gtm-status-text" style="font-weight: 600;">Not configured</span></div>
+            <div>Last updated: <span id="gtm-last-updated">Never</span></div>
+        </div>
+    </div>
+    
+    <div style="display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap;">
+        <button class="btn" onclick="saveGTMSettings(this)">💾 Save GTM Settings</button>
+        <button class="btn btn-secondary" onclick="testGTMIntegration(this)">🧪 Test Integration</button>
+        <button class="btn btn-secondary" onclick="clearGTMSettings()">🗑️ Clear Settings</button>
+    </div>
+</div>
+
+<script>
+// GTM Settings Management
+async function loadGTMSettings() {
+    try {
+        const response = await fetch(`${window.API_BASE_URL}/admin/settings/gtm`, {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}` }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            document.getElementById('gtm-container-id').value = data.container_id || '';
+            document.getElementById('gtm-enabled').checked = data.enabled !== false;
+            document.getElementById('custom-tracking-scripts').value = data.custom_scripts || '';
+            
+            updateGTMStatus(data);
+        }
+    } catch (error) {
+        console.error('Failed to load GTM settings:', error);
+    }
+}
+
+async function saveGTMSettings(btn) {
+    const containerId = document.getElementById('gtm-container-id').value.trim();
+    const enabled = document.getElementById('gtm-enabled').checked;
+    const customScripts = document.getElementById('custom-tracking-scripts').value.trim();
+    
+    // Validate GTM container ID format
+    if (containerId && !/^GTM-[A-Z0-9]{7,}$/i.test(containerId)) {
+        window.dashboardCore.showNotification('Invalid GTM Container ID format. Should be GTM-XXXXXXX', 'error');
+        return;
+    }
+    
+    if (btn) window.dashboardCore.setButtonLoading(btn, true);
+    
+    try {
+        const response = await fetch(`${window.API_BASE_URL}/admin/settings/gtm`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('admin.auth.token')}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                container_id: containerId,
+                enabled: enabled,
+                custom_scripts: customScripts
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            window.dashboardCore.showNotification('GTM settings saved successfully! Changes will apply to all public pages.');
+            updateGTMStatus(result.settings);
+        } else {
+            throw new Error(result.error || 'Failed to save settings');
+        }
+    } catch (error) {
+        window.dashboardCore.handleError(error, 'saveGTMSettings');
+    } finally {
+        if (btn) window.dashboardCore.setButtonLoading(btn, false);
+    }
+}
+
+async function testGTMIntegration(btn) {
+    const containerId = document.getElementById('gtm-container-id').value.trim();
+    
+    if (!containerId) {
+        window.dashboardCore.showNotification('Please enter a GTM Container ID first', 'error');
+        return;
+    }
+    
+    if (btn) window.dashboardCore.setButtonLoading(btn, true);
+    
+    try {
+        // Test by checking if GTM script loads
+        const testUrl = `https://www.googletagmanager.com/gtm.js?id=${containerId}`;
+        const response = await fetch(testUrl, { method: 'HEAD', mode: 'no-cors' });
+        
+        window.dashboardCore.showNotification('GTM Container ID appears valid. Check Google Tag Manager for live data.', 'success');
+    } catch (error) {
+        window.dashboardCore.showNotification('Could not verify GTM Container ID. Please check your ID and try again.', 'error');
+    } finally {
+        if (btn) window.dashboardCore.setButtonLoading(btn, false);
+    }
+}
+
+function clearGTMSettings() {
+    if (!confirm('Clear all GTM settings? This will remove tracking from all public pages.')) return;
+    
+    document.getElementById('gtm-container-id').value = '';
+    document.getElementById('gtm-enabled').checked = false;
+    document.getElementById('custom-tracking-scripts').value = '';
+    
+    saveGTMSettings();
+}
+
+function updateGTMStatus(data) {
+    const statusText = document.getElementById('gtm-status-text');
+    const lastUpdated = document.getElementById('gtm-last-updated');
+    
+    if (data.container_id && data.enabled) {
+        statusText.textContent = `Active (${data.container_id})`;
+        statusText.style.color = '#16a34a';
+    } else if (data.container_id && !data.enabled) {
+        statusText.textContent = `Configured but disabled`;
+        statusText.style.color = '#f59e0b';
+    } else {
+        statusText.textContent = 'Not configured';
+        statusText.style.color = '#6b7280';
+    }
+    
+    if (data.updated_at) {
+        lastUpdated.textContent = new Date(data.updated_at).toLocaleString();
+    }
+}
+
+// Load GTM settings when settings section is opened
+document.addEventListener('DOMContentLoaded', () => {
+    const settingsNav = document.querySelector('[data-section="settings"]');
+    if (settingsNav) {
+        settingsNav.addEventListener('click', loadGTMSettings);
+    }
+});
+</script>

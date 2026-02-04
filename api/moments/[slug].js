@@ -87,6 +87,7 @@ function generatePage(m) {
 <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#2563eb">
 <script type="application/ld+json">${schema}</script>
+<script src="/js/gtm-loader.js" defer></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;line-height:1.6}

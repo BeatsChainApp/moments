@@ -779,6 +779,67 @@ router.get('/settings', async (req, res) => {
   }
 });
 
+// Get GTM settings
+router.get('/settings/gtm', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('*')
+      .in('setting_key', ['gtm_container_id', 'gtm_enabled', 'gtm_custom_scripts', 'gtm_updated_at']);
+
+    if (error) throw error;
+    
+    const settings = {};
+    data?.forEach(row => {
+      const key = row.setting_key.replace('gtm_', '');
+      settings[key] = row.setting_value;
+    });
+    
+    res.json({
+      container_id: settings.container_id || '',
+      enabled: settings.enabled !== 'false',
+      custom_scripts: settings.custom_scripts || '',
+      updated_at: settings.updated_at || null
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Save GTM settings
+router.post('/settings/gtm', async (req, res) => {
+  try {
+    const { container_id, enabled, custom_scripts } = req.body;
+    const user = await getUserFromRequest(req);
+    const timestamp = new Date().toISOString();
+    
+    const updates = [
+      { setting_key: 'gtm_container_id', setting_value: container_id || '', updated_by: user?.id || 'admin', updated_at: timestamp },
+      { setting_key: 'gtm_enabled', setting_value: String(enabled !== false), updated_by: user?.id || 'admin', updated_at: timestamp },
+      { setting_key: 'gtm_custom_scripts', setting_value: custom_scripts || '', updated_by: user?.id || 'admin', updated_at: timestamp },
+      { setting_key: 'gtm_updated_at', setting_value: timestamp, updated_by: user?.id || 'admin', updated_at: timestamp }
+    ];
+    
+    for (const update of updates) {
+      await supabase
+        .from('system_settings')
+        .upsert(update, { onConflict: 'setting_key' });
+    }
+    
+    res.json({
+      success: true,
+      settings: {
+        container_id,
+        enabled,
+        custom_scripts,
+        updated_at: timestamp
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Update system setting
 router.put('/settings/:key', async (req, res) => {
   try {
