@@ -322,11 +322,11 @@ async function loadAnalytics() {
         
         document.getElementById('analytics').innerHTML = `
             <div class="stat-card">
-                <div class="stat-number">${data.totalMoments || 0}</div>
+                <div class="stat-number">${data.totalMoments || data.broadcastedMoments || 0}</div>
                 <div class="stat-label">Total Moments</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${data.activeSubscribers || 0}</div>
+                <div class="stat-number">${data.activeSubscribers || data.totalSubscribers || 0}</div>
                 <div class="stat-label">Active Subscribers</div>
             </div>
             <div class="stat-card">
@@ -334,7 +334,7 @@ async function loadAnalytics() {
                 <div class="stat-label">Total Broadcasts</div>
             </div>
             <div class="stat-card">
-                <div class="stat-number">${data.successRate || '0'}%</div>
+                <div class="stat-number">${parseFloat(data.successRate || 0).toFixed(1)}%</div>
                 <div class="stat-label">Success Rate</div>
             </div>
         `;
@@ -965,8 +965,10 @@ async function loadBroadcasts() {
                 const momentTitle = broadcast.moments?.title || 'Unknown Moment';
                 const momentRegion = broadcast.moments?.region || 'Unknown';
                 const momentCategory = broadcast.moments?.category || 'General';
-                const successRate = broadcast.recipient_count > 0 ? 
-                    Math.round((broadcast.success_count / broadcast.recipient_count) * 100) : 0;
+                const recipientCount = broadcast.recipient_count || 0;
+                const successCount = broadcast.success_count || 0;
+                const failureCount = broadcast.failure_count || 0;
+                const successRate = recipientCount > 0 ? Math.round((successCount / recipientCount) * 100) : 0;
                 
                 return `
                     <div class="moment-item">
@@ -984,15 +986,15 @@ async function loadBroadcasts() {
                         </div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 1rem; margin-top: 0.5rem; padding: 0.75rem; background: #f8fafc; border-radius: 0.5rem;">
                             <div style="text-align: center;">
-                                <div style="font-size: 1.25rem; font-weight: bold; color: #374151;">${broadcast.recipient_count || 0}</div>
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #374151;">${recipientCount}</div>
                                 <div style="font-size: 0.75rem; color: #6b7280;">Recipients</div>
                             </div>
                             <div style="text-align: center;">
-                                <div style="font-size: 1.25rem; font-weight: bold; color: #16a34a;">${broadcast.success_count || 0}</div>
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #16a34a;">${successCount}</div>
                                 <div style="font-size: 0.75rem; color: #6b7280;">Delivered</div>
                             </div>
                             <div style="text-align: center;">
-                                <div style="font-size: 1.25rem; font-weight: bold; color: #dc2626;">${broadcast.failure_count || 0}</div>
+                                <div style="font-size: 1.25rem; font-weight: bold; color: #dc2626;">${failureCount}</div>
                                 <div style="font-size: 0.75rem; color: #6b7280;">Failed</div>
                             </div>
                             <div style="text-align: center;">
