@@ -27,9 +27,9 @@ app.get('/health', (req, res) => {
 app.use((req, res, next) => {
   res.setHeader('Content-Security-Policy', 
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " +
-    "connect-src 'self' https://bxmdzcxejcxbinghtyfw.supabase.co; " +
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; " +
+    "script-src-elem 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com; " +
+    "connect-src 'self' https://bxmdzcxejcxbinghtyfw.supabase.co https://www.google-analytics.com https://analytics.google.com; " +
     "img-src 'self' data: https:; " +
     "style-src 'self' 'unsafe-inline';"
   );
