@@ -218,7 +218,7 @@ function toggleMomentContent(button) {
 function renderMedia(mediaUrls) {
     if (!mediaUrls || mediaUrls.length === 0) return '';
     
-    const mediaItems = mediaUrls.slice(0, 4); // Show max 4 items
+    const mediaItems = mediaUrls.slice(0, 4);
     const hasMore = mediaUrls.length > 4;
     
     return `
@@ -230,34 +230,30 @@ function renderMedia(mediaUrls) {
                 if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
                     return `
                         <div class="media-preview">
-                            <img src="${escapeHtml(url)}" alt="Moment image" onclick="openMedia('${escapeHtml(url)}')" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🖼️</div>'">
-                            ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                            <img src="${escapeHtml(url)}" alt="Moment image" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\"media-icon\">🖼️</div>'">
+                            ${hasMore && index === 3 ? `<div class="media-count">+${mediaUrls.length - 4}</div>` : ''}
                         </div>
                     `;
                 } else if (['mp4', 'webm', 'mov', '3gp'].includes(ext)) {
                     return `
                         <div class="media-preview">
-                            <video preload="metadata" onclick="openMedia('${escapeHtml(url)}')">
+                            <video preload="metadata">
                                 <source src="${escapeHtml(url)}">
                             </video>
                             <div class="media-icon">▶️</div>
-                            ${hasMore && index === 3 ? `<div class="media-overlay">+${mediaUrls.length - 4}</div>` : ''}
+                            ${hasMore && index === 3 ? `<div class="media-count">+${mediaUrls.length - 4}</div>` : ''}
                         </div>
                     `;
                 } else if (['mp3', 'wav', 'ogg', 'm4a', 'aac', 'amr'].includes(ext)) {
                     return `
                         <div class="media-preview">
                             <div class="media-icon">🎧</div>
-                            <audio controls style="position: absolute; bottom: 0; width: 100%; height: 30px;">
-                                <source src="${escapeHtml(url)}">
-                            </audio>
                         </div>
                     `;
                 } else {
                     return `
                         <div class="media-preview">
                             <div class="media-icon">📄</div>
-                            <a href="${escapeHtml(url)}" target="_blank" style="position: absolute; inset: 0;"></a>
                         </div>
                     `;
                 }
