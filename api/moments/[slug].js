@@ -92,8 +92,10 @@ function generatePage(m) {
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;line-height:1.6}
 .nav{background:white;border-bottom:1px solid #e5e7eb;padding:1rem;position:sticky;top:0;z-index:100}
 .nav-container{max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-.nav-logo{font-weight:600;color:#2563eb;text-decoration:none;font-size:1.125rem}
-.nav-link{color:#6b7280;text-decoration:none;font-size:0.875rem}
+.nav-logo{font-weight:600;color:#2563eb;text-decoration:none;font-size:1.125rem;display:flex;align-items:center;gap:0.5rem}
+.nav-logo img{height:24px;width:auto}
+.nav-links{display:flex;gap:1.5rem;align-items:center}
+.nav-link{color:#6b7280;text-decoration:none;font-size:0.875rem;font-weight:500}
 .nav-link:hover{color:#2563eb}
 .container{max-width:800px;margin:0 auto;padding:1rem}
 .moment-card{background:white;border-radius:1rem;padding:2rem;margin:2rem 0;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
@@ -122,8 +124,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <body>
 <nav class="nav">
 <div class="nav-container">
-<a href="/" class="nav-logo">📢 Moments</a>
-<a href="/moments" class="nav-link">Browse All</a>
+<a href="/" class="nav-logo">
+<img src="/logo.png" alt="Unami" onerror="this.style.display='none'">
+Moments
+</a>
+<div class="nav-links">
+<a href="/" class="nav-link">Home</a>
+<a href="/moments" class="nav-link">Browse</a>
+<a href="https://wa.me/27658295041?text=START" class="nav-link">Join WhatsApp</a>
+</div>
 </div>
 </nav>
 <div class="container">
@@ -143,8 +152,40 @@ ${m.media_urls && m.media_urls.length > 0 ? `<div class="media-gallery">${m.medi
 </div>
 </div>
 <footer class="footer">
-<p>&copy; 2024 Unami Foundation Moments App</p>
-<p style="margin-top:0.5rem"><a href="/">Home</a> • <a href="/moments">Browse Moments</a> • <a href="https://wa.me/27658295041?text=START">Join WhatsApp</a></p>
+<div style="max-width:800px;margin:0 auto;padding:0 1rem">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;margin-bottom:2rem">
+<div>
+<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Moments App</h4>
+<p style="font-size:0.875rem;color:#6b7280">Your digital notice board for South African communities</p>
+</div>
+<div>
+<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Quick Links</h4>
+<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
+<a href="/" style="color:#6b7280;text-decoration:none">Home</a>
+<a href="/moments" style="color:#6b7280;text-decoration:none">Browse Moments</a>
+<a href="/about.html" style="color:#6b7280;text-decoration:none">About</a>
+</div>
+</div>
+<div>
+<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Legal</h4>
+<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
+<a href="/privacy.html" style="color:#6b7280;text-decoration:none">Privacy Policy</a>
+<a href="/terms.html" style="color:#6b7280;text-decoration:none">Terms of Service</a>
+<a href="/contact.html" style="color:#6b7280;text-decoration:none">Contact</a>
+</div>
+</div>
+<div>
+<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Connect</h4>
+<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
+<a href="https://wa.me/27658295041?text=START" style="color:#6b7280;text-decoration:none">WhatsApp: +27 65 829 5041</a>
+<a href="mailto:info@unamifoundation.org" style="color:#6b7280;text-decoration:none">Email Support</a>
+</div>
+</div>
+</div>
+<div style="border-top:1px solid #e5e7eb;padding-top:1.5rem;text-align:center;color:#6b7280;font-size:0.875rem">
+<p>&copy; 2024 Unami Foundation Moments App. Empowering South African communities.</p>
+</div>
+</div>
 </footer>
 </body>
 </html>`;
