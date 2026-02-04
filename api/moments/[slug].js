@@ -91,13 +91,14 @@ function generatePage(m) {
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f8fafc;line-height:1.6}
-.nav{background:white;border-bottom:1px solid #e5e7eb;padding:1rem;position:sticky;top:0;z-index:100}
-.nav-container{max-width:800px;margin:0 auto;display:flex;justify-content:space-between;align-items:center}
-.nav-logo{font-weight:600;color:#2563eb;text-decoration:none;font-size:1.125rem;display:flex;align-items:center;gap:0.5rem}
+.nav{background:white;box-shadow:0 2px 4px rgba(0,0,0,0.1);position:sticky;top:0;z-index:100}
+.nav-container{max-width:1200px;margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center;height:60px}
+.nav-logo{font-size:1.5rem;font-weight:bold;color:#2563eb;text-decoration:none;display:flex;align-items:center;gap:0.5rem}
 .nav-logo img{height:24px;width:auto}
-.nav-links{display:flex;gap:1.5rem;align-items:center}
-.nav-link{color:#6b7280;text-decoration:none;font-size:0.875rem;font-weight:500}
-.nav-link:hover{color:#2563eb}
+.nav-links{display:flex;gap:2rem;align-items:center}
+.nav-links a{text-decoration:none;color:#374151;font-weight:500;transition:color 0.2s}
+.nav-links a:hover{color:#2563eb}
+.nav-toggle{display:none;background:none;border:none;font-size:1.5rem;cursor:pointer}
 .container{max-width:800px;margin:0 auto;padding:1rem}
 .moment-card{background:white;border-radius:1rem;padding:2rem;margin:2rem 0;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
 .moment-title{font-size:1.75rem;font-weight:700;margin-bottom:1rem;color:#1f2937}
@@ -117,23 +118,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .moment-footer{border-top:1px solid #e5e7eb;padding-top:1.5rem;margin-top:1.5rem}
 .whatsapp-cta{background:#25D366;color:white;padding:1rem 2rem;border-radius:0.5rem;text-decoration:none;display:inline-flex;align-items:center;gap:0.5rem;font-weight:500}
 .whatsapp-cta:hover{background:#128C7E}
-.footer{background:white;border-top:1px solid #e5e7eb;padding:2rem 1rem;margin-top:3rem;text-align:center;color:#6b7280;font-size:0.875rem}
-.footer a{color:#2563eb;text-decoration:none}
-.footer a:hover{text-decoration:underline}
+.footer{background:#1f2937;color:white;padding:60px 0 30px;text-align:center}
+.footer-content{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:40px;margin-bottom:40px;text-align:left;max-width:1200px;margin:0 auto 40px;padding:0 20px}
+.footer-section h4{font-size:1.2rem;margin-bottom:20px;color:#60a5fa}
+.footer-section p,.footer-section a{color:#d1d5db;text-decoration:none;display:block;margin-bottom:10px}
+.footer-section a:hover{color:white}
+.footer-bottom{border-top:1px solid #374151;padding-top:30px;text-align:center;color:#9ca3af;max-width:1200px;margin:0 auto;padding:30px 20px 0}
+@media (max-width:768px){
+.nav-container{padding:0 15px}
+.nav-links{display:none;position:absolute;top:100%;left:0;right:0;background:white;flex-direction:column;padding:1rem;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.nav-links.active{display:flex}
+.nav-toggle{display:block}
+.footer{padding:40px 0 20px}
+.footer-content{text-align:center}
+}
 </style>
 </head>
 <body>
 <nav class="nav">
 <div class="nav-container">
 <a href="/" class="nav-logo">
-<img src="/logo.png" alt="Unami" onerror="this.style.display='none'">
-Moments
+<img src="/logo.png" alt="Unami Foundation" onerror="this.style.display='none'">
+Moments App
 </a>
-<div class="nav-links">
-<a href="/" class="nav-link">Home</a>
-<a href="/moments" class="nav-link">Browse</a>
-<a href="https://wa.me/27658295041?text=START" class="nav-link">Join WhatsApp</a>
+<div class="nav-links" id="nav-links">
+<a href="/">Home</a>
+<a href="/moments">Moments</a>
+<a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
 </div>
+<button class="nav-toggle" id="nav-toggle">☰</button>
 </div>
 </nav>
 <div class="container">
@@ -153,41 +166,52 @@ ${m.media_urls && m.media_urls.length > 0 ? `<div class="media-gallery">${m.medi
 </div>
 </div>
 <footer class="footer">
-<div style="max-width:800px;margin:0 auto;padding:0 1rem">
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;margin-bottom:2rem">
-<div>
-<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Moments App</h4>
-<p style="font-size:0.875rem;color:#6b7280">Your digital notice board for South African communities</p>
+<div class="container">
+<div class="footer-content">
+<div class="footer-section">
+<h4>📢 Your Neighborhood Notice Board</h4>
+<p>Real moments from real neighbors. Job openings, local events, safety alerts - amplified to reach who needs them.</p>
 </div>
-<div>
-<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Quick Links</h4>
-<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
-<a href="/" style="color:#6b7280;text-decoration:none">Home</a>
-<a href="/moments" style="color:#6b7280;text-decoration:none">Browse Moments</a>
-<a href="/about.html" style="color:#6b7280;text-decoration:none">About</a>
+<div class="footer-section">
+<h4>Get Started</h4>
+<a href="https://wa.me/27658295041?text=START">💬 Send START to join</a>
+<a href="https://wa.me/27658295041?text=REGIONS">📍 Choose your provinces</a>
+<a href="https://wa.me/27658295041?text=HELP">❓ See all commands</a>
+</div>
+<div class="footer-section">
+<h4>9 Provinces Connected</h4>
+<p>KZN • WC • GP • EC • FS</p>
+<p>LP • MP • NC • NW</p>
+</div>
+<div class="footer-section">
+<h4>Contact</h4>
+<p>WhatsApp: <a href="https://wa.me/27658295041">+27 65 829 5041</a></p>
+<p>Email: info@unamifoundation.org</p>
+</div>
+<div class="footer-section">
+<h4>Legal & Compliance</h4>
+<a href="/privacy.html">Privacy Policy</a>
+<a href="/terms.html">Terms of Service</a>
+<a href="/about.html">About Us</a>
+<a href="/subscribe.html">How to Subscribe</a>
 </div>
 </div>
-<div>
-<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Legal</h4>
-<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
-<a href="/privacy.html" style="color:#6b7280;text-decoration:none">Privacy Policy</a>
-<a href="/terms.html" style="color:#6b7280;text-decoration:none">Terms of Service</a>
-<a href="/contact.html" style="color:#6b7280;text-decoration:none">Contact</a>
-</div>
-</div>
-<div>
-<h4 style="font-weight:600;margin-bottom:1rem;color:#1f2937">Connect</h4>
-<div style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.875rem">
-<a href="https://wa.me/27658295041?text=START" style="color:#6b7280;text-decoration:none">WhatsApp: +27 65 829 5041</a>
-<a href="mailto:info@unamifoundation.org" style="color:#6b7280;text-decoration:none">Email Support</a>
-</div>
-</div>
-</div>
-<div style="border-top:1px solid #e5e7eb;padding-top:1.5rem;text-align:center;color:#6b7280;font-size:0.875rem">
-<p>&copy; 2024 Unami Foundation Moments App. Empowering South African communities.</p>
+<div class="footer-bottom">
+<p>Real moments that matter, amplified. Empowering South African communities through accessible, privacy-respecting connection.</p>
+<p style="margin-top:0.5rem">&copy; 2026 Unami Foundation. Proudly South African 🇿🇦</p>
 </div>
 </div>
 </footer>
+<script>
+document.getElementById('nav-toggle').addEventListener('click',()=>{
+document.getElementById('nav-links').classList.toggle('active');
+});
+document.addEventListener('click',(e)=>{
+if(!e.target.closest('.nav')){
+document.getElementById('nav-links').classList.remove('active');
+}
+});
+</script>
 </body>
 </html>`;
 }
