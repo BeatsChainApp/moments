@@ -84,6 +84,16 @@ app.get('/moments', (req, res) => {
     res.status(404).json({ error: 'Moments page not found' });
   }
 });
+
+// Partners landing page
+app.get('/partners', (req, res) => {
+  try {
+    res.sendFile(path.join(__dirname, '../public/partners.html'));
+  } catch (error) {
+    res.status(404).json({ error: 'Partners page not found' });
+  }
+});
+
 app.get('/login', (req, res) => {
   try {
     res.sendFile(path.join(__dirname, '../public/login.html'));
