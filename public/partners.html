@@ -28,6 +28,7 @@
         .nav-links { display: flex; gap: 1.5rem; align-items: center; }
         .nav-links a { text-decoration: none; color: #374151; font-weight: 500; transition: color 0.2s; }
         .nav-links a:hover { color: #2563eb; }
+        .nav-toggle { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; }
         
         /* Hero */
         .hero { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 4rem 0; text-align: center; }
@@ -89,6 +90,11 @@
             .hero { padding: 2rem 0; }
             .section { padding: 2rem 0; }
             .cta-grid, .partner-grid, .pricing-grid { grid-template-columns: 1fr; }
+            .nav-container { padding: 0 1rem; }
+            .nav-links { display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; flex-direction: column; padding: 1rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            .nav-links.active { display: flex; }
+            .nav-toggle { display: block; }
+            .section h2, .section-title { color: #1f2937 !important; background: rgba(255,255,255,0.95); padding: 0.75rem; border-radius: 0.5rem; }
         }
     </style>
 </head>
@@ -101,12 +107,13 @@
                     <img src="/logo.png" alt="Unami Foundation" style="height: 24px; width: auto; margin-right: 8px; vertical-align: middle;" onerror="this.style.display='none'">
                     Moments App
                 </a>
-                <div class="nav-links">
+                <div class="nav-links" id="nav-links">
                     <a href="/">Home</a>
                     <a href="/moments">Moments</a>
                     <a href="/partners">Partners</a>
                     <a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
                 </div>
+                <button class="nav-toggle" id="nav-toggle">☰</button>
             </div>
         </div>
     </nav>
@@ -430,5 +437,19 @@
             </div>
         </div>
     </footer>
+    
+    <script>
+        // Mobile navigation toggle
+        document.getElementById('nav-toggle').addEventListener('click', () => {
+            document.getElementById('nav-links').classList.toggle('active');
+        });
+        
+        // Close mobile nav when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.nav')) {
+                document.getElementById('nav-links').classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
