@@ -289,6 +289,11 @@ app.get('/moments/', (req, res) => {
   res.sendFile(path.join(__dirname, '../public/moments/index.html'));
 });
 
+// Partners landing page
+app.get('/partners', (req, res) => {
+  res.sendFile(path.join(__dirname, '../public/partners.html'));
+});
+
 // Error handling
 app.use((error, req, res, next) => {
   console.error('Server error:', error);
