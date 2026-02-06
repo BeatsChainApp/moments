@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partner with Unami Foundation Moments App | WhatsApp Community Engagement</title>
+    <meta name="description" content="Reach South African communities via WhatsApp. Free authority-based posting for schools, NGOs, community leaders. Sponsored campaigns for retail, corporate, franchises.">
+    <meta name="keywords" content="WhatsApp marketing South Africa, retail WhatsApp broadcast, SPAR community messaging, school communication platform, NGO WhatsApp outreach, franchise hiring WhatsApp, community engagement platform">
+    <link rel="stylesheet" href="/css/design-system.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1f2937; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 1rem; }
+        
+        /* Navigation */
+        .nav { background: white; box-shadow: 0 1px 3px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .nav-container { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; }
+        .nav-logo { font-size: 1.25rem; font-weight: bold; color: #2563eb; text-decoration: none; }
+        .nav-links { display: flex; gap: 1.5rem; align-items: center; }
+        .nav-links a { text-decoration: none; color: #374151; font-weight: 500; transition: color 0.2s; }
+        .nav-links a:hover { color: #2563eb; }
+        
+        /* Hero */
+        .hero { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; padding: 4rem 0; text-align: center; }
+        .hero h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 1rem; }
+        .hero p { font-size: clamp(1rem, 2.5vw, 1.25rem); margin-bottom: 2rem; opacity: 0.95; }
+        .cta-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 800px; margin: 0 auto; }
+        .cta-card { background: white; color: #1f2937; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: left; }
+        .cta-card h3 { font-size: 1.25rem; margin-bottom: 0.5rem; color: #2563eb; }
+        .cta-card p { font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem; }
+        .btn { display: inline-block; padding: 0.75rem 1.5rem; background: #2563eb; color: white; text-decoration: none; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s; border: none; cursor: pointer; }
+        .btn:hover { background: #1d4ed8; transform: translateY(-2px); }
+        .btn-secondary { background: #6b7280; }
+        .btn-secondary:hover { background: #4b5563; }
+        
+        /* Sections */
+        .section { padding: 4rem 0; }
+        .section-title { font-size: clamp(1.75rem, 4vw, 2.5rem); text-align: center; margin-bottom: 3rem; color: #1f2937; }
+        .section-subtitle { text-align: center; color: #6b7280; margin-bottom: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; }
+        
+        /* Partner Cards */
+        .partner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+        .partner-card { background: white; border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem; transition: all 0.3s; }
+        .partner-card:hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.1); }
+        .partner-card h3 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+        .partner-card .examples { font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem; }
+        .partner-card ul { list-style: none; margin: 1rem 0; }
+        .partner-card ul li { padding: 0.5rem 0; padding-left: 1.5rem; position: relative; }
+        .partner-card ul li:before { content: "✓"; position: absolute; left: 0; color: #16a34a; font-weight: bold; }
+        .partner-card .meta { font-size: 0.875rem; color: #6b7280; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb; }
+        
+        /* Pricing */
+        .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 900px; margin: 0 auto; }
+        .pricing-card { background: white; border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 2rem; }
+        .pricing-card.featured { border-color: #2563eb; box-shadow: 0 8px 16px rgba(37,99,235,0.2); }
+        .pricing-card h3 { font-size: 1.5rem; margin-bottom: 1rem; }
+        .pricing-card .price { font-size: 2rem; font-weight: bold; color: #2563eb; margin-bottom: 1rem; }
+        .pricing-card ul { list-style: none; margin: 1.5rem 0; }
+        .pricing-card ul li { padding: 0.5rem 0; padding-left: 1.5rem; position: relative; }
+        .pricing-card ul li:before { content: "✓"; position: absolute; left: 0; color: #16a34a; font-weight: bold; }
+        .pricing-card ul li.disabled { color: #9ca3af; }
+        .pricing-card ul li.disabled:before { content: "✗"; color: #dc2626; }
+        
+        /* FAQ */
+        .faq-grid { max-width: 800px; margin: 0 auto; }
+        .faq-item { background: white; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1.5rem; margin-bottom: 1rem; }
+        .faq-item h4 { font-size: 1.125rem; margin-bottom: 0.5rem; color: #1f2937; }
+        .faq-item p { color: #6b7280; }
+        
+        /* Footer */
+        .footer { background: #f8fafc; border-top: 1px solid #e5e7eb; padding: 2rem 0; text-align: center; color: #6b7280; }
+        .footer a { color: #2563eb; text-decoration: none; }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero { padding: 2rem 0; }
+            .section { padding: 2rem 0; }
+            .cta-grid, .partner-grid, .pricing-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="container">
+            <div class="nav-container">
+                <a href="/" class="nav-logo">Unami Foundation Moments App</a>
+                <div class="nav-links">
+                    <a href="/">Home</a>
+                    <a href="/moments">Community</a>
+                    <a href="https://wa.me/27658295041?text=START" target="_blank">Join WhatsApp</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Reach Your Community Where They Already Are</h1>
+            <p>WhatsApp-native platform connecting South African organizations with 10,000+ community members across 9 provinces</p>
+            
+            <div class="cta-grid">
+                <div class="cta-card">
+                    <h3>🆓 Request Organic Authority</h3>
+                    <p>Schools, NGOs, Community Leaders</p>
+                    <a href="https://wa.me/27658295041?text=REQUEST%20AUTHORITY" class="btn" target="_blank">WhatsApp Onboarding →</a>
+                </div>
+                
+                <div class="cta-card">
+                    <h3>💼 Launch Sponsored Campaign</h3>
+                    <p>Retail, Corporate, Franchises</p>
+                    <a href="mailto:info@unamifoundation.org?subject=Sponsored%20Campaign%20Inquiry" class="btn">Contact Admin →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Organic Partners Section -->
+    <section class="section" style="background: #f8fafc;">
+        <div class="container">
+            <h2 class="section-title">🆓 Free Authority-Based Posting</h2>
+            <p class="section-subtitle">For verified organizations serving South African communities. Request authority via WhatsApp, get admin approval, post within your blast radius.</p>
+            
+            <div class="partner-grid">
+                <div class="partner-card">
+                    <h3>🏫 Schools & Principals</h3>
+                    <p class="examples">Primary schools, high schools, educational institutions</p>
+                    <ul>
+                        <li>School announcements</li>
+                        <li>Parent communications</li>
+                        <li>Event notifications</li>
+                        <li>Safety alerts</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Authority Level:</strong> 3-4<br>
+                        <strong>Blast Radius:</strong> 500-1,000<br>
+                        <strong>Cost:</strong> R0 (within limits)<br>
+                        <strong>Application:</strong> WhatsApp onboarding
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>👥 Community Leaders</h3>
+                    <p class="examples">Ward councillors, community organizers, local advocates</p>
+                    <ul>
+                        <li>Community updates</li>
+                        <li>Local initiatives</li>
+                        <li>Safety information</li>
+                        <li>Event coordination</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Authority Level:</strong> 2-3<br>
+                        <strong>Blast Radius:</strong> 200-500<br>
+                        <strong>Cost:</strong> R0 (within limits)<br>
+                        <strong>Application:</strong> WhatsApp onboarding
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>🤝 NGOs & Social Organizations</h3>
+                    <p class="examples">Non-profits, community development organizations</p>
+                    <ul>
+                        <li>Program announcements</li>
+                        <li>Volunteer recruitment</li>
+                        <li>Community services</li>
+                        <li>Impact updates</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Authority Level:</strong> 2-4<br>
+                        <strong>Blast Radius:</strong> 500-2,000<br>
+                        <strong>Cost:</strong> R0 (within limits)<br>
+                        <strong>Application:</strong> WhatsApp onboarding
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>🏛️ Local Government</h3>
+                    <p class="examples">Municipal services, government departments</p>
+                    <ul>
+                        <li>Service announcements</li>
+                        <li>Public notices</li>
+                        <li>Emergency alerts</li>
+                        <li>Community programs</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Authority Level:</strong> 4-5<br>
+                        <strong>Blast Radius:</strong> 2,000-5,000<br>
+                        <strong>Cost:</strong> R0 (within limits)<br>
+                        <strong>Application:</strong> WhatsApp onboarding
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Sponsored Partners Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">💼 Sponsored Content (Unlimited Reach)</h2>
+            <p class="section-subtitle">For retail chains, corporate CSR programs, franchises, and property developers. Admin-controlled campaigns with unlimited blast radius and real-time analytics.</p>
+            
+            <div class="partner-grid">
+                <div class="partner-card">
+                    <h3>🛒 Retail Chains</h3>
+                    <p class="examples">SPAR • Boxer • Shoprite • Pick n Pay • Checkers</p>
+                    <ul>
+                        <li>Weekly specials (regional targeting)</li>
+                        <li>Store-level job postings</li>
+                        <li>Community event sponsorships</li>
+                        <li>Local promotions</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Reach:</strong> Unlimited (paid)<br>
+                        <strong>Cost:</strong> R0.45-0.60 per conversation<br>
+                        <strong>Access:</strong> Admin-controlled
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>🏢 Corporate CSR Programs</h3>
+                    <p class="examples">Banks • Telecoms • Insurance • Mining Companies</p>
+                    <ul>
+                        <li>Bursary announcements</li>
+                        <li>Skills training programs</li>
+                        <li>Job fairs</li>
+                        <li>Community investment initiatives</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Reach:</strong> Unlimited (paid)<br>
+                        <strong>Cost:</strong> R0.45-0.60 per conversation<br>
+                        <strong>Access:</strong> Admin-controlled
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>🍔 Franchise Networks</h3>
+                    <p class="examples">Nando's • Steers • Debonairs • KFC</p>
+                    <ul>
+                        <li>Hiring campaigns</li>
+                        <li>Franchise opportunities</li>
+                        <li>Community partnerships</li>
+                        <li>Local promotions</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Reach:</strong> Unlimited (paid)<br>
+                        <strong>Cost:</strong> R0.45-0.60 per conversation<br>
+                        <strong>Access:</strong> Admin-controlled
+                    </div>
+                </div>
+                
+                <div class="partner-card">
+                    <h3>🏘️ Property & Real Estate</h3>
+                    <p class="examples">Developers • Rental Agencies • Property Management</p>
+                    <ul>
+                        <li>Affordable housing announcements</li>
+                        <li>Rental listings</li>
+                        <li>Community development projects</li>
+                        <li>Property opportunities</li>
+                    </ul>
+                    <div class="meta">
+                        <strong>Reach:</strong> Unlimited (paid)<br>
+                        <strong>Cost:</strong> R0.45-0.60 per conversation<br>
+                        <strong>Access:</strong> Admin-controlled
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Comparison -->
+    <section class="section" style="background: #f8fafc;">
+        <div class="container">
+            <h2 class="section-title">Transparent Pricing</h2>
+            
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <h3>Organic Authority</h3>
+                    <div class="price">Free</div>
+                    <ul>
+                        <li>Free within blast radius limits</li>
+                        <li>WhatsApp onboarding</li>
+                        <li>Admin approval required</li>
+                        <li>Basic analytics</li>
+                        <li>Attribution included</li>
+                        <li class="disabled">Limited reach (200-5,000)</li>
+                        <li class="disabled">No scheduling</li>
+                        <li class="disabled">No A/B testing</li>
+                    </ul>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 1rem;">Perfect for: Schools, NGOs, Community Leaders</p>
+                    <a href="https://wa.me/27658295041?text=REQUEST%20AUTHORITY" class="btn btn-secondary" target="_blank" style="width: 100%; text-align: center; margin-top: 1rem;">Request Authority</a>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <h3>Sponsored Content</h3>
+                    <div class="price">R0.45-0.60</div>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-bottom: 1rem;">per conversation*</p>
+                    <ul>
+                        <li>Unlimited reach</li>
+                        <li>Admin-controlled campaigns</li>
+                        <li>Instant campaign launch</li>
+                        <li>Advanced analytics</li>
+                        <li>Campaign scheduling</li>
+                        <li>Regional targeting</li>
+                        <li>Priority support</li>
+                    </ul>
+                    <p style="font-size: 0.75rem; color: #6b7280; margin-top: 1rem;">*One conversation = 24-hour window with unlimited messages</p>
+                    <p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem;">Perfect for: Retail, Corporate, Franchises</p>
+                    <a href="mailto:info@unamifoundation.org?subject=Sponsored%20Campaign%20Inquiry" class="btn" style="width: 100%; text-align: center; margin-top: 1rem;">Contact Admin</a>
+                </div>
+            </div>
+            
+            <!-- Cost Comparison Table -->
+            <div style="max-width: 800px; margin: 3rem auto; overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 0.5rem; overflow: hidden;">
+                    <thead>
+                        <tr style="background: #2563eb; color: white;">
+                            <th style="padding: 1rem; text-align: left;">Channel</th>
+                            <th style="padding: 1rem; text-align: left;">Cost per 1,000</th>
+                            <th style="padding: 1rem; text-align: left;">Open Rate</th>
+                            <th style="padding: 1rem; text-align: left;">Verification</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem;">SMS</td>
+                            <td style="padding: 1rem;">R300-500</td>
+                            <td style="padding: 1rem;">20-30%</td>
+                            <td style="padding: 1rem;">None</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem;">Email</td>
+                            <td style="padding: 1rem;">R50-100</td>
+                            <td style="padding: 1rem;">15-25%</td>
+                            <td style="padding: 1rem;">Spam filters</td>
+                        </tr>
+                        <tr style="border-bottom: 1px solid #e5e7eb;">
+                            <td style="padding: 1rem;">Moments (Organic)</td>
+                            <td style="padding: 1rem;"><strong>R0</strong></td>
+                            <td style="padding: 1rem;"><strong>98%</strong></td>
+                            <td style="padding: 1rem;">Built-in</td>
+                        </tr>
+                        <tr style="background: #f0fdf4;">
+                            <td style="padding: 1rem;"><strong>Moments (Sponsored)</strong></td>
+                            <td style="padding: 1rem;"><strong>R6-60</strong></td>
+                            <td style="padding: 1rem;"><strong>98%</strong></td>
+                            <td style="padding: 1rem;">Built-in</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Frequently Asked Questions</h2>
+            
+            <div class="faq-grid">
+                <div class="faq-item">
+                    <h4>How do I request authority via WhatsApp?</h4>
+                    <p>Send "REQUEST AUTHORITY" to +27 65 829 5041. Our system will guide you through the application process. Admin approval takes 24-48 hours.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>What if I exceed my blast radius?</h4>
+                    <p>You can upgrade to sponsored content for unlimited reach. Contact our admin team to discuss pricing and campaign options.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>How much does sponsored content cost?</h4>
+                    <p>R0.45-0.60 per conversation (24-hour window). Batch 100+ messages in one window = R0.006 per recipient. No platform fees.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>What's a "conversation window"?</h4>
+                    <p>A 24-hour period where you can send unlimited messages to a recipient. One conversation charge covers all messages in that window.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>Can I target specific regions?</h4>
+                    <p>Yes! Both organic and sponsored partners can target specific provinces, regions, or categories for precise community reach.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>How do I access sponsored campaign management?</h4>
+                    <p>Sponsored campaigns are admin-controlled. Contact info@unamifoundation.org to discuss your campaign needs and our team will manage the setup and execution.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>What content is prohibited?</h4>
+                    <p>No spam, promotional content (organic only), commercial advertising (organic only), or POPIA violations. Sponsored content must be community-focused.</p>
+                </div>
+                
+                <div class="faq-item">
+                    <h4>Can I upgrade from organic to sponsored later?</h4>
+                    <p>Absolutely! Contact our admin team anytime to discuss sponsored campaign options and pricing.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section" style="background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white;">
+        <div class="container" style="text-align: center;">
+            <h2 style="font-size: clamp(1.75rem, 4vw, 2.5rem); margin-bottom: 1rem;">Ready to Reach Your Community?</h2>
+            <p style="font-size: 1.125rem; margin-bottom: 2rem; opacity: 0.95;">Join schools, NGOs, retailers, and organizations already engaging 10,000+ South Africans via WhatsApp.</p>
+            
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="https://wa.me/27658295041?text=REQUEST%20AUTHORITY" class="btn" style="background: white; color: #2563eb;" target="_blank">🆓 Request Authority</a>
+                <a href="mailto:info@unamifoundation.org?subject=Sponsored%20Campaign%20Inquiry" class="btn btn-secondary">💼 Contact Admin</a>
+            </div>
+            
+            <p style="font-size: 0.875rem; margin-top: 2rem; opacity: 0.8;">
+                Questions? Email <a href="mailto:info@unamifoundation.org" style="color: white; text-decoration: underline;">info@unamifoundation.org</a> or WhatsApp +27 65 829 5041
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Unami Foundation Moments App. Empowering South African communities through accessible WhatsApp-native engagement.</p>
+            <p style="margin-top: 0.5rem;">
+                <a href="mailto:info@unamifoundation.org">info@unamifoundation.org</a> | 
+                <a href="https://unamifoundation.org" target="_blank">unamifoundation.org</a> | 
+                <a href="/partner-terms">Partner Terms & Conditions</a>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
